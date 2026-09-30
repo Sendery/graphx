@@ -41,13 +41,23 @@ const themeAttr = (svg.match(/data-gx-theme="([^"]*)"/) || [])[1] || '';
 const inst = themeAttr.replace(/&quot;/g, '"').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
 const block = theme === 'dark' ? (inst.match(/:root\[data-theme="dark"\][^{]*\{([^}]*)\}/) || [])[1] : (inst.match(/^[^{]*\{([^}]*)\}/) || [])[1];
 (block || '').split(';').forEach(d => { const m = d.match(/--gx-([\w-]+):(.+)/); if (m) tok[m[1]] = m[2].trim(); });
-const hasC = [...css.matchAll(/([^{}]*\.has-c[^{}]*)\{([^}]*)\}/g)];
+/* --gx-c (color), --gx-f (relleno) y --gx-tc (texto) de cada pieza: una clase por valor y las reglas
+   .has-c / .has-f / .has-t duplicadas con el color ya resuelto */
+const VARS = [['c', 'has-c', 'hc'], ['f', 'has-f', 'hf'], ['tc', 'has-t', 'ht']];
 let extra = '';
-svg = svg.replace(/style="--gx-c: var\(--gx-(u\d+)\);?"/g, (_, u) => `class-c="${u}"`).replace(/class="([^"]*)"([^>]*?)class-c="(u\d+)"/g, '$2class="$1 hc-$3"');
-svg = svg.replace(/class-c="(u\d+)"([^>]*?)class="([^"]*)"/g, '$2class="$3 hc-$1"');
-for (const u of new Set([...svg.matchAll(/hc-(u\d+)/g)].map(m => m[1]))) {
-  const col = tok[u]; if (!col) continue;
-  for (const [, sel, body] of hasC) extra += sel.split(',').map(x => x.replace(/\.has-c/g, '.hc-' + u).trim()).join(',') + '{' + body.replace(/var\(--gx-c\)/g, col) + '}';
+svg = svg.replace(/<([a-z]+)((?:\s[^>]*?)?)\sstyle="([^"]*--gx-(?:c|f|tc):[^"]*)"([^>]*)>/g, (all, tag, pre, st, post) => {
+  const add = [];
+  const rest = st.replace(/--gx-(c|f|tc):\s*var\(--gx-(u\d+)\);?/g, (m, k, u) => { add.push(VARS.find(v => v[0] === k)[2] + '-' + u); return ''; }).trim();
+  let attrs = pre + post;
+  if (/\sclass="/.test(attrs)) attrs = attrs.replace(/\sclass="([^"]*)"/, (m, c) => ` class="${c} ${add.join(' ')}"`); else attrs += ` class="${add.join(' ')}"`;
+  return `<${tag}${attrs}${rest ? ` style="${rest}"` : ''}>`;
+});
+for (const [k, has, pfx] of VARS) {
+  const rulesFor = [...css.matchAll(new RegExp(`([^{}]*\\.${has}[^{}]*)\\{([^}]*)\\}`, 'g'))];
+  for (const u of new Set([...svg.matchAll(new RegExp(`${pfx}-(u\\d+)`, 'g'))].map(m => m[1]))) {
+    const col = tok[u]; if (!col) continue;
+    for (const [, sel, body] of rulesFor) extra += sel.split(',').map(x => x.replace(new RegExp(`\\.${has}`, 'g'), `.${pfx}-${u}`).trim()).join(',') + '{' + body.replace(new RegExp(`var\\(--gx-${k}\\)`, 'g'), col) + '}';
+  }
 }
 /* variables en atributos style (puntas de arista, rellenos calculados): también se resuelven */
 svg = svg.replace(/style="([^"]*var\(--[^"]*)"/g, (m, st) => `style="${res(st.replace(/&quot;/g, '"'))}"`);

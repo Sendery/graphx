@@ -107,6 +107,30 @@ async function mountSpec(spec) {
   ok(/-m-arrow-/.test(host.querySelector('.gx-edge .gx-eline').getAttribute('marker-end')), 'una arista gruesa lleva la flecha de tamaño fijo');
 }
 
+{
+  const { host, gx } = mounted['shapes.mmd'];
+  const r = gx.state.rects.get('ok'), line = host.querySelector('.gx-edge[data-id="v:revisar>ok"] .gx-eline');
+  const end = line && line.getAttribute('d').match(/(-?[\d.]+),(-?[\d.]+)\s*$/);
+  const lx = end ? +end[1] - r.x : NaN, ly = end ? +end[2] - r.y : NaN;
+  const onDiamond = Math.abs(Math.abs(lx - r.w / 2) / (r.w / 2) + Math.abs(ly - r.h / 2) / (r.h / 2) - 1) < .03;
+  ok(onDiamond, `la arista que entra en el rombo acaba en su contorno, no en su caja (${Math.round(lx)},${Math.round(ly)} en ${Math.round(r.w)}×${Math.round(r.h)})`);
+}
+{
+  const { host } = await mountSpec(globalThis.GraphX.fromMermaid('sequenceDiagram\nbox Aqua Front\nparticipant A\nend\nparticipant B\nA->>B: hola\ncreate participant C\nB->>C: nace\ndestroy C\nB-xC: adiós').spec);
+  ok(host.querySelectorAll('.gx-seq-box').length === 1 && host.querySelectorAll('.gx-seq-x').length === 1, 'secuencia: caja de box y aspa de destroy');
+  const cy = host.querySelector('.gx-seq-p[data-id="C"]').getAttribute('transform').match(/,(-?[\d.]+)\)/)[1], ay = host.querySelector('.gx-seq-p[data-id="A"]').getAttribute('transform').match(/,(-?[\d.]+)\)/)[1];
+  ok(+cy > +ay + 40, 'create: la cabecera nace en su fila, no arriba');
+}
+{
+  const { host } = await mountSpec(globalThis.GraphX.fromMermaid('flowchart LR\na[A] --> b[B]\nclassDef azul fill:#1e3a8a,color:#fff\nclass a azul').spec);
+  const a = host.querySelector('.gx-shape[data-id="a"]');
+  ok(a.classList.contains('has-f') && a.classList.contains('has-t'), 'classDef fill y color → relleno y texto propios');
+}
+{
+  const { host } = await mountSpec(globalThis.GraphX.fromMermaid(R('examples/mermaid/mindmap.mmd')).spec);
+  ok(host.querySelectorAll('.gx-edge.curved').length === 12 && !host.querySelector('.gx-edge.curved .gx-eline[marker-end]'), 'mindmap: ramas curvas y sin flechas');
+}
+
 /* 3 · React dibuja lo mismo que el motor */
 console.log('— React —');
 const { renderToStaticMarkup } = await import('react-dom/server');

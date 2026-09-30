@@ -142,7 +142,7 @@ const checkColor = (v, where) => {
   if (!ok) errors.push(`${where}: color no válido ${JSON.stringify(v)} — usa hex, rgb()/hsl()/oklch(), un nombre CSS o { light, dark }`);
 };
 (spec.lanes || []).forEach(n => checkColor(n.color, `carril ${n.id}`));
-(spec.nodes || []).forEach(n => checkColor(n.color, `nodo ${n.id}`));
+(spec.nodes || []).forEach(n => { checkColor(n.color, `nodo ${n.id}`); checkColor(n.fill, `nodo ${n.id} (fill)`); checkColor(n.textColor, `nodo ${n.id} (textColor)`); });
 (spec.edges || []).forEach(e => checkColor(e.color, `arista ${e.id}`));
 Object.entries(spec.statuses || {}).forEach(([k, v]) => checkColor(v && v.color, `statuses.${k}`));
 ((spec.legend && spec.legend.edges) || []).forEach((e, i) => checkColor(e.color, `legend.edges[${i}]`));
@@ -177,7 +177,7 @@ for (const f of spec.flows || []) {
       m.over.forEach(p => { if (!parts.has(p)) errors.push(`flujo ${f.id}, nota ${m.id}: participante desconocido ${p}`); });
       continue;
     }
-    if (m.kind === 'activate' || m.kind === 'deactivate') { if (!parts.has(m.node)) errors.push(`flujo ${f.id}, ${m.kind} ${m.id}: participante desconocido ${m.node}`); continue; }
+    if (['activate', 'deactivate', 'create', 'destroy'].includes(m.kind)) { if (!parts.has(m.node)) errors.push(`flujo ${f.id}, ${m.kind} ${m.id}: participante desconocido ${m.node}`); continue; }
     [m.activate, m.deactivate].forEach(p => { if (p != null && !parts.has(p)) errors.push(`flujo ${f.id}, mensaje ${m.id}: activación de un participante desconocido ${p}`); });
     if (!parts.has(m.from) || !parts.has(m.to)) errors.push(`flujo ${f.id}, mensaje ${m.id || m.label}: extremo que no es participante`);
     if ((m.kind === 'self') !== (m.from === m.to)) errors.push(`flujo ${f.id}, mensaje ${m.id}: self exige from === to (y al revés)`);

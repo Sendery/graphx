@@ -80,9 +80,13 @@
     const w = p.width || lay.w, hh = p.height || lay.h;
     const tree = S.render(node, w, hh, ctx, lay);
     const icons = p.icons || GX.icons || {};
-    const cls = ['gx-node', 'gx-leaf', 'gx-shape', 'fam-' + tree.family, 'sh-' + node.shape, 'd-' + (p.delta || node.delta || 'unchanged'), p.state || '', p.color ? 'has-c' : '', p.className || ''].filter(Boolean).join(' ');
+    /* color de acento, relleno y texto: props o, si son texto, los de la pieza ({ light, dark } → el claro) */
+    const pick = v => (typeof v === 'string' ? v : v && v.light) || null;
+    const color = p.color || pick(node.color), fill = p.fill || pick(node.fill), text = p.textColor || pick(node.textColor);
+    const cls = ['gx-node', 'gx-leaf', 'gx-shape', 'fam-' + tree.family, 'sh-' + node.shape, 'd-' + (p.delta || node.delta || 'unchanged'), p.state || '', color ? 'has-c' : '', fill ? 'has-f' : '', text ? 'has-t' : '', p.className || ''].filter(Boolean).join(' ');
+    const style = color || fill || text ? Object.assign({}, color ? { '--gx-c': color } : null, fill ? { '--gx-f': fill } : null, text ? { '--gx-tc': text } : null) : undefined;
     const pad = p.pad != null ? p.pad : 6;
-    const g = h('g', { className: cls, style: p.color ? { '--gx-c': p.color } : undefined, transform: `translate(${pad},${pad})`, onClick: p.onClick, tabIndex: p.onClick ? 0 : undefined, role: p.onClick ? 'button' : undefined, 'aria-label': node.label },
+    const g = h('g', { className: cls, style, transform: `translate(${pad},${pad})`, onClick: p.onClick, tabIndex: p.onClick ? 0 : undefined, role: p.onClick ? 'button' : undefined, 'aria-label': node.label },
       tree.children.map((c, i) => toReact(c, i, icons)));
     if (p.asGroup) return g;
     return h('svg', { className: 'gx-svg gx-shape-svg', width: w + pad * 2, height: hh + pad * 2, viewBox: `0 0 ${w + pad * 2} ${hh + pad * 2}`, role: 'img', 'aria-label': node.label }, g);

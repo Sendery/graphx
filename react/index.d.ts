@@ -43,8 +43,11 @@ export interface GraphXShapeProps {
   now?: number;
   state?: 'lit' | 'sel';
   delta?: GraphXShapeNode['delta'];
-  /** Color de la pieza (cualquier color CSS). */
+  /** Color de acento de la pieza (cualquier color CSS). */
   color?: string;
+  /** Relleno y color de texto propios. */
+  fill?: string;
+  textColor?: string;
   icons?: Record<string, string>;
   className?: string;
   /** Devuelve un <g> en vez de un <svg>, para colocarlo dentro de otro dibujo. */

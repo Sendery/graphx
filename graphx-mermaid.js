@@ -188,6 +188,12 @@
     let h = /^#([0-9a-f]{3,8})$/i.exec(hex)[1]; if (h.length <= 4) h = h.split('').map(c => c + c).join('');
     return '#' + [0, 2, 4].map(i => { const v = parseInt(h.slice(i, i + 2), 16); return Math.round(v + (255 - v) * t).toString(16).padStart(2, '0'); }).join('');
   };
+  /* mezcla un hex hacia otro (t = cuánto del segundo) */
+  const blend = (hex, to, t) => {
+    const p = x => { let h = /^#([0-9a-f]{3,8})$/i.exec(x)[1]; if (h.length <= 4) h = h.split('').map(c => c + c).join(''); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+    const a = p(hex), b = p(to);
+    return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('');
+  };
   const darken = (hex, t) => {
     let h = /^#([0-9a-f]{3,8})$/i.exec(hex)[1]; if (h.length <= 4) h = h.split('').map(c => c + c).join('');
     return '#' + [0, 2, 4].map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - t)).toString(16).padStart(2, '0')).join('');
@@ -207,6 +213,27 @@
     if (L > .72) { light = darken(pick, .45); dark = pick; }
     else if (L < .22) { dark = mix(pick, .55); }
     return light === dark ? light : { light, dark };
+  }
+  /* `fill` y `color` de un estilo: el relleno tal cual en claro; en oscuro, mezclado hacia el lienzo
+     para que no deslumbre. El texto sigue a `color` o, si no lo hay, al contraste con el relleno. */
+  function styleFill(st) {
+    if (!st) return null;
+    const out = {}, CANVAS = '#161b22';
+    const f = safeColor(st.fill) ? toHex(safeColor(st.fill)) : null;
+    if (f && /^#/.test(f) && lum(f) != null) {
+      const dark = blend(f, CANVAS, lum(f) > .5 ? .72 : .38);
+      out.fill = { light: f, dark };
+      const c = safeColor(st.color) ? toHex(safeColor(st.color)) : null;
+      const onDark = lum(dark) < .45 ? '#e6edf3' : '#1f2328';
+      const light = c || (lum(f) < .45 ? '#ffffff' : null);
+      if (light || c) out.text = { light: light || '#1f2328', dark: c && lum(c) != null && Math.abs(lum(c) - lum(dark)) > .45 ? c : onDark };
+    } else if (safeColor(st.color)) { const c = toHex(safeColor(st.color)); out.text = { light: c, dark: lum(c) != null && lum(c) < .45 ? blend(c, '#ffffff', .6) : c }; }
+    return out.fill || out.text ? out : null;
+  }
+  /* aplica un estilo de Mermaid a una pieza: el borde da el acento; el relleno y el texto, los suyos */
+  function applyStyle(node, st) {
+    const col = styleColor(st); if (col) node.color = col;
+    const sf = styleFill(st); if (sf) { if (sf.fill) node.fill = sf.fill; if (sf.text) node.textColor = sf.text; }
   }
   function parseStyle(s) {
     const o = {};
@@ -383,7 +410,7 @@
       if (Object.keys(icons).length) spec.icons = icons;
       const kinds = {}; used.forEach(k => { const nm = this.kindNames[k] || T.kinds[k]; if (nm) kinds[k] = nm; });
       spec.legend = Object.assign({ kinds }, this.legendEdges && this.legendEdges.length ? { edges: this.legendEdges } : {});
-      spec.layout = Object.assign({ cycles: 'dfs' }, this.layout || {});
+      spec.layout = Object.assign({ cycles: 'dfs', backEdges: 'route' }, this.layout || {});
       if (lanes.length) spec.lanes = lanes.filter(l => nodes.some(n => n.lane === l.id));
       spec.nodes = nodes;
       spec.edges = this.edges;
@@ -624,7 +651,7 @@
       let st = null;
       (nodeClass.get(node.id) || []).forEach(c => { if (classes.has(c)) st = Object.assign(st || {}, classes.get(c)); });
       if (nodeStyle.has(node.id)) st = Object.assign(st || {}, nodeStyle.get(node.id));
-      const col = styleColor(st); if (col) node.color = col;
+      applyStyle(node, st);
     }
     for (const [which, st] of linkStyles) {
       const col = safeColor(st.stroke) ? styleColor({ stroke: st.stroke }) : null; if (!col) continue;
@@ -649,7 +676,7 @@
     const blocks = []; let box = null, title = null;
     const TYPES = { participant: 'participant', actor: 'actor', boundary: 'ui', control: 'config', entity: 'table', database: 'datastore', collections: 'queue', queue: 'queue' };
     /* forma de la cabecera: el actor es una figura; la base de datos, un cilindro; la cola, un tubo */
-    const HEAD = { actor: 'actor', datastore: 'datastore', queue: 'cylinder-h' };
+    const HEAD = { participant: 'rect', actor: 'actor', datastore: 'datastore', queue: 'cylinder-h' };
     const part = (raw, props) => {
       raw = raw.trim();
       const n = b.node(raw, props || {});
@@ -664,7 +691,8 @@
     for (const { t, n } of statements(P.lines.slice(1), false)) {
       let m;
       if ((m = /^title\s*:?\s*(.+)$/.exec(t))) { title = clean(m[1]); continue; }
-      if ((m = /^(?:create\s+)?(participant|actor)\s+(.+?)(?:\s+as\s+(.+))?$/.exec(t))) {
+      if ((m = /^(create\s+)?(participant|actor)\s+(.+?)(?:\s+as\s+(.+))?$/.exec(t))) {
+        m = [m[0], m[2], m[3], m[4], m[1]];
         let raw = m[2], meta = null;
         const at = /^(.+?)@\{(.*)\}$/.exec(raw); if (at) { raw = at[1]; meta = parseObj(at[2].replace(/"(\w+)"\s*:/g, '$1:')); }
         const kind = meta && TYPES[meta.type] ? TYPES[meta.type] : TYPES[m[1]];
@@ -672,6 +700,8 @@
         if (HEAD[kind]) nd.shape = HEAD[kind]; else delete nd.shape;
         b.kinds.add(kind);
         if (box) nd.lane = box.id;
+        /* `create`: la cabecera aparece en esa fila, no arriba */
+        if (m[4]) push({ kind: 'create', node: nd.id });
         continue;
       }
       if ((m = /^box(?:\s+(.*))?$/.exec(t))) {
@@ -688,7 +718,8 @@
         const type = m[1] === 'par_over' ? 'par' : m[1];
         blocks.push({ type });
         const blk = { kind: 'block', block: type, title: type === 'rect' ? '' : T.blocks[type], label: type === 'rect' ? '' : clean(m[2]) };
-        if (type === 'rect') { const col = styleColor({ fill: m[2].trim() }); if (col) blk.color = col; }
+        /* el fondo de `rect` es el color que dice, tal cual (en oscuro, hacia el lienzo) */
+        if (type === 'rect') { const c = safeColor(m[2].trim()) ? toHex(safeColor(m[2].trim())) : null; if (c && /^#/.test(c)) blk.color = { light: c, dark: blend(c, '#0d1117', .7) }; }
         push(blk);
         continue;
       }
@@ -712,11 +743,13 @@
         continue;
       }
       if ((m = /^(activate|deactivate)\s+(.+)$/.exec(t))) { push({ kind: m[1], node: part(m[2]).id }); continue; }
-      if (/^(autonumber|destroy|properties|details)\b/.test(t)) continue;
+      /* `destroy`: la línea de vida acaba (con un aspa) en el siguiente mensaje que lo toca */
+      if ((m = /^destroy\s+(.+)$/.exec(t))) { push({ kind: 'destroy', node: part(m[1]).id }); continue; }
+      if (/^(autonumber|properties|details)\b/.test(t)) continue;
       if ((m = SEQ_ARROW.exec(t))) {
         const a = part(m[1]), c = part(m[4]), arrow = m[2];
         const dotted = arrow.startsWith('--') || arrow === '<<-->>';
-        const kind = a.id === c.id ? 'self' : /\)$/.test(arrow) ? 'async' : dotted ? 'return' : 'sync';
+        const kind = a.id === c.id ? 'self' : dotted ? 'return' : 'sync';
         const notes = [];
         if (/x$/.test(arrow)) notes.push(T.lost);
         if (/^<</.test(arrow)) notes.push(T.bidir);
@@ -787,18 +820,24 @@
         const A = cls(m[1]), B = cls(m[7]);
         const lm = m[3] || '', rm = m[5] || '', dotted = m[4] === '..';
         const mark = lm || rm;
-        /* la flecha llega al extremo con marca (el padre en la herencia, el todo en la composición) */
-        const [from, to] = !lm && rm ? [A, B] : lm && !rm ? [B, A] : [A, B];
         const kindOf = mk => mk === '<|' || mk === '|>' ? (dotted ? 'realize' : 'inherit') : mk === '*' ? 'compose' : mk === 'o' ? 'aggregate' : mk === '()' ? 'lollipop' : mk ? (dotted ? 'depend' : 'assoc') : 'link';
         const rk = kindOf(mark);
         const MK = x => x === '<|' || x === '|>' ? 'triangle' : x === '*' ? 'diamond' : x === 'o' ? 'odiamond' : x === '()' ? 'lollipop' : x ? 'arrow' : null;
-        const aEnd = MK(lm), bEnd = MK(rm);
-        const head = (to === B ? bEnd : aEnd) || 'none', tail = (from === A ? aEnd : bEnd) || null;
-        const headLabel = (to === B ? m[6] : m[2]) || null, tailLabel = (from === A ? m[2] : m[6]) || null;
+        const aEnd = MK(lm), bEnd = MK(rm), STRUCT = { triangle: 1, diamond: 1, odiamond: 1 };
+        /* La estructura se lee de arriba abajo, como en Mermaid: el padre de una herencia y el todo de
+           una composición o agregación van primero, con su marca en el origen de la arista. Una
+           asociación o dependencia va del extremo sin marca al que la tiene. */
+        let from, to;
+        if (STRUCT[aEnd]) [from, to] = [A, B];
+        else if (STRUCT[bEnd]) [from, to] = [B, A];
+        else [from, to] = !lm && rm ? [A, B] : lm && !rm ? [B, A] : [A, B];
+        const endOf = X => (X === A ? aEnd : bEnd), cardOf = X => (X === A ? m[2] : m[6]) || null;
+        const head = endOf(to) || 'none', tail = endOf(from) || null, headLabel = cardOf(to), tailLabel = cardOf(from);
+        const marked = aEnd ? A : B, other = marked === A ? B : A;
         const card = [m[2], m[6]].some(Boolean) ? `${A.label} ${m[2] || '·'} — ${m[6] || '·'} ${B.label}` : null;
-        const label = clean(m[8] || '') || T.rel[rk];
-        /* en la composición y la agregación, el todo es el extremo con marca (el destino) */
-        const sentence = rk === 'link' ? T.linked(from.label, to.label) : rk === 'compose' || rk === 'aggregate' ? `${to.label} ${T.rel[rk]} ${from.label}.` : `${from.label} ${T.rel[rk]} ${to.label}.`;
+        /* sin texto en Mermaid, sin etiqueta en el dibujo: el tipo de relación va en el tooltip */
+        const label = clean(m[8] || '') || null;
+        const sentence = rk === 'link' ? T.linked(A.label, B.label) : rk === 'compose' || rk === 'aggregate' ? `${marked.label} ${T.rel[rk]} ${other.label}.` : `${other.label} ${T.rel[rk]} ${marked.label}.`;
         const sum = [sentence, card ? card + '.' : ''].filter(Boolean).join(' ');
         b.edge(from.id, to.id, { kind: dotted ? 'async' : (rk === 'inherit' || rk === 'realize' ? 'dependency' : 'call'), label, summary: sum, _rk: rk, head, tail, headLabel, tailLabel });
         continue;
@@ -846,7 +885,7 @@
       if (anno && /abstract/i.test(anno)) nd.abstract = true;
       let st = null; (nodeClass.get(nd.id) || []).forEach(c => { if (classes.has(c)) st = Object.assign(st || {}, classes.get(c)); });
       if (nodeStyle.has(nd.id)) st = Object.assign(st || {}, nodeStyle.get(nd.id));
-      const col = styleColor(st); if (col) nd.color = col;
+      applyStyle(nd, st);
     }
     const rks = new Set(b.edges.map(e => e._rk).filter(Boolean)); b.edges.forEach(e => delete e._rk);
     const LE = { inherit: 'solid', realize: 'dashed', compose: 'solid', aggregate: 'solid', assoc: 'solid', depend: 'dashed', link: 'solid', lollipop: 'solid' };
@@ -913,7 +952,7 @@
     for (const nd of b.nodes.values()) {
       let st = null; (nodeClass.get(nd.id) || []).forEach(c => { if (classes.has(c)) st = Object.assign(st || {}, classes.get(c)); });
       if (nodeStyle.has(nd.id)) st = Object.assign(st || {}, nodeStyle.get(nd.id));
-      const col = styleColor(st); if (col) nd.color = col;
+      applyStyle(nd, st);
     }
   }
 
@@ -957,7 +996,7 @@
       nd._desc = T.nAttrs(at.length) + (at.some(x => /PK/.test(x.keys)) ? ' · PK: ' + at.filter(x => /PK/.test(x.keys)).map(x => x.name).join(', ') : '');
       nd.details_html = `<h4>${esc(T.attrs)}</h4><ul class="gx-mmd-members">${at.map(x => `<li><code>${esc(x.name)}</code> <i>${esc(x.type)}</i>${x.keys ? ` <b>${esc(x.keys)}</b>` : ''}${x.comment ? ` — ${esc(x.comment)}` : ''}</li>`).join('')}</ul>`;
       nd.tags = at.map(x => x.name);
-      nd.rows = at.map(x => Object.assign({ name: x.name, type: x.type }, x.keys ? { keys: x.keys.replace(/\s+/g, ',') } : {}));
+      nd.rows = at.map(x => Object.assign({ name: x.name, type: x.type }, x.keys ? { keys: x.keys.replace(/\s+/g, ',') } : {}, x.comment ? { comment: x.comment } : {}));
     }
     if (b.edges.some(e => e.kind === 'async')) b.legendEdges = [{ label: T.identifying.replace(/\.$/, ''), style: 'solid' }, { label: T.nonIdentifying.replace(/ \(.*$/, '').replace(/\.$/, ''), style: 'dashed' }];
   }
@@ -975,6 +1014,7 @@
   function parseMindmap(P, b, opts) {
     b.direction = 'right';
     const nest = !!(opts && opts.nest);
+    let branchN = 0;
     const idea = b.T.kinds.idea;
     b.kindNames = { circle: idea, rounded: idea, step: idea, cloud: idea, bang: idea, hexagon: idea, idea };
     const stack = [];
@@ -983,9 +1023,16 @@
       const x = mmText(L.t);
       while (stack.length && stack[stack.length - 1].indent >= L.indent) stack.pop();
       const nd = b.node(x.raw && !b.has(x.raw) ? x.raw : '\u0000mm' + L.n, { label: clean(x.label) || ' ', kind: x.kind, shape: { idea: 'rounded', step: 'rect' }[x.kind] || x.kind });
-      if (stack.length) { const up = stack[stack.length - 1].id; if (nest) b.setParent(nd.id, up); else b.edge(up, nd.id, { kind: 'call' }); }
+      if (stack.length) {
+        const up = stack[stack.length - 1];
+        /* cada rama que sale de la raíz tiene su color, y lo heredan sus hojas */
+        const branch = stack.length === 1 ? PALETTE[(branchN++) % PALETTE.length] : up.color;
+        nd.color = branch;
+        if (nest) b.setParent(nd.id, up.id); else b.edge(up.id, nd.id, { kind: 'call', head: 'none', curve: true, color: branch });
+        stack.push({ indent: L.indent, id: nd.id, color: branch }); continue;
+      }
       else if (b.nodes.size > 1) b.warn('mindmap con más de una raíz', L.n);
-      else nd.subtitle = b.lang === 'en' ? 'Central topic' : 'Tema central';
+      
       stack.push({ indent: L.indent, id: nd.id });
     }
     if (!b.nodes.size) throw new MermaidError('mindmap vacío');
@@ -1004,11 +1051,13 @@
     b.direction = 'right';
     b.levelNames = [b.lang === 'en' ? 'Section' : 'Sección', T.kinds.job];
     let section = null, title = null, prev = null;
-    const tasks = [], byId = new Map(), links = [];
+    const tasks = [], byId = new Map(), links = [], excl = [];
     for (const { t, n } of statements(P.lines.slice(1), false)) {
       let m;
       if ((m = /^title\s+(.+)$/.exec(t))) { title = clean(m[1]); continue; }
-      if (/^(dateFormat|axisFormat|tickInterval|excludes|includes|todayMarker|weekday|weekend|displayMode|inclusiveEndDates|topAxis)\b/.test(t)) continue;
+      /* `excludes weekends`, días de la semana o fechas: no cuentan en las duraciones en días */
+      if ((m = /^excludes\s+(.+)$/.exec(t))) { m[1].toLowerCase().split(/[\s,]+/).filter(Boolean).forEach(x => excl.push(x)); continue; }
+      if (/^(dateFormat|axisFormat|tickInterval|includes|todayMarker|weekday|weekend|displayMode|inclusiveEndDates|topAxis)\b/.test(t)) continue;
       if ((m = /^section\s+(.+)$/.exec(t))) { section = b.node('\u0000sec' + n, { label: clean(m[1]), kind: 'group' }); continue; }
       if ((m = /^click\s+(\S+)\s+href\s+"([^"]+)"/.exec(t))) { links.push([m[1], m[2]]); continue; }
       if (/^click\s/.test(t)) continue;
@@ -1033,7 +1082,14 @@
       else if (prev) s = prev._end;
       let e = null;
       const dm = task.end && /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d|w|M|y)$/.exec(task.end);
-      if (dm && s != null) e = s + parseFloat(dm[1]) * DUR_MS[dm[2]];
+      if (dm && s != null && dm[2] === 'd' && excl.length) {
+        /* se avanza día a día y solo cuentan los que no están excluidos */
+        const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const off = t => { const d = new Date(t), dow = d.getUTCDay(), iso = d.toISOString().slice(0, 10); return excl.includes(iso) || excl.includes(DAYS[dow]) || (excl.includes('weekends') && (dow === 0 || dow === 6)); };
+        let left = parseFloat(dm[1]), t = s, guard = 0;
+        while (left > 0 && guard++ < 3660) { if (!off(t)) left -= Math.min(1, left); t += DUR_MS.d; }
+        e = t;
+      } else if (dm && s != null) e = s + parseFloat(dm[1]) * DUR_MS[dm[2]];
       else if (task.end && parseDate(task.end) != null) e = parseDate(task.end);
       else if (task.end && /^until\s/.test(task.end)) { const u = byId.get(task.end.replace(/^until\s+/, '').trim()); e = u && u._start != null ? u._start : null; }
       if (task.tags.includes('milestone') && s != null && e == null) e = s;
@@ -1140,7 +1196,7 @@
     const branches = new Map(); let cur = main, seq = 0;
     const order = [];
     const branch = (name, from, ord) => {
-      const l = b.lane('\u0000branch:' + name, { label: name, subtitle: T.branch, color: PALETTE[branches.size % PALETTE.length] });
+      const l = b.lane('\u0000branch:' + name, { label: name, color: PALETTE[branches.size % PALETTE.length] });
       branches.set(name, { lane: l, head: from, order: ord != null ? ord : branches.size });
       order.push(name); return branches.get(name);
     };
@@ -1236,7 +1292,9 @@
       }
       if (BOUND.test(fn)) {
         const [alias, label, ty, descr] = pos;
-        const nd = b.node(alias, { label: clean(label || alias), kind: fn === 'Deployment_Node' || /^Node/.test(fn) ? 'package' : 'group', subtitle: ty ? clean(ty) : (fn.replace(/_Boundary$/, '').replace('_', ' ') !== 'Boundary' ? fn.replace(/_Boundary$/, '') : null) });
+        const BN = b.lang === 'en' ? { Enterprise: 'Enterprise', System: 'System', Container: 'Container' } : { Enterprise: 'Empresa', System: 'Sistema', Container: 'Contenedor' };
+        const bk = fn.replace(/_Boundary$/, '');
+        const nd = b.node(alias, { label: clean(label || alias), kind: fn === 'Deployment_Node' || /^Node/.test(fn) ? 'package' : 'group', subtitle: ty ? `[${clean(ty)}]` : (BN[bk] ? `[${BN[bk]}]` : null) });
         nd.frame = /Boundary/.test(fn) ? 'dashed' : null;
         if (!nd.frame) delete nd.frame;
         if (descr) nd.summary = clean(descr);
@@ -1260,8 +1318,8 @@
     for (const r of pending) {
       if (!b.has(r.from) || !b.has(r.to)) { b.warn(`Rel(${r.from}, ${r.to}): elemento desconocido`, r.n); continue; }
       const a = b.get(r.from), c = b.get(r.to);
-      const label = (r.idx ? r.idx + '. ' : '') + r.label;
-      b.edge(a.id, c.id, { kind: /async|event|queue|kafka|amqp/i.test(r.techn) ? 'async' : /http|rest|json|api/i.test(r.techn) ? 'http' : 'call', label, data: r.techn || null, summary: [r.descr, r.bi ? T.bidir : ''].filter(Boolean).join(' ') || null });
+      const label = (r.idx ? r.idx + '. ' : '') + r.label + (r.techn ? ` [${r.techn}]` : '');
+      b.edge(a.id, c.id, { tail: r.bi ? 'arrow' : null, kind: /async|event|queue|kafka|amqp/i.test(r.techn) ? 'async' : /http|rest|json|api/i.test(r.techn) ? 'http' : 'call', label, data: r.techn || null, summary: [r.descr, r.bi ? T.bidir : ''].filter(Boolean).join(' ') || null });
       if (dyn) {
         [a.id, c.id].forEach(id => { if (!dyn.participants.includes(id)) dyn.participants.push(id); });
         dyn.messages.push({ id: 'm' + (dyn.messages.length + 1), from: a.id, to: c.id, label: r.label || '…', kind: a.id === c.id ? 'self' : 'sync', note: r.techn || undefined });
@@ -1283,7 +1341,7 @@
       let m;
       if ((m = /^(group|service)\s+([\w-]+)\s*(?:\(([^)]*)\))?\s*(?:\[([^\]]*)\])?\s*(?:in\s+([\w-]+))?$/.exec(t))) {
         const nd = b.node(m[2], { label: clean(m[4] || m[2]), kind: m[1] === 'group' ? 'group' : kindOf(m[3]) });
-        if (m[1] === 'group') nd.frame = 'dashed'; else nd.shape = 'tile';
+        if (m[1] === 'group') { nd.frame = 'dashed'; if (m[3]) { nd.kind = kindOf(m[3]); b.kinds.add(nd.kind); } } else nd.shape = 'tile';
         if (m[3] && m[1] === 'service') nd.subtitle = m[3];
         if (m[5]) pend.push([nd.id, m[5]]);
         continue;
@@ -1302,7 +1360,7 @@
       const a = end(m[1], m[2]), c = end(m[8], m[9]);
       const bi = m[4] && m[6];
       const [from, to] = m[4] && !m[6] ? [c, a] : [a, c];
-      b.edge(from, to, { kind: 'call', label: m[5] ? clean(m[5]) : null, summary: bi ? T.bidir : (!m[4] && !m[6] ? T.open : null) });
+      b.edge(from, to, { kind: 'call', label: m[5] ? clean(m[5]) : null, summary: bi ? T.bidir : (!m[4] && !m[6] ? T.open : null), head: !m[4] && !m[6] ? 'none' : null, tail: bi ? 'arrow' : null });
     }
   }
 

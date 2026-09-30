@@ -15,7 +15,7 @@
   const DELTA_RANK = { added: 3, removed: 3, modified: 2, unchanged: 0 };
   const DASHED_KINDS = { event: 1, queue: 1, async: 1 };
   /* filas de una secuencia que no son mensajes: marcos, notas, activaciones y fases */
-  const SEQ_META = { phase: 1, block: 1, else: 1, end: 1, note: 1, activate: 1, deactivate: 1 };
+  const SEQ_META = { phase: 1, block: 1, else: 1, end: 1, note: 1, activate: 1, deactivate: 1, create: 1, destroy: 1 };
 
   const STR = {
     es: {
@@ -29,7 +29,7 @@
       viaChildren: 'a través de piezas plegadas', clickHint: 'Clic para el detalle', dblHint: 'doble clic para centrar', expHint: '+N para abrir',
       zoomHint: 'Pulsa en el diagrama o usa ⌘/Ctrl + rueda para hacer zoom', play: 'Reproducir', pause: 'Pausa',
       stop: 'Detener', upShort: 'Depende de', downShort: 'Dependientes', inTour: 'En el recorrido',
-      seeInGraph: 'Ver en el grafo', layouting: 'Recolocando…', noMatch: 'Sin resultados', items: 'piezas',
+      seeInGraph: 'Ver en el grafo', layouting: 'Recolocando…', noMatch: 'Sin resultados', items: 'piezas', item: 'pieza',
       delta: { added: 'nuevo', modified: 'modificado', removed: 'eliminado', unchanged: 'sin cambios' },
       deltaShort: { added: 'NUEVO', modified: 'MOD', removed: 'ELIM', unchanged: '' },
       edgeKinds: { sync: 'llamada', async: 'asíncrono / evento', hero: 'la conexión que importa', animated: 'flujo principal', agg: 'conexiones agrupadas' },
@@ -50,7 +50,7 @@
       viaChildren: 'through collapsed parts', clickHint: 'Click for details', dblHint: 'double-click to center', expHint: '+N to open',
       zoomHint: 'Click the diagram or use ⌘/Ctrl + wheel to zoom', play: 'Play', pause: 'Pause',
       stop: 'Stop', upShort: 'Depends on', downShort: 'Dependents', inTour: 'In the tour',
-      seeInGraph: 'Show in graph', layouting: 'Laying out…', noMatch: 'No matches', items: 'parts',
+      seeInGraph: 'Show in graph', layouting: 'Laying out…', noMatch: 'No matches', items: 'parts', item: 'part',
       delta: { added: 'new', modified: 'modified', removed: 'removed', unchanged: 'unchanged' },
       deltaShort: { added: 'NEW', modified: 'MOD', removed: 'DEL', unchanged: '' },
       edgeKinds: { sync: 'call', async: 'async / event', hero: 'the connection that matters', animated: 'main flow', agg: 'grouped connections' },
@@ -179,6 +179,15 @@
     while (lo < hi) { const m = (lo + hi + 1) >> 1; if (textW(text.slice(0, m) + '…', size, weight, mono) <= max) lo = m; else hi = m - 1; }
     return text.slice(0, lo) + '…';
   }
+  /* una curva suave del primer al último punto, saliendo y llegando en el sentido de la ruta (mindmap) */
+  function smoothPath(pts) {
+    if (pts.length < 2) return '';
+    const a = pts[0], b = pts[pts.length - 1], a1 = pts[1], b1 = pts[pts.length - 2];
+    const L = Math.hypot(b.x - a.x, b.y - a.y) * .45;
+    const u = (p, q) => { const d = Math.hypot(q.x - p.x, q.y - p.y) || 1; return { x: (q.x - p.x) / d, y: (q.y - p.y) / d }; };
+    const da = u(a, a1), db = u(b1, b);
+    return `M${a.x},${a.y} C${a.x + da.x * L},${a.y + da.y * L} ${b.x - db.x * L},${b.y - db.y * L} ${b.x},${b.y}`;
+  }
   function roundedPath(pts, r) {
     if (pts.length < 2) return '';
     let d = `M${pts[0].x},${pts[0].y}`;
@@ -264,6 +273,7 @@
     const lang = STR[opts.lang || spec.lang] ? (opts.lang || spec.lang) : 'es';
     const T = STR[lang];
     const G = buildModel(spec);
+    const nItems = k => `${k} ${k === 1 ? T.item : T.items}`;
     /* nombre legible de un tipo: el de `legend.kinds` si lo trae, si no el propio `kind` */
     const kindName = k => (spec.legend && spec.legend.kinds && spec.legend.kinds[k]) || k;
     const M = G.M;
@@ -366,6 +376,7 @@
       const src = (spec.nodes || []).find(x => x.id === n.id) || {};
       n.status = src.status && STATUSES[src.status] ? src.status : null;
       n.cvar = colorVar(n.color || (n.status ? STATUSES[n.status].color : null));
+      n.fvar = colorVar(n.fill); n.tvar = colorVar(n.textColor);
     }
     const statusCvar = k => colorVar(STATUSES[k] && STATUSES[k].color);
     G.edges.forEach(e => { e.cvar = colorVar(e.color); });
@@ -382,6 +393,11 @@
       return `url(#${id})`;
     };
     const paint = (el, cvar) => { if (cvar) { el.classList.add('has-c'); el.style.setProperty('--gx-c', cvar); } };
+    /* relleno y color de texto propios (fill / textColor, p. ej. de un classDef de Mermaid) */
+    const paintFill = (el, n) => {
+      if (n.fvar) { el.classList.add('has-f'); el.style.setProperty('--gx-f', n.fvar); }
+      if (n.tvar) { el.classList.add('has-t'); el.style.setProperty('--gx-tc', n.tvar); }
+    };
 
     function btn(parent, label, title, cls) {
       const b = h('button', 'gx-btn' + (cls ? ' ' + cls : ''), esc(label), parent);
@@ -535,7 +551,7 @@
         const kids = n.children.filter(c => vis.has(c));
         if (kids.length && exp.has(id)) {
           const top = n.isLane && framed() ? 18 : 46;
-          const hw = textW(n.label, n.isLane ? 11 : 12.5, 700) * (n.isLane ? 1.25 : 1) + textW(n.subtitle || '', 11, 400, !n.isLane) + 120;
+          const hw = textW(n.label, n.isLane ? 11 : 12.5, 700) * (n.isLane ? 1.25 : 1) + textW(n.subtitle || (n.isLane ? '' : nItems(kids.length)), 11, 400, !n.isLane) + 120;
           return {
             id, children: kids.map(make),
             layoutOptions: { 'elk.padding': `[top=${top},left=18,bottom=18,right=18]`, 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${Math.round(hw)},60)` }
@@ -575,7 +591,9 @@
       const down = S.dir === 'down';
       const c1 = rectsOf(res), ctr = (m, id) => { const r = m.get(id); return down ? r.y + r.h / 2 : r.x + r.w / 2; };
       const laneIx = id => { const l = M.get(id).laneId; return l != null ? M.get(l).order : -1; };
-      const back = new Set(vedges.filter(v => c1.has(v.from) && c1.has(v.to) && (
+      /* `layout.backEdges: "route"`: ELK traza también las que vuelven atrás, esquivando piezas y notas */
+      const routeBack = spec.layout && spec.layout.backEdges === 'route';
+      const back = new Set(routeBack ? [] : vedges.filter(v => c1.has(v.from) && c1.has(v.to) && (
         (strictLanes && laneIx(v.to) >= 0 && laneIx(v.from) >= 0 ? laneIx(v.to) < laneIx(v.from) : false) ||
         ((!strictLanes || laneIx(v.to) === laneIx(v.from)) && ctr(c1, v.to) < ctr(c1, v.from) - 12))).map(v => v.id));
       if (back.size) res = await elk.layout(buildGraph(vedges.filter(v => !back.has(v.id))));
@@ -599,6 +617,21 @@
         const lab = (e.labels || [])[0];
         paths.set(e.id, { pts, label: lab ? { x: lab.x, y: lab.y, w: lab.width, h: lab.height } : null });
       });
+      /* ELK lleva cada arista hasta la caja de la pieza; con forma, se recorta hasta su contorno
+         (el rombo, el círculo, el punto del commit), para que no se quede en el aire */
+      if (SHP) {
+        const clipEnd = (pts, i, j, id) => {
+          const n = M.get(id), r = rects.get(id);
+          if (!r || !hasShape(n) || (exp.has(id) && n.children.some(c => vis.has(c)))) return;
+          const hl = SHP.hull(n, r.w, r.h); if (!hl) return;
+          const q = SHP.hit(hl, { x: pts[j].x - r.x, y: pts[j].y - r.y }, { x: pts[i].x - r.x, y: pts[i].y - r.y });
+          if (q) pts[i] = { x: q.x + r.x, y: q.y + r.y };
+        };
+        for (const v of vedges) {
+          const p = paths.get(v.id); if (!p || !p.pts || p.pts.length < 2) continue;
+          clipEnd(p.pts, 0, 1, v.from); clipEnd(p.pts, p.pts.length - 1, p.pts.length - 2, v.to);
+        }
+      }
       let bb = { x: 0, y: 0, w: res.width, h: res.height };
       for (const v of vedges) {
         if (!v.back) continue;
@@ -648,6 +681,7 @@
       const g = s('g', { class: `gx-node gx-leaf gx-shape fam-${tree.family} sh-${n.shape} d-${n.delta}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label}${n.delta !== 'unchanged' ? ' — ' + (T.delta[n.delta] || '') : ''}` });
       paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
       if (n.status) g.classList.add('st-' + String(n.status).replace(/[^\w-]/g, ''));
+      paintFill(g, n);
       /* plegada con hijos: dos copias del contorno detrás, como la pila de una tarjeta */
       const od = n.children.length ? SHP.outlineOf(tree) : null;
       if (od) [8, 4].forEach(k => s('path', { class: 'gx-stack', d: od, transform: `translate(${k},${k})` }, g));
@@ -678,6 +712,7 @@
       if (hasShape(n)) return makeShapeLeaf(n);
       const g = s('g', { class: `gx-node gx-leaf d-${n.delta}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label} — ${T.delta[n.delta] || ''}` });
       paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
+      paintFill(g, n);
       const hasKids = n.children.length > 0;
       const parts = {};
       if (hasKids) { parts.stack2 = s('rect', { class: 'gx-stack', rx: 10 }, g); parts.stack1 = s('rect', { class: 'gx-stack', rx: 10 }, g); }
@@ -759,7 +794,7 @@
         p.title.textContent = cl.lines.length > 1 ? cl.lines[0] : fitText(n.label, r.w - 66 - (chipW ? chipW + 6 : 0), 13, 600);
         p.title2.textContent = cl.lines[1] || '';
         const par = n.parent != null ? M.get(n.parent) : null;
-        const fallback = n.children.length ? `${n.children.length} ${T.items}` : (par && !par.isLane ? par.label : kindName(n.kind));
+        const fallback = n.children.length ? nItems(n.children.length) : (par && !par.isLane ? par.label : kindName(n.kind));
         p.sub.textContent = fitText(n.subtitle || fallback, r.w - 66, 11, 400, true);
       }
       if (p.chip) { p.chipR.setAttribute('x', r.w - chipW - 9); p.chipR.setAttribute('width', chipW); p.chipT.setAttribute('x', r.w - chipW / 2 - 9); }
@@ -809,7 +844,7 @@
         const room = r.w - tx - 42 - (chipW ? chipW + 8 : 0);
         p.title.textContent = fitText(label, room - (n.isLane ? label.length * 1.32 : 0), n.isLane ? 11 : 12.5, 700);
         const tw = textW(p.title.textContent, n.isLane ? 11 : 12.5, 700) + (n.isLane ? p.title.textContent.length * 11 * .12 : 0);
-        const sub = n.isLane ? (n.subtitle || '') : (n.subtitle || `${n.children.length} ${T.items}`);
+        const sub = n.isLane ? (n.subtitle || '') : (n.subtitle || nItems(n.children.length));
         const subRoom = room - tw - 12;
         p.sub.textContent = subRoom > 40 ? fitText(sub, subRoom, 11, 400, !n.isLane) : '';
         p.sub.setAttribute('x', tx + tw + 10);
@@ -831,7 +866,7 @@
       const def = SHP.markers[type], id = `${prefix}-m-${type}-${String(key).replace(/\W/g, '_')}`;
       if (!root.querySelector('#' + id)) {
         const m = s('marker', { id, viewBox: '0 0 20 20', refX: 19.5, refY: 10, markerWidth: 15, markerHeight: 15, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' }, root);
-        const col = MK_COLOR[key] || key, pth = s('path', { d: def.d, class: 'gx-mkx' }, m);
+        const col = key === 'unchanged' && def.fill !== 'solid' ? 'var(--gx-muted)' : (MK_COLOR[key] || key), pth = s('path', { d: def.d, class: 'gx-mkx' }, m);
         pth.style.stroke = def.fill === 'solid' ? 'none' : col;
         pth.style.fill = def.fill === 'solid' ? col : def.fill === 'line' ? 'none' : 'var(--gx-canvas)';
         pth.style.strokeWidth = '1.8';
@@ -854,7 +889,9 @@
     const maxWeight = Math.max(0, ...(spec.edges || []).map(e => typeof e.weight === 'number' ? e.weight : 0));
     function makeEdge(v, path) {
       const g = s('g', { class: `gx-edge d-${v.delta} k-${v.kind}${v.back ? ' back' : ''}${v.hero ? ' hero' : ''}${v.muted ? ' muted' : ''}${v.lifted ? ' lifted' : ''}${DASHED_KINDS[v.kind] ? ' dashed' : ''}`, 'data-id': v.id });
-      const d = path.d || roundedPath(path.pts, 9);
+      const curve = v.list.every(e => e.curve);
+      const d = path.d || (curve ? smoothPath(path.pts) : roundedPath(path.pts, 9));
+      if (curve) g.classList.add('curved');
       s('path', { class: 'gx-ehit', d }, g);
       /* halo en vez de filtro: un filtro sobre una línea recta tiene caja de altura 0 y no se pinta */
       if (v.hero) s('path', { class: 'gx-ehalo', d }, g);
@@ -985,7 +1022,7 @@
           p.stat.setAttribute('transform', `translate(16,${yS + 18})`);
           if (b.h > yS + 30) {
             const put = (txt, cls, k) => { const t = s('text', { class: 'gx-bandsx ' + (cls || ''), x: 0, y: k * 16 }, p.stat); t.textContent = txt; };
-            put(`${c.n} ${T.items}`, '', 0);
+            put(nItems(c.n), '', 0);
             if (c.a && b.h > yS + 46) put(`● ${c.a} ${T.bandAdd}`, 'a', 1);
             if (c.m && b.h > yS + 62) put(`● ${c.m} ${T.bandMod}`, 'm', 2);
           }
@@ -1001,7 +1038,7 @@
         let x = 0;
         const put = (txt, cls) => { const t = s('text', { class: 'gx-bandsx ' + (cls || ''), x }, p.stat); t.textContent = txt; x += textW(txt, 10.5, 600) + 10; };
         if (room > 60) {
-          put(`${c.n} ${T.items}`);
+          put(nItems(c.n));
           if (c.a && x + 60 < b.w - 40) put(`● ${c.a} ${T.bandAdd}`, 'a');
           if (c.m && x + 60 < b.w - 40) put(`● ${c.m} ${T.bandMod}`, 'm');
         }
@@ -1301,7 +1338,7 @@
         <div class="gx-tip-m">${nodePill(n)}<span>${esc(kindLabel(n.kind))}</span>${n.laneId && !n.isLane ? `<span>${esc(M.get(n.laneId).label)}</span>` : ''}</div>
         ${sum ? `<p>${sum}</p>` : ''}
         ${(n.links || []).length ? `<div class="gx-tip-f">${(n.links || []).map(l => resolveLink(l, spec)).filter(Boolean).slice(0, 4).map(l => `<span>${iconHTML(IC[l.kind] ? l.kind : 'url')} ${esc(l.kind === 'node' ? (M.get(l.target) || {}).label || l.label : l.label)}</span>`).join('')}</div>` : ''}
-        <div class="gx-tip-f">${statTxt(n.stat)}${deg ? `<span>${deg.out}↗ ${deg.in}↘</span>` : ''}${n.children.length ? `<span>${n.descendants} ${esc(T.items)}</span>` : ''}</div>
+        <div class="gx-tip-f">${statTxt(n.stat)}${deg ? `<span>${deg.out}↗ ${deg.in}↘</span>` : ''}${n.children.length ? `<span>${esc(nItems(n.descendants))}</span>` : ''}</div>
         <div class="gx-tip-k">${esc(T.clickHint)} · ${esc(T.dblHint)}${n.children.length && !S.expanded.has(n.id) ? ' · ' + esc(T.expHint) : ''}${n.stat && n.stat.files ? ' · ± ' + esc(T.openDiff).toLowerCase() : ''}</div>`;
     }
     function edgeTip(v) {
@@ -1678,17 +1715,24 @@
         return { n, h: lay.h, cl: { w: lay.w, h: lay.h, lay } };
       });
       const headH = Math.max(56, ...heads.map(x => x.h));
-      const rowH = 54, top = headH + 40;
+      /* cajas de `box`: participantes seguidos del mismo carril, con su título encima */
+      const laneOf = p => { const l = M.get(p.node).laneId; return l != null && M.get(l).isLane ? l : null; };
+      const boxPad = P.some(laneOf) ? 28 : 0;
+      const rowH = 54, top = headH + 40 + boxPad;
       let y = top; const rows = [];
+      const spanOf = m => m.kind === 'self' || m.from === m.to ? 220 : Math.max(Math.abs((X.get(m.to) || 0) - (X.get(m.from) || 0)) - 28, 150);
       const noteLines = m => { const ov = overOf(m).filter(id => X.has(id)); return wrapLines(m.label, m.side === 'over' && ov.length > 1 ? Math.max(Math.abs(X.get(ov[ov.length - 1]) - X.get(ov[0])) + 60, 180) : 190, 12); };
       f.messages.forEach(m => {
         if (m.kind === 'phase') { rows.push({ m, y: y + 6 }); y += 40; return; }
         if (m.kind === 'block') { rows.push({ m, y: y + 4 }); y += 34; return; }
         if (m.kind === 'else') { rows.push({ m, y: y + 6 }); y += 30; return; }
         if (m.kind === 'end') { rows.push({ m, y: y + 2 }); y += 16; return; }
-        if (m.kind === 'activate' || m.kind === 'deactivate') { rows.push({ m, y }); return; }
-        if (m.kind === 'note') { const L = noteLines(m); rows.push({ m, y: y + 6, lines: L }); y += L.length * 15 + 30; return; }
-        const hh = rowH + (m.note ? 22 : 0) + (m.kind === 'self' ? 14 : 0); rows.push({ m, y: y + 18 }); y += hh;
+        if (m.kind === 'activate' || m.kind === 'deactivate' || m.kind === 'destroy') { rows.push({ m, y }); return; }
+        if (m.kind === 'create') { const hd = heads[P.findIndex(p => p.node === m.node)]; rows.push({ m, y: y + 6 }); y += (hd ? hd.h : 56) + 18; return; }
+        if (m.kind === 'note') { const L = noteLines(m); rows.push({ m, y: y + 6, lines: L }); y += L.length * 15 + 42; return; }
+        /* una etiqueta larga se parte en líneas en vez de salirse de su tramo */
+        const lines = isMsg(m) ? wrapLines(m.label + (m.repeat ? `  ×${m.repeat}` : ''), spanOf(m), 12).slice(0, 3) : [m.label];
+        const hh = rowH + (m.note ? 22 : 0) + (m.kind === 'self' ? 14 : 0) + (lines.length - 1) * 15; rows.push({ m, y: y + 18 + (lines.length - 1) * 15, lines }); y += hh;
       });
       const H = y + 30, W = 40 + P.length * (colW + 26) + 180;
       const xs = ids => ids.filter(id => X.has(id)).map(id => X.get(id));
@@ -1736,8 +1780,18 @@
         t.textContent = fitText(lab, (bw - 30) / 1.22, 11, 700);
         if (t.textContent !== lab) { const tt = s('title', null, g); tt.textContent = r.m.label; }
       });
+      /* `create`: la cabecera nace en su fila; `destroy`: la línea acaba en el siguiente mensaje, con un aspa */
+      const created = new Map(), destroyed = new Map();
+      rows.forEach((r, i) => {
+        if (r.m.kind === 'create') created.set(r.m.node, r.y);
+        if (r.m.kind === 'destroy') { const nx = rows.slice(i + 1).find(q => isMsg(q.m) && (q.m.from === r.m.node || q.m.to === r.m.node)); destroyed.set(r.m.node, nx ? nx.y + 14 : H - 26); }
+      });
       const gl = s('g', { class: 'gx-seq-life' }, seqWorld);
-      P.forEach(p => s('path', { d: `M${X.get(p.node)},${headH + 16} V${H - 20}` }, gl));
+      P.forEach((p, i) => {
+        const cx = X.get(p.node), y0 = created.has(p.node) ? created.get(p.node) + heads[i].h + 4 : headH + 16 + boxPad, y1 = destroyed.has(p.node) ? destroyed.get(p.node) : H - 20;
+        s('path', { d: `M${cx},${y0} V${y1}` }, gl);
+        if (destroyed.has(p.node)) s('path', { class: 'gx-seq-x', d: `M${cx - 8},${y1 - 8}L${cx + 8},${y1 + 8}M${cx + 8},${y1 - 8}L${cx - 8},${y1 + 8}` }, gl);
+      });
       /* barras de activación: se abren con `+`/activate y se cierran con `-`/deactivate; anidables */
       const gact = s('g', { class: 'gx-seq-acts' }, seqWorld);
       const act = new Map(), bars = [];
@@ -1756,7 +1810,7 @@
       });
       heads.forEach(({ n, h, cl }, i) => {
         const p = P[i], cx = X.get(p.node);
-        const w = cl ? cl.w : colW, x = cx - w / 2, yy = 10 + headH - h;
+        const w = cl ? cl.w : colW, x = cx - w / 2, yy = created.has(n.id) ? created.get(n.id) : 10 + boxPad + headH - h;
         const g = s('g', { class: `gx-seq-p gx-node gx-leaf${cl ? ` gx-shape fam-${SHP.families[n.shape]} sh-${n.shape}` : ''} d-${n.delta}`, transform: `translate(${x},${yy})`, 'data-id': n.id, tabindex: 0, role: 'button' }, seqWorld);
         paint(g, n.cvar);
         if (cl) SHP.render(n, cl.w, cl.h, shapeCtx, cl.lay).children.forEach(c => toSVG(c, g));
@@ -1805,11 +1859,12 @@
         const line = s('path', { class: 'gx-eline', d }, g);
         g._line = line; g._m = m; markSeq(g, false);
         if (m.animated) s('path', { class: 'gx-eflow', d }, g);
-        const nb = s('g', { class: 'gx-seq-n', transform: `translate(${Math.min(x1, x2) - 30},${yy})` }, g);
+        /* el número va del lado de quien envía */
+        const nb = s('g', { class: 'gx-seq-n', transform: `translate(${m.kind === 'self' || x2 >= x1 ? x1 - 30 : x1 + 30},${yy})` }, g);
         s('circle', { r: 10 }, nb); const nt = s('text', { y: 4 }, nb); nt.textContent = i + 1;
         const lx = m.kind === 'self' ? x1 + 54 : (x1 + x2) / 2;
-        const lt = s('text', { class: 'gx-seq-l', x: lx, y: yy - 8, 'text-anchor': m.kind === 'self' ? 'start' : 'middle' }, g);
-        lt.textContent = m.label + (m.repeat ? `  ×${m.repeat}` : '');
+        const L = row.lines || [m.label];
+        L.forEach((ln, k) => { const lt = s('text', { class: 'gx-seq-l', x: lx, y: yy - 8 - (L.length - 1 - k) * 15, 'text-anchor': m.kind === 'self' ? 'start' : 'middle' }, g); lt.textContent = ln; });
         if (m.note) { const nn = s('text', { class: 'gx-seq-note', x: m.kind === 'self' ? x1 + 54 : (x1 + x2) / 2, y: yy + 20, 'text-anchor': m.kind === 'self' ? 'start' : 'middle' }, g); nn.textContent = fitText(m.note, Math.max(Math.abs(x2 - x1) + 60, 260), 11, 400); }
         g._pts = { x1, x2, y: yy };
         g.addEventListener('pointerenter', ev => showTip(`<div class="gx-tip-h"><b>${i + 1}. ${esc(m.label)}</b></div><div class="gx-tip-m"><span>${esc(M.get(m.from).label)} → ${esc(M.get(m.to).label)}</span><span>${esc(m.kind)}</span></div>${m.note ? `<p>${esc(m.note)}</p>` : ''}${m.summary ? `<p>${esc(m.summary)}</p>` : ''}${m.data ? `<p><i>${esc(T.data)}:</i> ${esc(m.data)}</p>` : ''}`, ev));
@@ -1817,6 +1872,21 @@
         g.addEventListener('click', ev => { ev.stopPropagation(); litSeq([m.id]); });
         msgEls.push(g);
       });
+      if (boxPad) {
+        const gb = s('g', { class: 'gx-seq-boxes' }); seqWorld.insertBefore(gb, seqWorld.firstChild);
+        let i = 0;
+        while (i < P.length) {
+          const l = laneOf(P[i]); let j = i; while (j + 1 < P.length && laneOf(P[j + 1]) === l && l) j++;
+          if (l) {
+            const x0 = X.get(P[i].node) - colW / 2 - 12, x1 = X.get(P[j].node) + colW / 2 + 12, lane = M.get(l);
+            const g = s('g', { class: 'gx-seq-box' }, gb); paint(g, lane.cvar);
+            s('rect', { x: x0, y: 2, width: x1 - x0, height: H - 10, rx: 12 }, g);
+            const t = s('text', { class: 'gx-seq-boxt', x: x0 + 14, y: 22 }, g); t.textContent = fitText(String(lane.label || '').toUpperCase(), x1 - x0 - 28, 11, 700);
+            minX = Math.min(minX, x0); maxX = Math.max(maxX, x1);
+          }
+          i = j + 1;
+        }
+      }
       /* una nota a la izquierda del primer participante (o a la derecha del último) amplía el encuadre */
       const bx = Math.min(0, minX - 20), bw = Math.max(W, maxX + 20) - bx;
       S.seq = { f, msgEls, frames: [...gfr.children], bbox: { x: bx, y: 0, w: bw, h: H }, X };

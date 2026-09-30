@@ -637,7 +637,7 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 /* secuencia: marcos de bloque, notas y activaciones */
 .gx-seq-frame { fill: color-mix(in srgb, var(--gx-ink) 2%, transparent); stroke: color-mix(in srgb, var(--gx-ink) 26%, transparent); stroke-width: 1.1; transition: stroke .2s, fill .2s; }
 .gx-seq-rect { fill: color-mix(in srgb, var(--gx-accent) 7%, transparent); stroke: none; }
-.gx-seq-fr.has-c .gx-seq-rect { fill: color-mix(in srgb, var(--gx-c) 24%, transparent); }
+.gx-seq-fr.has-c .gx-seq-rect { fill: color-mix(in srgb, var(--gx-c) 55%, transparent); }
 .gx-seq-ftab { fill: var(--gx-glyph-bg); stroke: color-mix(in srgb, var(--gx-ink) 26%, transparent); stroke-width: 1.1; }
 .gx-seq-ftt { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; fill: var(--gx-ink); }
 .gx-seq-fl { font-size: 11.5px; font-weight: 500; font-style: italic; fill: var(--gx-muted); }
@@ -655,6 +655,20 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 .gx-seq-nt { font-size: 12px; fill: var(--gx-ink); }
 .gx-seq-act rect { fill: var(--gx-card); stroke: var(--gx-muted); stroke-width: 1.2; }
 .gx-seq-act.has-c rect { fill: color-mix(in srgb, var(--gx-c) 16%, var(--gx-card)); stroke: var(--gx-c); }
+
+.gx-rc { font-size: 11px; font-style: italic; fill: var(--gx-muted); }
+/* cajas de `box` en una secuencia y el aspa de `destroy` */
+.gx-seq-box rect { fill: color-mix(in srgb, var(--gx-glyph-bg) 55%, transparent); stroke: var(--gx-line); stroke-width: 1; }
+.gx-seq-box.has-c rect { fill: color-mix(in srgb, var(--gx-c) 11%, transparent); stroke: color-mix(in srgb, var(--gx-c) 38%, transparent); }
+.gx-seq-boxt { font-size: 11px; font-weight: 700; letter-spacing: .1em; fill: var(--gx-muted); }
+.gx-seq-box.has-c .gx-seq-boxt { fill: color-mix(in srgb, var(--gx-c) 70%, var(--gx-ink)); }
+.gx-seq-x { fill: none; stroke: var(--gx-ink); stroke-width: 2.2; stroke-linecap: round; }
+/* relleno y texto propios de una pieza (fill / textColor): mandan sobre los tonos derivados del color */
+.gx-node.gx-leaf.has-f > .gx-card, .gx-node.gx-leaf.has-f > .gx-shhead { fill: var(--gx-f); }
+.gx-node.has-t .gx-t, .gx-node.has-t .gx-st, .gx-node.has-t .gx-nt, .gx-node.has-t .gx-rn, .gx-node.has-t .gx-rt, .gx-node.has-t .gx-tl, .gx-node.has-t .gx-dl,
+.gx-node.has-t .gx-c4n, .gx-node.has-t .gx-c4s, .gx-node.has-t .gx-c4d, .gx-node.has-t .gx-tha { fill: var(--gx-tc); }
+/* aristas curvas (mindmap): más gruesas y redondeadas, del color de su rama */
+.gx-edge.curved .gx-eline { stroke-width: 2.3; stroke-linecap: round; opacity: .9; }
 
 @media (prefers-reduced-motion: reduce) {
   .gx-pulse, .gx-bar-live { animation: none; }

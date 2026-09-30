@@ -116,6 +116,23 @@
       }
     };
   }
+  /* vértices de las formas poligonales: el contorno y el casco (donde se anclan las aristas) salen de aquí */
+  const PTS = {
+    hexagon: (w, h) => { const k = h * .28; return [[k, 0], [w - k, 0], [w, h / 2], [w - k, h], [k, h], [0, h / 2]]; },
+    decision: (w, h) => [[w / 2, 0], [w, h / 2], [w / 2, h], [0, h / 2]],
+    io: (w, h) => [[16, 0], [w, 0], [w - 16, h], [0, h]],
+    'io-l': (w, h) => [[0, 0], [w - 16, 0], [w, h], [16, h]],
+    trapezoid: (w, h) => [[16, 0], [w - 16, 0], [w, h], [0, h]],
+    'trapezoid-t': (w, h) => [[0, 0], [w, 0], [w - 16, h], [16, h]],
+    flag: (w, h) => [[0, 0], [w, 0], [w, h], [0, h], [17, h / 2]],
+    triangle: (w, h) => [[w / 2, 0], [w, h], [0, h]],
+    'triangle-down': (w, h) => [[0, 0], [w, 0], [w / 2, h]],
+    'arrow-right': (w, h) => [[0, h * .2], [w - h * .5, h * .2], [w - h * .5, 0], [w, h / 2], [w - h * .5, h], [w - h * .5, h * .8], [0, h * .8]],
+    'arrow-left': (w, h) => [[w, h * .2], [h * .5, h * .2], [h * .5, 0], [0, h / 2], [h * .5, h], [h * .5, h * .8], [w, h * .8]],
+    'arrow-up': (w, h) => [[w * .2, h], [w * .2, w * .5], [0, w * .5], [w / 2, 0], [w, w * .5], [w * .8, w * .5], [w * .8, h]],
+    'arrow-down': (w, h) => [[w * .2, 0], [w * .2, h - w * .5], [0, h - w * .5], [w / 2, h], [w, h - w * .5], [w * .8, h - w * .5], [w * .8, 0]],
+    choice: (w, h) => [[w / 2, 1], [w - 1, h / 2], [w / 2, h - 1], [1, h / 2]]
+  };
   const pad = (w0, h0, px, py, minW, maxW, minH) => ({ w: clamp(w0 + px, minW || 96, maxW || 260), h: Math.max(minH || 46, h0 + py) });
 
   const SHAPES = {
@@ -137,31 +154,31 @@
     }),
     circle: flow({ maxW: 118, maxLines: 3, fit: (w, h) => { const d = clamp(Math.max(w, h * 1.25) + 30, 58, 176); return { w: d, h: d }; }, outline: (w) => circleD(w / 2, w / 2, w / 2) }),
     dcircle: flow({ maxW: 110, maxLines: 3, fit: (w, h) => { const d = clamp(Math.max(w, h * 1.25) + 40, 64, 184); return { w: d, h: d }; }, outline: (w) => circleD(w / 2, w / 2, w / 2), lines: (w) => circleD(w / 2, w / 2, w / 2 - 5) }),
-    hexagon: flow({ fit: (w, h) => { const hh = Math.max(46, h + 26); return { w: clamp(w + hh * .56 + 26, 110, 290), h: hh }; }, outline: (w, h) => { const k = h * .28; return poly([[k, 0], [w - k, 0], [w, h / 2], [w - k, h], [k, h], [0, h / 2]]); } }),
+    hexagon: flow({ fit: (w, h) => { const hh = Math.max(46, h + 26); return { w: clamp(w + hh * .56 + 26, 110, 290), h: hh }; }, outline: (w, h) => poly(PTS.hexagon(w, h)) }),
     decision: flow({
       maxW: 142,
       fit: (w, h) => { const W = clamp(w * 1.55 + 46, 104, 290); return { w: W, h: clamp(Math.max(h * 1.6 + 38, W * .5), 72, 160) }; },
-      outline: (w, h) => poly([[w / 2, 0], [w, h / 2], [w / 2, h], [0, h / 2]]),
+      outline: (w, h) => poly(PTS.decision(w, h)),
       box: (w, h) => ({ x: w * .2, y: h * .2, w: w * .6, h: h * .6 })
     }),
-    io: flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly([[16, 0], [w, 0], [w - 16, h], [0, h]]) }),
-    'io-l': flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly([[0, 0], [w - 16, 0], [w, h], [16, h]]) }),
-    trapezoid: flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly([[16, 0], [w - 16, 0], [w, h], [0, h]]) }),
-    'trapezoid-t': flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly([[0, 0], [w, 0], [w - 16, h], [16, h]]) }),
-    flag: flow({ fit: (w, h) => pad(w, h, 52, 26), outline: (w, h) => poly([[0, 0], [w, 0], [w, h], [0, h], [17, h / 2]]), box: (w, h) => ({ x: 14, y: 0, w: w - 14, h }) }),
+    io: flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly(PTS.io(w, h)) }),
+    'io-l': flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly(PTS['io-l'](w, h)) }),
+    trapezoid: flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly(PTS.trapezoid(w, h)) }),
+    'trapezoid-t': flow({ fit: (w, h) => pad(w, h, 64, 26, 110, 290), outline: (w, h) => poly(PTS['trapezoid-t'](w, h)) }),
+    flag: flow({ fit: (w, h) => pad(w, h, 52, 26), outline: (w, h) => poly(PTS.flag(w, h)), box: (w, h) => ({ x: 14, y: 0, w: w - 14, h }) }),
     document: flow({ fit: (w, h) => pad(w, h, 38, 38, 96, 260, 58), outline: (w, h) => `M0,0H${w}V${h - 10}C${w * .75},${h - 23} ${w * .25},${h + 3} 0,${h - 10}Z`, box: (w, h) => ({ x: 0, y: 0, w, h: h - 10 }) }),
     cloud: flow({ fit: (w, h) => pad(w, h, 66, 44, 120, 300, 70), outline: (w, h) => cloudD(w, h), box: (w, h) => ({ x: w * .15, y: h * .15, w: w * .7, h: h * .7 }) }),
     bang: flow({ fit: (w, h) => pad(w, h, 78, 56, 130, 300, 84), outline: (w, h) => bangD(w, h), box: (w, h) => ({ x: w * .2, y: h * .2, w: w * .6, h: h * .6 }) }),
-    triangle: flow({ maxW: 130, fit: (w, h) => { const W = clamp(w * 1.7 + 50, 110, 280); return { w: W, h: Math.max(h + W * .34, 70) }; }, outline: (w, h) => poly([[w / 2, 0], [w, h], [0, h]]), box: (w, h) => ({ x: w * .2, y: h * .42, w: w * .6, h: h * .55 }) }),
-    'triangle-down': flow({ maxW: 130, fit: (w, h) => { const W = clamp(w * 1.7 + 50, 110, 280); return { w: W, h: Math.max(h + W * .34, 70) }; }, outline: (w, h) => poly([[0, 0], [w, 0], [w / 2, h]]), box: (w, h) => ({ x: w * .2, y: h * .04, w: w * .6, h: h * .55 }) }),
+    triangle: flow({ maxW: 130, fit: (w, h) => { const W = clamp(w * 1.7 + 50, 110, 280); return { w: W, h: Math.max(h + W * .34, 70) }; }, outline: (w, h) => poly(PTS.triangle(w, h)), box: (w, h) => ({ x: w * .2, y: h * .42, w: w * .6, h: h * .55 }) }),
+    'triangle-down': flow({ maxW: 130, fit: (w, h) => { const W = clamp(w * 1.7 + 50, 110, 280); return { w: W, h: Math.max(h + W * .34, 70) }; }, outline: (w, h) => poly(PTS['triangle-down'](w, h)), box: (w, h) => ({ x: w * .2, y: h * .04, w: w * .6, h: h * .55 }) }),
     hourglass: flow({ maxW: 120, fit: (w, h) => { const W = clamp(w + 50, 90, 220); return { w: W, h: Math.max(h + 44, 70) }; }, outline: (w, h) => poly([[0, 0], [w, 0], [0, h], [w, h]]), box: (w, h) => ({ x: 0, y: h * .3, w, h: h * .4 }) }),
     delay: flow({ fit: (w, h) => pad(w, h, 50, 26), outline: (w, h) => `M0,0H${w - h / 2}A${h / 2},${h / 2} 0 0 1 ${w - h / 2},${h}H0Z`, box: (w, h) => ({ x: 0, y: 0, w: w - h * .3, h }) }),
     card: flow({ fit: (w, h) => pad(w, h, 40, 26), outline: (w, h) => poly([[15, 0], [w, 0], [w, h], [0, h], [0, 15]]) }),
     text: flow({ fit: (w, h) => pad(w, h, 16, 12, 40, 280, 30), outline: (w, h) => rectD(w, h, 6), ghost: true }),
-    'arrow-right': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly([[0, h * .2], [w - h * .5, h * .2], [w - h * .5, 0], [w, h / 2], [w - h * .5, h], [w - h * .5, h * .8], [0, h * .8]]), box: (w, h) => ({ x: 4, y: 0, w: w - h * .5, h }) }),
-    'arrow-left': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly([[w, h * .2], [h * .5, h * .2], [h * .5, 0], [0, h / 2], [h * .5, h], [h * .5, h * .8], [w, h * .8]]), box: (w, h) => ({ x: h * .5, y: 0, w: w - h * .5 - 4, h }) }),
-    'arrow-up': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly([[w * .2, h], [w * .2, w * .5], [0, w * .5], [w / 2, 0], [w, w * .5], [w * .8, w * .5], [w * .8, h]]), box: (w, h) => ({ x: w * .2, y: w * .45, w: w * .6, h: h - w * .45 }) }),
-    'arrow-down': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly([[w * .2, 0], [w * .2, h - w * .5], [0, h - w * .5], [w / 2, h], [w, h - w * .5], [w * .8, h - w * .5], [w * .8, 0]]), box: (w, h) => ({ x: w * .2, y: 0, w: w * .6, h: h - w * .45 }) })
+    'arrow-right': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly(PTS['arrow-right'](w, h)), box: (w, h) => ({ x: 4, y: 0, w: w - h * .5, h }) }),
+    'arrow-left': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly(PTS['arrow-left'](w, h)), box: (w, h) => ({ x: h * .5, y: 0, w: w - h * .5 - 4, h }) }),
+    'arrow-up': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-up'](w, h)), box: (w, h) => ({ x: w * .2, y: w * .45, w: w * .6, h: h - w * .45 }) }),
+    'arrow-down': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-down'](w, h)), box: (w, h) => ({ x: w * .2, y: 0, w: w * .6, h: h - w * .45 }) })
   };
 
   /* ---------- nota ---------- */
@@ -186,7 +203,7 @@
   SHAPES.start = { family: 'dot', measure: () => ({ w: 26, h: 26 }), render: (n, w, h) => dotBox(w, h, [P(circleD(w / 2, h / 2, 9), 'gx-card gx-shfill')]) };
   SHAPES.end = { family: 'dot', measure: () => ({ w: 28, h: 28 }), render: (n, w, h) => dotBox(w, h, [P(circleD(w / 2, h / 2, 12), 'gx-card gx-shring'), P(circleD(w / 2, h / 2, 6.5), 'gx-shfill2')]) };
   SHAPES.junction = { family: 'dot', measure: () => ({ w: 16, h: 16 }), render: (n, w, h) => dotBox(w, h, [P(circleD(w / 2, h / 2, 5.5), 'gx-card gx-shfill')]) };
-  SHAPES.choice = { family: 'dot', measure: () => ({ w: 34, h: 34 }), render: (n, w, h) => dotBox(w, h, [P(poly([[w / 2, 1], [w - 1, h / 2], [w / 2, h - 1], [1, h / 2]]), 'gx-card')]) };
+  SHAPES.choice = { family: 'dot', measure: () => ({ w: 34, h: 34 }), render: (n, w, h) => dotBox(w, h, [P(poly(PTS.choice(w, h)), 'gx-card')]) };
   /* barra de bifurcación: perpendicular al sentido del diagrama */
   SHAPES.fork = {
     family: 'dot',
@@ -239,15 +256,17 @@
         const visW = kind === 'class' && rows.some(r => r.vis) ? 14 : 0;
         const mono = kind === 'class';
         let rowW = 0;
-        rows.forEach(r => { rowW = Math.max(rowW, keyW + visW + tw(ctx, r.name, 12, 500, mono) + (r.type ? tw(ctx, r.type, 11, 400, true) + 22 : 0)); });
+        rows.forEach(r => { rowW = Math.max(rowW, keyW + visW + tw(ctx, r.name, 12, 500, mono) + (r.comment ? tw(ctx, r.comment, 11, 400) + 12 : 0) + (r.type ? tw(ctx, r.type, 11, 400, true) + 22 : 0)); });
         const headW = tw(ctx, n.label, 13, 700) + (kind === 'table' ? 52 : 28);
-        const w = clamp(Math.max(rowW + 28, headW, anno ? tw(ctx, anno, 10.5, 500) + 24 : 0), 170, 340);
+        const w = clamp(Math.max(rowW + 28, headW, anno ? tw(ctx, anno, 10.5, 500) + 24 : 0), kind === 'table' && !rows.length ? 120 : 170, 380);
         const sections = kind === 'class' ? 2 : 1;
-        const body = rows.length ? rows.length * ROW + (more ? ROW : 0) + 8 + (kind === 'class' && rows.some(r => r.section === 'method') && rows.some(r => r.section !== 'method') ? 7 : 0) : (sections === 2 ? 26 : 10);
+        const body = rows.length ? rows.length * ROW + (more ? ROW : 0) + 8 + (kind === 'class' && rows.some(r => r.section === 'method') && rows.some(r => r.section !== 'method') ? 7 : 0) : (sections === 2 ? 26 : kind === 'table' ? 0 : 10);
         return { w: Math.round(w), h: headH + body, rows, more, headH, keyW, visW, anno, mono };
       },
       render(n, w, h, ctx, lay) {
-        const H = lay.headH, kids = [P(rectD(w, h, 9), 'gx-card'), P(`M0,${H}V9A9,9 0 0 1 9,0H${w - 9}A9,9 0 0 1 ${w},9V${H}Z`, 'gx-shhead'), P(`M0,${H}H${w}`, 'gx-shl')];
+        const H = lay.headH, empty = kind === 'table' && !lay.rows.length;
+        const kids = [P(rectD(w, h, 9), 'gx-card'), P(empty ? rectD(w, h, 9) : `M0,${H}V9A9,9 0 0 1 9,0H${w - 9}A9,9 0 0 1 ${w},9V${H}Z`, 'gx-shhead')];
+        if (!empty) kids.push(P(`M0,${H}H${w}`, 'gx-shl'));
         if (kind === 'table') {
           kids.push(E('glyph', { kind: n.kind || 'table', x: 10, y: 8, size: 21 }));
           kids.push(T(40, 23, fit(ctx, n.label, w - 52, 13, 700), 'gx-t gx-tht', 'start'));
@@ -264,7 +283,9 @@
           if (lay.keyW) { if (r.keys) { const kw = tw(ctx, r.keys, 9, 700) + 8; row.push(E('rect', { class: 'gx-key k-' + String(r.keys).split(/[\s,]+/)[0].toLowerCase(), x, y: y + 4, width: kw, height: 13, rx: 3 }), T(x + kw / 2, y + 14, r.keys, 'gx-keyt')); } x += lay.keyW; }
           if (lay.visW) { if (r.vis) row.push(T(x + 3, y + 15, r.vis, 'gx-vis v-' + (VIS[r.vis] || 'pkg'))); x += lay.visW; }
           const typeW = r.type ? Math.min(tw(ctx, r.type, 11, 400, true), (w - x) * .45) : 0;
-          row.push(T(x, y + 15, fit(ctx, r.name, w - x - 14 - (typeW ? typeW + 10 : 0), 12, 500, lay.mono), 'gx-rn' + (r.static ? ' gx-static' : '') + (r.abstract ? ' gx-abs' : '') + (lay.mono ? ' mono' : ''), 'start'));
+          const room = w - x - 14 - (typeW ? typeW + 10 : 0), nameTxt = fit(ctx, r.name, room, 12, 500, lay.mono);
+          row.push(T(x, y + 15, nameTxt, 'gx-rn' + (r.static ? ' gx-static' : '') + (r.abstract ? ' gx-abs' : '') + (lay.mono ? ' mono' : ''), 'start'));
+          if (r.comment) { const nx = x + tw(ctx, nameTxt, 12, 500, lay.mono) + 8, left = room - (nx - x); if (left > 24) row.push(T(nx, y + 15, fit(ctx, r.comment, left, 11, 400), 'gx-rc', 'start')); }
           if (r.type) row.push(T(w - 12, y + 15, fit(ctx, r.type, typeW, 11, 400, true), 'gx-rt', 'end'));
           kids.push(E('g', { class: 'gx-trow' }, row));
           y += ROW;
@@ -320,7 +341,8 @@
       render(n, w, h, ctx, lay) {
         const t = lay.top;
         let outline;
-        if (variant === 'person') outline = rectD(w, h - 22, 12, 0, 22) + circleD(w / 2, 22, 21);
+        /* persona: la cabeza entera encima del cuerpo, separada por un hueco (sin borde que la cruce) */
+        if (variant === 'person') outline = circleD(w / 2, 17, 15) + rectD(w, h - 36, 12, 0, 36);
         else if (variant === 'db') outline = `M0,10A${w / 2},10 0 0 1 ${w},10V${h - 10}A${w / 2},10 0 0 1 0,${h - 10}Z`;
         else if (variant === 'queue') outline = `M12,0H${w - 12}A12,${h / 2} 0 0 1 ${w - 12},${h}H12A12,${h / 2} 0 0 1 12,0Z`;
         else outline = rectD(w, h, 9);
@@ -435,6 +457,39 @@
     const out = sh.render(n, w, h, ctx, lay);
     return { family: sh.family, children: out.children, chrome: out.chrome };
   }
+  /* Casco de una forma: dónde deben acabar las aristas. ELK las lleva hasta la caja; el motor las
+     recorta contra esto para que toquen el rombo, el círculo o el punto, no el aire de alrededor.
+     Las formas rectangulares no lo necesitan (su caja es su contorno). */
+  const ell = (cx, cy, rx, ry) => ({ ellipse: [cx, cy, rx, ry] });
+  const HULLS = {
+    circle: (w, h) => ell(w / 2, h / 2, w / 2, h / 2), dcircle: (w, h) => ell(w / 2, h / 2, w / 2, h / 2),
+    cloud: (w, h) => ell(w / 2, h / 2, w / 2 - 5, h / 2 - 4), bang: (w, h) => ell(w / 2, h / 2, w * .43, h * .43),
+    start: (w, h) => ell(w / 2, h / 2, 9, 9), end: (w, h) => ell(w / 2, h / 2, 12, 12), junction: (w, h) => ell(w / 2, h / 2, 5.5, 5.5),
+    commit: (w, h) => ell(w / 2, h / 2, 10, 10), 'commit-merge': (w, h) => ell(w / 2, h / 2, 12, 12), 'commit-highlight': (w, h) => ({ poly: [[w / 2 - 10, h / 2 - 10], [w / 2 + 10, h / 2 - 10], [w / 2 + 10, h / 2 + 10], [w / 2 - 10, h / 2 + 10]] }), 'commit-reverse': (w, h) => ell(w / 2, h / 2, 10, 10),
+    tile: w => ({ poly: [[w / 2 - 30, 4], [w / 2 + 30, 4], [w / 2 + 30, 64], [w / 2 - 30, 64]] }),
+    actor: w => ({ poly: [[w / 2 - 19, 3], [w / 2 + 19, 3], [w / 2 + 19, 70], [w / 2 - 19, 70]] })
+  };
+  Object.keys(PTS).forEach(k => { if (!HULLS[k]) HULLS[k] = (w, h) => ({ poly: PTS[k](w, h) }); });
+  function hull(n, w, h) { const f = HULLS[n && n.shape]; return f ? f(w, h) : null; }
+  /* primer corte de la recta que va de `a` a `b` (y más allá) con el casco, en coordenadas del casco */
+  function hit(hl, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y; let best = Infinity;
+    if (hl.ellipse) {
+      const [cx, cy, rx, ry] = hl.ellipse, ox = (a.x - cx) / rx, oy = (a.y - cy) / ry, ex = dx / rx, ey = dy / ry;
+      const A = ex * ex + ey * ey, B = 2 * (ox * ex + oy * ey), Cc = ox * ox + oy * oy - 1, D = B * B - 4 * A * Cc;
+      if (A > 0 && D >= 0 && Cc > 0) { const t = (-B - Math.sqrt(D)) / (2 * A); if (t > 1e-6) best = t; }
+    } else if (hl.poly) {
+      const pts = hl.poly;
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length], sx = x2 - x1, sy = y2 - y1, den = dx * sy - dy * sx;
+        if (Math.abs(den) < 1e-9) continue;
+        const t = ((x1 - a.x) * sy - (y1 - a.y) * sx) / den, u = ((x1 - a.x) * dy - (y1 - a.y) * dx) / den;
+        if (t > 1e-6 && u >= -1e-6 && u <= 1 + 1e-6 && t < best) best = t;
+      }
+    }
+    return best === Infinity ? null : { x: a.x + dx * best, y: a.y + dy * best };
+  }
+
   /* contorno solo (lo usa el motor para las copias apiladas de una pieza con hijos plegados) */
   function outlineOf(tree) { const c = tree.children.find(k => /\bgx-card\b/.test(k.attrs.class || '')); return c && c.tag === 'path' ? c.attrs.d : null; }
 
@@ -457,5 +512,5 @@
     open: { d: 'M4,4 L19,10 L4,16', fill: 'line', w: 20 }
   };
 
-  return { has: n => !!SHAPES[n], names, measure, render, outlineOf, markers: MARKERS, wrap, fit, estW, families: names.reduce((o, k) => (o[k] = SHAPES[k].family, o), {}) };
+  return { has: n => !!SHAPES[n], names, measure, render, outlineOf, hull, hit, markers: MARKERS, wrap, fit, estW, families: names.reduce((o, k) => (o[k] = SHAPES[k].family, o), {}) };
 });

@@ -138,7 +138,7 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `initialDepth` | nivel al abrir; por defecto 1 |
 | | `initialView` | `"flow:<id>"` — abre en ese flujo en vez de en el grafo |
 | | `graphTab` | `false` — solo secuencia: sin vista de grafo; las piezas son solo participantes y pulsarlas ilumina sus mensajes |
-| | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs`: como Mermaid) |
+| | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order", "backEdges": "route" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs`: como Mermaid); `route`: ELK traza también las aristas que vuelven atrás (esquivan piezas) en vez de arcos |
 | | `collapsed` | ids que arrancan plegados aunque su nivel diga lo contrario |
 | | `statuses` | estados propios `{ "<clave>": { "label", "color" } }` — ver §4.1 |
 | | `legend` | `{ "edges": [{ "label", "style", "color" }], "kinds": { "<kind>": "etiqueta" }, "delta": false }` — ver §4.1 |
@@ -159,6 +159,7 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `shape` | una forma de §7.1 en vez de la tarjeta (`decision`, `table`, `bar`…) |
 | | `rows` · `span` · `score` · `value` · `badge` · `avatar` · `head` | los datos que usa su forma (§7.1) |
 | | `frame` | en un contenedor: `dashed` · `dotted` — marco discontinuo (fronteras de C4, grupos de arquitectura) |
+| | `fill` · `textColor` | relleno y color de texto propios (como `color`, un color o `{ light, dark }`); el de un `classDef` de Mermaid |
 | arista | `id` `from` `to` | |
 | | `kind` | `call http rpc event queue data dependency render async other` (`event`/`queue`/`async` van discontinuas) |
 | | `label` `summary` `data` `trigger` | qué viaja y qué lo dispara aparecen en el tooltip y el panel |
@@ -168,12 +169,14 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `head` · `tail` | la punta de cada extremo: `arrow` (defecto en `head`), `none`, `triangle`, `diamond`, `odiamond`, `circle`, `cross`, `open`, `lollipop`, `one`, `zero-one`, `one-many`, `zero-many` |
 | | `headLabel` · `tailLabel` | texto junto a cada extremo (cardinalidades: `1`, `0..*`) |
 | | `weight` | un número: el grosor de la arista crece con él (sankey) |
+| | `curve` | `true`: una curva suave en vez de la ruta ortogonal (las ramas de un mindmap) |
 | flujo | `id` `title` `summary` `participants[]` `messages[]` | una secuencia, en su propia pestaña con «Reproducir» |
 | mensaje | `id` `from` `to` `label` `kind` | `sync async return self` (`self` exige `from === to`) · `phase`: una banda con `label` que agrupa lo que sigue, sin `from`/`to` ni número |
 | | `head` · `tail` · `activate` · `deactivate` | punta (`line` sin punta, `open`, `cross`), doble sentido, y el participante que se activa o se desactiva |
 | fila de secuencia | `kind`: `block` `else` `end` | un marco (`block`: `block` = `loop`/`alt`/`par`…, `title`, `label`) partido por `else` y cerrado por `end` |
 | | `kind`: `note` | `over: [ids]`, `side`: `over` · `left` · `right`, `label` — una nota como caja |
 | | `kind`: `activate` · `deactivate` | `node` — abre o cierra una barra de activación |
+| | `kind`: `create` · `destroy` | `node` — la cabecera nace en esa fila; la línea de vida acaba, con un aspa, en el siguiente mensaje |
 | | `summary` `data` | salen en el tooltip del mensaje |
 | | `note` `repeat` `animated` `color` | |
 | recorrido | `tour.title` `tour.steps[]` | |
@@ -433,7 +436,8 @@ la clase `gx-card`: hover, iluminado, selección, color de pieza y deltas funcio
 | C4 | `person c4 c4-db c4-queue` | `subtitle` ([tipo]), `summary` (descripción dentro), `color` (relleno) |
 | tarjetas con datos | `bar` (gantt), `score` (journey), `ticket` (kanban), `flowbar` (sankey), `block` (treemap) | `span: { start, end, milestone, live }`, `score` 1–5, `badge` + `avatar`, `value` |
 
-Las barras de gantt comparten una pista de fechas (el rango del diagrama entero), con la tarea en
+Las aristas acaban en el contorno de la forma (el vértice del rombo, el borde del círculo, el punto
+del commit), no en su caja. Las barras de gantt comparten una pista de fechas (el rango del diagrama entero), con la tarea en
 curso rayada en movimiento y el día de hoy marcado; el HEAD de cada rama de git late; las filas de
 una tabla se iluminan al pasar. Todo respeta `prefers-reduced-motion`.
 

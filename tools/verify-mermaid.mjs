@@ -47,21 +47,22 @@ const CHECKS = {
     ok(f.messages.some(m => m.activate === 'A') && f.messages.some(m => m.deactivate === 'A'), '+/- → barras de activación');
     ok(f.messages.some(m => m.head === 'cross') && f.messages.some(m => m.head === 'open'), 'puntas de mensaje: aspa y abierta');
     ok(f.messages.filter(m => m.from).map(m => m.id).join() === Array.from({ length: 13 }, (_, i) => 'm' + (i + 1)).join(), 'los mensajes se numeran m1…m13 aunque haya marcos y notas entre ellos');
-    ok(f.messages.some(m => m.kind === 'self') && f.messages.some(m => m.kind === 'return') && f.messages.some(m => m.kind === 'async'), 'self, return (-->>) y async (-))');
+    ok(f.messages.some(m => m.kind === 'self') && f.messages.some(m => m.kind === 'return') && f.messages.some(m => m.kind === 'sync' && m.head === 'open'), 'self, return (-->>) y -) continua con punta abierta');
     ok(f.messages.some(m => m.kind === 'note' && m.side === 'right' && /redirección/.test(m.label)), 'Note → caja de nota a su lado');
     ok((node(s, 'A').links || []).length === 1, 'link A: … @ url');
   },
   class: s => {
     ok(node(s, 'Perro').parent === 'Dominio', 'namespace → contenedor');
-    ok(edge(s, 'Perro', 'Animal') && edge(s, 'Perro', 'Nadador').kind === 'async', 'herencia hacia el padre; realización discontinua');
-    ok(/Perro se compone de Collar/.test((edge(s, 'Collar', 'Perro') || {}).summary || ''), 'composición: el todo es el extremo con marca');
+    ok(edge(s, 'Animal', 'Perro').tail === 'triangle' && edge(s, 'Nadador', 'Perro').kind === 'async', 'la herencia baja del padre, con el triángulo en él; realización discontinua');
+    ok(/Perro se compone de Collar/.test((edge(s, 'Perro', 'Collar') || {}).summary || ''), 'composición: el todo va primero y lleva la marca');
+    ok(!edge(s, 'Animal', 'Perro').label && edge(s, 'Perro', 'Collar').label === 'lleva', 'sin etiqueta inventada; la de Mermaid se conserva');
     ok(node(s, 'Collar').label === 'Collar<T>' && node(s, 'Veterinario').label === 'Clínica veterinaria', 'genéricos ~T~ y etiqueta ["…"]');
     ok(/hacerRuido/.test(node(s, 'Animal').details_html) && node(s, 'Animal').subtitle === '«abstract»', 'miembros en el panel y anotación');
     ok(node(s, 'Nadador').subtitle === '«interface»', '<<interface>> suelto');
     ok(s.nodes.some(n => n.shape === 'note' && n.label === 'El mejor amigo') && s.edges.some(e => e.to === 'Perro' && e.head === 'none'), 'note for → nota unida a su clase');
     ok(node(s, 'Animal').shape === 'class' && node(s, 'Animal').rows.some(r => r.section === 'method' && r.name === 'hacerRuido()' && r.type === 'void' && r.abstract), 'caja UML: filas con sección, tipo y abstracto');
-    ok(edge(s, 'Perro', 'Animal').head === 'triangle' && edge(s, 'Collar', 'Perro').head === 'diamond' && edge(s, 'Animal', 'Veterinario').head === 'odiamond', 'puntas UML: triángulo, rombo lleno y hueco');
-    ok(edge(s, 'Collar', 'Perro').headLabel === '1' && edge(s, 'Collar', 'Perro').tailLabel === '0..1', 'cardinalidades en los extremos');
+    ok(edge(s, 'Animal', 'Perro').head === 'none' && edge(s, 'Perro', 'Collar').tail === 'diamond' && edge(s, 'Veterinario', 'Animal').tail === 'odiamond' && edge(s, 'Perro', 'Hueso').head === 'arrow', 'puntas UML: triángulo, rombo lleno y hueco, flecha de dependencia');
+    ok(edge(s, 'Perro', 'Collar').tailLabel === '1' && edge(s, 'Perro', 'Collar').headLabel === '0..1', 'cardinalidades en los extremos');
   },
   state: s => {
     ok(node(s, 'start').kind === 'start' && node(s, 'end').kind === 'end', '[*] → inicio y fin');
@@ -88,10 +89,11 @@ const CHECKS = {
   gantt: s => {
     const b = s.nodes.find(n => n.label === 'Backend'), i = s.nodes.find(n => n.label === 'Integración');
     ok(b.status === 'crit' && s.statuses.done && s.statuses.active, 'done/active/crit → estados');
-    ok((b.metrics || []).some(m => m.value === '2026-09-13'), 'fechas calculadas (after + duración)');
+    ok((b.metrics || []).some(m => m.value === '2026-09-17'), 'fechas calculadas (after + duración)');
+    ok(s.nodes.find(n => n.label === 'Investigación').span.end === '2026-09-08', 'excludes weekends: 5 días desde el martes 1 acaban el martes 8, como en Mermaid');
     ok(s.edges.filter(e => e.to === i.id).length === 2, 'after dev1 dev2 → dos dependencias');
     ok(s.nodes.some(n => n.kind === 'milestone' && n.span && n.span.milestone), 'hito');
-    ok(b.shape === 'bar' && b.span.start === '2026-09-13' && s.nodes.some(n => n.span && n.span.live), 'barras con su intervalo; la activa, en movimiento');
+    ok(b.shape === 'bar' && b.span.start === '2026-09-17' && s.nodes.some(n => n.span && n.span.live), 'barras con su intervalo; la activa, en movimiento');
   },
   journey: s => {
     ok(s.nodes.filter(n => n.kind === 'job').every(n => n.status && n.metrics[0].label), 'puntuación → estado y métrica con nombre');
@@ -180,7 +182,7 @@ ok(s.nodes.some(n => n.id === 'root'), 'una pieza puede llamarse «root»');
 s = one('sequenceDiagram\nAlice Smith->>Bob: hola\nBob->>Bob: piensa');
 ok(s.flows[0].messages[1].kind === 'self' && s.nodes[0].label === 'Alice Smith', 'participantes con espacios y automensaje');
 s = one('classDiagram\nclassC --* classD\nclassI -- classJ');
-ok(/classD se compone de classC/.test(s.edges[0].summary), 'C --* D: D es el todo');
+ok(/classD se compone de classC/.test(s.edges[0].summary) && s.edges[0].from === 'classD' && s.edges[0].tail === 'diamond', 'C --* D: D es el todo y va primero');
 s = one('erDiagram\nCAR one or more to zero or more PERSON : drives');
 ok(/cada PERSON, con uno o más CAR/.test(s.edges[0].summary), 'cardinalidad escrita en palabras');
 s = conv('flowchart LR\nA-->B', { lang: 'en' }).spec;
