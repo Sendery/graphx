@@ -41,7 +41,7 @@ ok(Object.values(S.markers).every(m => /^[MmLlHhVvAaZz0-9.,\s-]+$/.test(m.d)), `
 console.log('— motor —');
 const page = mmd => `<!doctype html><html><head><style>${R('graphx.css')}</style></head><body>
 <div data-gx><script type="text/plain" class="gx-mermaid">${R('examples/mermaid/' + mmd).replace(/<\/script/gi, '<\\/script')}</script></div>
-<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx.js')}</script><script>${R('graphx-mermaid.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
+<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx-layouts.js')}</script><script>${R('graphx.js')}</script><script>${R('graphx-mermaid.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
 async function mount(mmd) {
   const dom = new JSDOM(page(mmd), { runScripts: 'dangerously', pretendToBeVisual: true, beforeParse(w) { w.matchMedia = q => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }); w.HTMLCanvasElement.prototype.getContext = () => null; } });
   const w = dom.window; await new Promise(r => w.addEventListener('load', r));
@@ -59,7 +59,29 @@ const cls = mounted['class.mmd'];
 ok(!!cls.host.querySelector('marker[id*="-m-triangle-"]') && !!cls.host.querySelector('marker[id*="-m-diamond-"]') && !!cls.host.querySelector('marker[id*="-m-odiamond-"]'), 'clases: puntas de herencia, composición y agregación');
 ok(cls.host.querySelectorAll('.gx-eend').length >= 4, 'clases: cardinalidades en los extremos');
 ok(!!mounted['er.mmd'].host.querySelector('marker[id*="-m-zero-many-"]') && !!mounted['er.mmd'].host.querySelector('.gx-key.k-pk'), 'ER: patas de gallo y claves');
-ok(mounted['gantt.mmd'].host.querySelectorAll('.gx-bar-fill').length >= 5 && !!mounted['gantt.mmd'].host.querySelector('.gx-bar-ms'), 'gantt: barras en su fecha y el hito');
+{
+  const { host, gx } = mounted['gantt.mmd'];
+  const r = id => gx.state.rects.get(id), back = gx.state.rects.get('dev1'), front = gx.state.rects.get('dev2');
+  ok(host.querySelectorAll('.gx-shape.sh-gbar').length === 7 && !!host.querySelector('.gx-gbms') && host.querySelectorAll('.gx-deco .gx-lg-tick').length > 5, 'gantt: barras, hito y eje de fechas');
+  ok(Math.abs(back.x - front.x) < 1 && back.w > front.w && r('des1').x < r('des2').x, 'gantt: cada barra empieza en su fecha y dura lo que dura');
+}
+{
+  const { host, gx } = await mountSpec(globalThis.GraphX.fromMermaid(R('examples/mermaid/git.mmd')).spec);
+  const commits = [...gx.model.M.values()].filter(n => !n.isLane).sort((a, b) => a.order - b.order);
+  const xs = commits.map(n => { const r = gx.state.rects.get(n.id); return r.x + r.w / 2; });
+  void host;
+  ok(xs.every((x, i) => i === 0 || x > xs[i - 1]), 'gitGraph: los commits avanzan en orden cronológico, una columna cada uno');
+}
+{
+  const { gx } = await mountSpec(globalThis.GraphX.fromMermaid(R('examples/mermaid/sankey.mmd')).spec);
+  const h = id => gx.state.rects.get(id).h;
+  ok(Math.abs(h('Red') / h('Solar') - 105 / 60) < .05, 'sankey: la altura de cada barra es proporcional a su valor');
+}
+{
+  const { gx } = await mountSpec(globalThis.GraphX.fromMermaid(R('examples/mermaid/treemap.mmd')).spec);
+  const area = lbl => { const n = [...gx.model.M.values()].find(x => x.label === lbl); const r = gx.state.rects.get(n.id); return r.w * r.h; };
+  ok(Math.abs(area('Salarios') / area('Equipos') - 3.5) < .6, 'treemap: el área de cada hoja es proporcional a su valor');
+}
 {
   const { gx, host } = mounted['shapes.mmd'];
   gx.select('ok'); await new Promise(r => setTimeout(r, 400));
@@ -81,7 +103,7 @@ ok(mounted['gantt.mmd'].host.querySelectorAll('.gx-bar-fill').length >= 5 && !!m
 console.log('— regresiones —');
 async function mountSpec(spec) {
   const html = `<!doctype html><html><head><style>${R('graphx.css')}</style></head><body><div data-gx><script type="application/json" class="gx-spec">${JSON.stringify(spec).replace(/</g, '\\u003c')}</script></div>
-<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
+<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx-layouts.js')}</script><script>${R('graphx.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, beforeParse(w) { w.matchMedia = q => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }); w.HTMLCanvasElement.prototype.getContext = () => null; } });
   const w = dom.window; await new Promise(r => w.addEventListener('load', r));
   const host = w.document.querySelector('[data-gx]'); await host._gx.ready; await new Promise(r => setTimeout(r, 900));

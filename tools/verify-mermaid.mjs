@@ -93,7 +93,8 @@ const CHECKS = {
     ok(s.nodes.find(n => n.label === 'Investigación').span.end === '2026-09-08', 'excludes weekends: 5 días desde el martes 1 acaban el martes 8, como en Mermaid');
     ok(s.edges.filter(e => e.to === i.id).length === 2, 'after dev1 dev2 → dos dependencias');
     ok(s.nodes.some(n => n.kind === 'milestone' && n.span && n.span.milestone), 'hito');
-    ok(b.shape === 'bar' && b.span.start === '2026-09-17' && s.nodes.some(n => n.span && n.span.live), 'barras con su intervalo; la activa, en movimiento');
+    ok(b.shape === 'gbar' && b.span.start === '2026-09-17' && s.nodes.some(n => n.span && n.span.live), 'barras con su intervalo; la activa, en movimiento');
+    ok(s.layout.mode === 'gantt' && s.layout.weekends && s.nodes.some(n => n.kind === 'group' && n.shape === 'gbar' && n.span), 'eje de fechas, fines de semana y resumen de cada sección');
   },
   journey: s => {
     ok(s.nodes.filter(n => n.kind === 'job').every(n => n.status && n.metrics[0].label), 'puntuación → estado y métrica con nombre');
@@ -132,8 +133,8 @@ const CHECKS = {
     ok(!!edge(s, 'test_entity', 'test_req') && !!edge(s, 'test_req', 'login_req') === false, 'relaciones en su sentido');
   },
   sankey: s => {
-    ok(s.edges.length === 5 && s.edges.filter(e => e.emphasis === 'hero').length === 2, 'flujos, los dos mayores con énfasis');
-    ok(s.edges.every(e => typeof e.weight === 'number') && s.nodes.every(n => n.shape === 'flowbar' && typeof n.value === 'number'), 'grosor por valor y barra de nivel');
+    ok(s.edges.length === 5 && s.layout.mode === 'sankey', 'cinco flujos en un layout de sankey');
+    ok(s.edges.every(e => typeof e.weight === 'number' && e.color) && s.nodes.every(n => n.shape === 'sbar' && n.color), 'grosor por valor, barras y un color por nodo');
     ok(s.nodes.some(n => n.label === 'Mermas, transporte'), 'CSV con comillas');
   },
   kanban: s => {
@@ -199,7 +200,7 @@ if (process.argv.includes('--mount')) {
   const blocks = fs.readdirSync(EX).filter(f => f.endsWith('.mmd') && f !== 'pie.mmd').sort()
     .map(f => `<div data-gx data-name="${f}"><script type="text/plain" class="gx-mermaid">${R('examples/mermaid/' + f).replace(/<\/script/gi, '<\\/script')}</script></div>`).join('\n');
   const html = `<!doctype html><html><head><style>${R('graphx.css')}</style></head><body>${blocks}
-<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx.js')}</script><script>${R('graphx-mermaid.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
+<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx-layouts.js')}</script><script>${R('graphx.js')}</script><script>${R('graphx-mermaid.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, beforeParse(w) { w.matchMedia = q => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }); w.HTMLCanvasElement.prototype.getContext = () => null; } });
   const w = dom.window; await new Promise(res => w.addEventListener('load', res));
   for (const el of w.document.querySelectorAll('[data-gx]')) {

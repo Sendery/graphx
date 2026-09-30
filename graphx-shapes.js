@@ -448,6 +448,37 @@
     }
   };
 
+  /* ---------- barras de los layouts de gantt y sankey (su tamaño lo pone el layout) ---------- */
+  /* barra de gantt: tan larga como su tarea; la etiqueta dentro si cabe, si no a la derecha; el hito, un rombo */
+  SHAPES.gbar = {
+    family: 'bar',
+    measure(n, ctx) { const label = fit(ctx, n.label, 240, 12, 600); return { w: Math.round(tw(ctx, label, 12, 600) + 28), h: 24, label }; },
+    render(n, w, h, ctx, lay) {
+      const lw = tw(ctx, lay.label, 12, 600), kids = [];
+      if (n.span && n.span.milestone) {
+        kids.push(P(poly(PTS.decision(w, h)), 'gx-card gx-gbms'), T(w + 8, h / 2 + 4, lay.label, 'gx-gbt out', 'start'));
+        return { children: kids, chrome: { x: w + lw + 52, y: h / 2 } };
+      }
+      const inside = lw + 16 <= w;
+      kids.push(P(rectD(w, h, Math.min(6, h / 2)), 'gx-card'));
+      /* en curso: una franja que avanza por el borde de abajo, sin tapar la etiqueta */
+      if (n.span && n.span.live) kids.push(P(`M5,${h - 3}H${Math.max(w - 5, 6)}`, 'gx-bar-live gx-gbar-live'));
+      kids.push(T(inside ? 9 : w + 8, h / 2 + 4, lay.label, 'gx-gbt' + (inside ? '' : ' out'), 'start'));
+      return { children: kids, chrome: { x: inside ? w - 4 : w + lw + 52, y: h / 2 } };
+    }
+  };
+  /* barra de sankey: fina, alta según el valor; la etiqueta, al lado (a la izquierda en la última columna) */
+  SHAPES.sbar = {
+    family: 'bar',
+    measure(n, ctx) { return { w: 16, h: 40, label: fit(ctx, n.label, 200, 12, 600), sub: n.subtitle ? fit(ctx, n.subtitle, 160, 11, 400, true) : '' }; },
+    render(n, w, h, ctx, lay) {
+      const left = n.labelSide === 'left', x = left ? -9 : w + 9, a = left ? 'end' : 'start';
+      const kids = [P(rectD(w, h, 3), 'gx-card gx-sbar'), T(x, h / 2 + (lay.sub ? -2 : 4), lay.label, 'gx-t', a)];
+      if (lay.sub) kids.push(T(x, h / 2 + 13, lay.sub, 'gx-st', a));
+      return { children: kids, chrome: null };
+    }
+  };
+
   /* ---------- API ---------- */
   const names = Object.keys(SHAPES);
   function measure(n, ctx) { const sh = SHAPES[n.shape]; return sh ? sh.measure(n, ctx || {}) : null; }

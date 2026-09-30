@@ -522,7 +522,7 @@
       node.meta = parseObj(sc.s.slice(sc.p + 2, j)); sc.p = j + 1;
     }
     let m = /^:::([\w-]+)/.exec(sc.rest()); if (m) { node.cls = m[1]; sc.p += m[0].length; }
-    m = /^:(\d+)/.exec(sc.rest()); if (m) sc.p += m[0].length; /* ancho de bloque en block-beta */
+    m = /^:(\d+)/.exec(sc.rest()); if (m) { node.gspan = +m[1]; sc.p += m[0].length; } /* ancho de bloque en block-beta */
     return node;
   }
   function readGroup(sc) {
@@ -562,8 +562,16 @@
     const classes = new Map(), nodeClass = new Map(), nodeStyle = new Map(), linkStyles = [];
     const linkIdx = [], edgeById = new Map(), stack = [];
     let thick = 0;
+    /* block-beta: cada bloque ocupa su celda en la rejilla de su contenedor (`columns`, `:N`, `space`) */
+    const grids = [{ cols: Infinity, r: 0, c: 0 }];
+    const place = (n, span) => {
+      const g = grids[grids.length - 1];
+      if (g.c > 0 && g.c + span > g.cols) { g.r++; g.c = 0; }
+      if (n) n.grid = { r: g.r, c: g.c, span };
+      g.c += span;
+    };
     const declare = (nd) => {
-      if (block && /^space$/.test(nd.raw) && nd.label == null) return null;
+      if (block && /^space$/.test(nd.raw) && nd.label == null) { place(null, nd.gspan || 1); return null; }
       if (nd.meta && edgeById.has(nd.raw) && nd.label == null) {
         const e = edgeById.get(nd.raw);
         if (/^(true|fast|slow)$/i.test(nd.meta.animate || nd.meta.animation || '')) e.animated = true;
@@ -578,6 +586,7 @@
       else if (!n.kind) { n.shape = 'rect'; n.kind = 'step'; b.kinds.add('step'); }
       if (nd.cls) nodeClass.set(n.id, (nodeClass.get(n.id) || []).concat(nd.cls));
       if (stack.length) b.setParent(n.id, stack[stack.length - 1]);
+      if (block && !n.grid) place(n, nd.gspan || 1);
       return n;
     };
     const addEdge = (a, c, l) => {
@@ -609,10 +618,18 @@
         }
         const g = b.node(raw, { label: clean(title) || ' ', kind: 'group' });
         if (stack.length) b.setParent(g.id, stack[stack.length - 1]);
+        if (block) { const sp = /:(\d+)$/.exec(t); place(g, sp ? +sp[1] : 1); grids.push({ cols: Infinity, r: 0, c: 0, node: g }); }
         stack.push(g.id); continue;
       }
-      if (/^end$/i.test(t)) { if (stack.length) stack.pop(); else b.warn(T.ignored(t), n); continue; }
-      if (/^direction\s+\w+$/i.test(t) || /^columns\s+/i.test(t) || /^space(:\d+)?$/.test(t)) continue;
+      if (/^end$/i.test(t)) {
+        if (!stack.length) { b.warn(T.ignored(t), n); continue; }
+        stack.pop();
+        if (block && grids.length > 1) { const g = grids.pop(); if (isFinite(g.cols)) g.node.gridCols = g.cols; }
+        continue;
+      }
+      if ((m = /^columns\s+(\d+)$/i.exec(t)) && block) { grids[grids.length - 1].cols = Math.max(1, +m[1]); continue; }
+      if ((m = /^space(?::(\d+))?$/.exec(t)) && block) { place(null, m[1] ? +m[1] : 1); continue; }
+      if (/^direction\s+\w+$/i.test(t) || /^columns\s+/i.test(t)) continue;
       if ((m = /^classDef\s+([\w,-]+)\s+(.+)$/.exec(t))) { m[1].split(',').forEach(c => classes.set(c.trim(), parseStyle(m[2]))); continue; }
       if ((m = /^class\s+(.+?)\s+([\w-]+)$/.exec(t))) { m[1].split(',').forEach(r => { const id = b.id(r.trim()); nodeClass.set(id, (nodeClass.get(id) || []).concat(m[2])); }); continue; }
       if ((m = /^style\s+(\S+)\s+(.+)$/.exec(t))) { nodeStyle.set(b.id(m[1]), parseStyle(m[2])); continue; }
@@ -659,6 +676,7 @@
     }
     /* grueso = énfasis, pero «hero» solo sirve si hay una o dos */
     for (const e of b.edges) { if (e._thick && thick <= 2) e.emphasis = 'hero'; delete e._thick; }
+    if (block) b.layout = Object.assign({ mode: 'grid' }, isFinite(grids[0].cols) ? { columns: grids[0].cols } : {});
     /* las formas que Mermaid pinta como contenedor vacío (subgrafo sin nada dentro) siguen siendo grupo */
     const used = new Set(b.edges.map(e => e.kind));
     b.legendEdges = [{ label: T.link, style: 'solid' }];
@@ -1105,7 +1123,7 @@
     };
     for (const task of tasks) {
       const ms = task.tags.includes('milestone');
-      const nd = b.node(task.id || '\u0000task' + task.n, { label: task.label, kind: ms ? 'milestone' : 'job', status: st(task), shape: 'bar' });
+      const nd = b.node(task.id || '\u0000task' + task.n, { label: task.label, kind: ms ? 'milestone' : 'job', status: st(task), shape: 'gbar' });
       if (task._start != null) nd.span = Object.assign({ start: fmtDate(task._start), end: fmtDate(task._end != null ? task._end : task._start) }, ms ? { milestone: true } : {}, task.tags.includes('active') ? { live: true } : {});
       task.node = nd;
       if (task.section) b.setParent(nd.id, task.section.id);
@@ -1123,6 +1141,14 @@
       else if (task.prev) b.edge(task.prev.node.id, task.node.id, { kind: 'dependency', emphasis: 'muted' });
     }
     for (const [id, url] of links) { const tk = byId.get(id); if (tk && httpURL(url)) (tk.node.links = tk.node.links || []).push({ kind: 'url', url }); }
+    /* una fila por tarea sobre un eje de fechas común; plegada, la sección es una barra de su principio a su final */
+    b.layout = Object.assign({ mode: 'gantt' }, excl.includes('weekends') ? { weekends: true } : {});
+    for (const sec of new Set(tasks.map(t => t.section).filter(Boolean))) {
+      const own = tasks.filter(t => t.section === sec && t._start != null);
+      if (!own.length) continue;
+      sec.shape = 'gbar';
+      sec.span = { start: fmtDate(Math.min(...own.map(t => t._start))), end: fmtDate(Math.max(...own.map(t => t._end != null ? t._end : t._start))) };
+    }
     return { title };
   }
 
@@ -1140,6 +1166,7 @@
         const score = Math.max(1, Math.min(5, +m[2]));
         const actors = (m[3] || '').split(',').map(x => clean(x)).filter(Boolean);
         const nd = b.node('\u0000task' + n, { label: clean(m[1]), kind: 'job', status: b.status('s' + score, T.scoreText(score), SC[score]), shape: 'score', score });
+        b.layout = { mode: 'journey' };
         nd.metrics = [{ label: T.score, value: score + '/5' }].concat(actors.length ? [{ label: T.actors, value: actors.join(', ') }] : []);
         if (actors.length) { nd.tags = actors; nd.subtitle = actors.join(', '); }
         if (section) b.setParent(nd.id, section.id);
@@ -1157,18 +1184,18 @@
   function parseTimeline(P, b) {
     const T = b.T;
     b.direction = 'right';
-    let section = null, title = null, period = null, prevPeriod = null, events = 0;
+    let section = null, title = null, period = null, prevPeriod = null, events = 0, secN = 0;
     const periods = [];
-    const addEvent = (txt, n) => { events++; const ev = b.node('\u0000ev' + events, { label: clean(txt), kind: 'event' }); b.setParent(ev.id, period.id); };
+    const addEvent = (txt, n) => { events++; const ev = b.node('\u0000ev' + events, { label: clean(txt), kind: 'event', shape: 'rounded', color: section ? section.color : null }); b.setParent(ev.id, period.id); };
     for (const { t, n } of statements(P.lines.slice(1), false)) {
       let m;
       if ((m = /^title\s+(.+)$/.exec(t))) { title = clean(m[1]); continue; }
-      if ((m = /^section\s+(.+)$/.exec(t))) { section = b.node('\u0000sec' + n, { label: clean(m[1]), kind: 'group' }); continue; }
+      if ((m = /^section\s+(.+)$/.exec(t))) { section = b.node('\u0000sec' + n, { label: clean(m[1]), kind: 'group', section: true, color: PALETTE[secN++ % PALETTE.length] }); continue; }
       if (/^:/.test(t)) { if (!period) { b.warn(T.ignored(t), n); continue; } t.split(':').map(x => x.trim()).filter(Boolean).forEach(x => addEvent(x, n)); continue; }
       const parts = t.split(/\s:\s|\s:$|^:\s/).map(x => x.trim());
       const segs = t.split(':').map(x => x.trim());
       const pl = segs.length > 1 ? segs : parts;
-      period = b.node('\u0000p' + n, { label: clean(pl[0]), kind: 'event' });
+      period = b.node('\u0000p' + n, { label: clean(pl[0]), kind: 'event', color: section ? section.color : null });
       periods.push(period);
       if (section) b.setParent(period.id, section.id);
       if (prevPeriod) b.edge(prevPeriod.id, period.id, { kind: 'call' });
@@ -1177,7 +1204,8 @@
     }
     /* un periodo con eventos es un grupo; sin eventos, una tarjeta */
     const kids = new Map(); for (const nd of b.nodes.values()) if (nd.parent) kids.set(nd.parent, (kids.get(nd.parent) || 0) + 1);
-    periods.forEach(p => { if (kids.get(p.id)) { p.kind = 'group'; p._desc = T.events(kids.get(p.id)); } });
+    periods.forEach(p => { if (kids.get(p.id)) { p.kind = 'group'; p._desc = T.events(kids.get(p.id)); } else p.shape = 'rounded'; });
+    b.layout = { mode: 'timeline' };
     b.kinds.add('group');
     b.levelNames = b.nodes.size && [...b.nodes.values()].some(x => x.kind === 'group' && !periods.includes(x))
       ? [b.lang === 'en' ? 'Section' : 'Sección', b.lang === 'en' ? 'Period' : 'Periodo', T.kinds.event]
@@ -1191,7 +1219,7 @@
     const head = P.lines[0].t;
     b.direction = /\bTB\b|\bBT\b/.test(head) ? 'down' : 'right';
     /* las ramas avanzan en paralelo: sin partición de ELK, que las pondría una detrás de otra */
-    b.layout = { lanes: 'flow', inheritLaneColor: true };
+    b.layout = { lanes: 'flow', inheritLaneColor: true, mode: 'git' };
     const main = (/mainBranchName:\s*['"]?([\w/.-]+)/.exec(P.meta.config) || [])[1] || 'main';
     const branches = new Map(); let cur = main, seq = 0;
     const order = [];
@@ -1216,8 +1244,9 @@
       if (o.type === 'HIGHLIGHT') { notes.push({ tone: 'good', text: T.highlight }); nd.color = C.warn; }
       if (notes.length) nd.notes = notes;
       nd._desc = `${T.commit} · ${T.branch}: ${cur}`;
-      if (br.head) b.edge(br.head, nd.id, { kind: 'call' });
-      (extraParents || []).forEach(p => b.edge(p.id, nd.id, p.kind));
+      if (br.head) b.edge(br.head, nd.id, { kind: 'call', head: 'none', color: br.lane.color });
+      /* un merge o un cherry-pick va del color de la rama de la que viene */
+      (extraParents || []).forEach(p => { const from = [...branches.values()].find(x => x.lane.id === (b.nodes.get(p.id) || {}).lane); b.edge(p.id, nd.id, Object.assign({ head: 'none', color: from ? from.lane.color : null }, p.kind)); });
       br.head = nd.id;
       return nd;
     };
@@ -1420,8 +1449,9 @@
     for (const L of P.lines.slice(1)) {
       const [src, dst, val] = csv(L.t);
       if (!src || !dst || isNaN(parseFloat(val))) { b.warn(T.ignored(L.t), L.n); continue; }
-      const a = b.node(src, { kind: 'flowpoint', shape: 'flowbar' }), c = b.node(dst, { kind: 'flowpoint', shape: 'flowbar' }), v = parseFloat(val);
-      b.edge(a.id, c.id, { kind: 'data', label: String(v), data: `${T.value}: ${v}`, weight: v, head: 'none' });
+      const col = () => PALETTE[b.nodes.size % PALETTE.length];
+      const a = b.has(src) ? b.get(src) : b.node(src, { kind: 'flowpoint', shape: 'sbar', color: col() }), c = b.has(dst) ? b.get(dst) : b.node(dst, { kind: 'flowpoint', shape: 'sbar', color: col() }), v = parseFloat(val);
+      b.edge(a.id, c.id, { kind: 'data', label: String(v), data: `${T.value}: ${v}`, weight: v, head: 'none', color: a.color });
       outflow.set(a.id, (outflow.get(a.id) || 0) + v); inflow.set(c.id, (inflow.get(c.id) || 0) + v);
     }
     const fmt = v => Math.round(v * 100) / 100;
@@ -1432,7 +1462,8 @@
       nd.value = fmt(Math.max(i || 0, o || 0));
     }
     /* los dos flujos más gruesos, con énfasis */
-    [...b.edges].sort((x, y) => parseFloat(y.label) - parseFloat(x.label)).slice(0, 2).forEach(e => { e.emphasis = 'hero'; });
+    /* columnas por profundidad, barras con altura según el valor y cintas apiladas */
+    b.layout = { mode: 'sankey' };
   }
 
   /* ================= kanban ================= */
@@ -1475,6 +1506,7 @@
     const T = b.T;
     b.direction = 'right';
     const stack = [], value = new Map();
+    let branchN = 0;
     for (const L of P.lines.slice(1)) {
       if (/^classDef\s/.test(L.t)) continue;
       const m = /^"([^"]+)"\s*(?::\s*([\d.]+))?\s*(?::::[\w-]+)?$/.exec(L.t);
@@ -1484,8 +1516,12 @@
       if (m[2] != null) { nd.shape = 'block'; nd.value = parseFloat(m[2]); }
       if (stack.length) b.setParent(nd.id, stack[stack.length - 1].id);
       if (m[2] != null) { value.set(nd.id, parseFloat(m[2])); nd.metrics = [{ label: T.value, value: m[2] }]; nd.subtitle = m[2]; }
-      stack.push({ indent: L.indent, id: nd.id });
+      /* un tono por rama de primer nivel; lo heredan sus hojas */
+      const color = stack.length === 1 ? PALETTE[(branchN++) % PALETTE.length] : stack.length ? stack[stack.length - 1].color : null;
+      if (color) nd.color = color;
+      stack.push({ indent: L.indent, id: nd.id, color });
     }
+    b.layout = { mode: 'treemap' };
     /* suma hacia arriba */
     const nodes = [...b.nodes.values()];
     const sum = id => { const own = value.get(id) || 0; return own + nodes.filter(x => x.parent === id).reduce((a, x) => a + sum(x.id), 0); };

@@ -40,7 +40,8 @@ let svg = fs.readFileSync(inp, 'utf8');
 const themeAttr = (svg.match(/data-gx-theme="([^"]*)"/) || [])[1] || '';
 const inst = themeAttr.replace(/&quot;/g, '"').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
 const block = theme === 'dark' ? (inst.match(/:root\[data-theme="dark"\][^{]*\{([^}]*)\}/) || [])[1] : (inst.match(/^[^{]*\{([^}]*)\}/) || [])[1];
-(block || '').split(';').forEach(d => { const m = d.match(/--gx-([\w-]+):(.+)/); if (m) tok[m[1]] = m[2].trim(); });
+/* se guardan con y sin el prefijo: las reglas .has-c los buscan como `u0`; var(--gx-u0), como `gx-u0` */
+(block || '').split(';').forEach(d => { const m = d.match(/--gx-([\w-]+):(.+)/); if (m) { tok[m[1]] = m[2].trim(); tok['gx-' + m[1]] = m[2].trim(); } });
 /* --gx-c (color), --gx-f (relleno) y --gx-tc (texto) de cada pieza: una clase por valor y las reglas
    .has-c / .has-f / .has-t duplicadas con el color ya resuelto */
 const VARS = [['c', 'has-c', 'hc'], ['f', 'has-f', 'hf'], ['tc', 'has-t', 'ht']];

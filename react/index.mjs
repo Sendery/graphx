@@ -3,6 +3,7 @@
  * Mermaid (graphx-mermaid.js) se importan aparte cuando se usa <GraphX>. */
 import React from 'react';
 import '../graphx-shapes.js';
+import '../graphx-layouts.js';
 import './graphx-react.js';
 
 const api = globalThis.GraphXReactFactory(React, () => globalThis.GraphX || {});

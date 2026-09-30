@@ -350,6 +350,7 @@
     const clipR = s('rect', { rx: 18 }, clip);
     const gBands = s('g', { class: 'gx-bands', 'clip-path': `url(#${I}-clip)` }, world);
     const frameR = s('rect', { class: 'gx-frame', rx: 18 }, world);
+    const gDeco = s('g', { class: 'gx-deco' }, world);
     const gGroups = s('g', { class: 'gx-groups' }, world);
     const gEdges = s('g', { class: 'gx-edges' }, world);
     const gNodes = s('g', { class: 'gx-nodes' }, world);
@@ -542,10 +543,38 @@
     if (!strictLanes) bFrames.style.display = 'none';
     bFrames.classList.toggle('on', S.frames);
     host.classList.toggle('gx-framed', framed());
+    /* ELK (o un layout propio) lleva cada arista hasta la caja de la pieza, o de centro a centro;
+       aquí se recorta hasta su contorno (el rombo, el círculo, el punto del commit) o, sin forma,
+       hasta el borde de la caja, para que no se quede en el aire ni se meta dentro */
+    function clipPaths(rects, paths, vedges, vis, exp) {
+      if (!SHP) return;
+      const clipEnd = (pts, i, j, id) => {
+        const n = M.get(id), r = rects.get(id);
+        if (!r || (exp.has(id) && n.children.some(c => vis.has(c)))) return;
+        const hl = (hasShape(n) && SHP.hull(n, r.w, r.h)) || { poly: [[0, 0], [r.w, 0], [r.w, r.h], [0, r.h]] };
+        const q = SHP.hit(hl, { x: pts[j].x - r.x, y: pts[j].y - r.y }, { x: pts[i].x - r.x, y: pts[i].y - r.y });
+        if (q) pts[i] = { x: q.x + r.x, y: q.y + r.y };
+      };
+      for (const v of vedges) {
+        const p = paths.get(v.id); if (!p || !p.pts || p.pts.length < 2) continue;
+        /* de centro a centro, el punto de dentro no sirve de referencia: se recorta desde el otro extremo */
+        clipEnd(p.pts, 0, 1, v.from); clipEnd(p.pts, p.pts.length - 1, p.pts.length - 2, v.to);
+      }
+    }
+    /* layouts propios por tipo de diagrama (graphx-layouts.js), elegidos con `layout.mode` */
+    const LAYOUTS = global.GraphX && global.GraphX.layouts ? global.GraphX.layouts : null;
+    const MODE = spec.layout && spec.layout.mode && LAYOUTS && LAYOUTS[spec.layout.mode] ? spec.layout.mode : null;
+    if (MODE) { host.classList.add('gx-mode-' + MODE); bDir.style.display = 'none'; }
     async function layout(vis, vedges) {
       /* foto del estado: la segunda pasada de ELK ocurre tras un await, y para entonces otra
          acción (Detener, un paso nuevo) puede haber cambiado lo que está abierto */
       const exp = new Set(S.expanded);
+      if (MODE) {
+        const out = LAYOUTS[MODE]({ M, roots: G.roots, vis, exp, vedges, size: id => leafSize(M.get(id)), textW, spec, now: Date.now(), cvar: id => (M.get(id) || {}).cvar || null, lang });
+        vedges.forEach(v => { v.back = false; });
+        clipPaths(out.rects, out.paths, vedges, vis, exp);
+        return { rects: out.rects, paths: out.paths, bbox: out.bbox, deco: out.deco || [] };
+      }
       const make = id => {
         const n = M.get(id);
         const kids = n.children.filter(c => vis.has(c));
@@ -617,21 +646,7 @@
         const lab = (e.labels || [])[0];
         paths.set(e.id, { pts, label: lab ? { x: lab.x, y: lab.y, w: lab.width, h: lab.height } : null });
       });
-      /* ELK lleva cada arista hasta la caja de la pieza; con forma, se recorta hasta su contorno
-         (el rombo, el círculo, el punto del commit), para que no se quede en el aire */
-      if (SHP) {
-        const clipEnd = (pts, i, j, id) => {
-          const n = M.get(id), r = rects.get(id);
-          if (!r || !hasShape(n) || (exp.has(id) && n.children.some(c => vis.has(c)))) return;
-          const hl = SHP.hull(n, r.w, r.h); if (!hl) return;
-          const q = SHP.hit(hl, { x: pts[j].x - r.x, y: pts[j].y - r.y }, { x: pts[i].x - r.x, y: pts[i].y - r.y });
-          if (q) pts[i] = { x: q.x + r.x, y: q.y + r.y };
-        };
-        for (const v of vedges) {
-          const p = paths.get(v.id); if (!p || !p.pts || p.pts.length < 2) continue;
-          clipEnd(p.pts, 0, 1, v.from); clipEnd(p.pts, p.pts.length - 1, p.pts.length - 2, v.to);
-        }
-      }
+      clipPaths(rects, paths, vedges, vis, exp);
       let bb = { x: 0, y: 0, w: res.width, h: res.height };
       for (const v of vedges) {
         if (!v.back) continue;
@@ -675,9 +690,9 @@
     }
     /* Una pieza con forma se construye una vez, con su tamaño final; al animar (nacer de su
        contenedor, plegarse) se escala el grupo entero en vez de rehacer el dibujo en cada fotograma. */
-    function makeShapeLeaf(n) {
-      const cl = shapeLayout(n);
-      const tree = SHP.render(n, cl.w, cl.h, shapeCtx, cl.lay);
+    function makeShapeLeaf(n, size) {
+      const cl = shapeLayout(n), W = size ? size.w : cl.w, H = size ? size.h : cl.h;
+      const tree = SHP.render(n, W, H, shapeCtx, cl.lay);
       const g = s('g', { class: `gx-node gx-leaf gx-shape fam-${tree.family} sh-${n.shape} d-${n.delta}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label}${n.delta !== 'unchanged' ? ' — ' + (T.delta[n.delta] || '') : ''}` });
       paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
       if (n.status) g.classList.add('st-' + String(n.status).replace(/[^\w-]/g, ''));
@@ -705,11 +720,11 @@
           parts.exp.addEventListener('click', ev => { ev.stopPropagation(); toggle(n.id); });
         }
       }
-      g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: cl.w, h: cl.h };
+      g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: W, h: H };
       return g;
     }
-    function makeLeaf(n) {
-      if (hasShape(n)) return makeShapeLeaf(n);
+    function makeLeaf(n, size) {
+      if (hasShape(n)) return makeShapeLeaf(n, size);
       const g = s('g', { class: `gx-node gx-leaf d-${n.delta}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label} — ${T.delta[n.delta] || ''}` });
       paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
       paintFill(g, n);
@@ -900,8 +915,8 @@
       const line = s('path', { class: 'gx-eline', d }, g);
       /* grosor por valor (sankey): la arista se lee como un caudal */
       const wsum = v.list.reduce((a, e) => a + (typeof e.weight === 'number' ? e.weight : 0), 0);
-      v._weighted = !!(maxWeight && wsum);
-      if (v._weighted) { g.classList.add('weighted'); line.style.strokeWidth = (1.6 + 13 * Math.min(wsum / maxWeight, 1)).toFixed(1) + 'px'; }
+      v._weighted = !!(maxWeight && wsum) || path.width != null;
+      if (v._weighted) { g.classList.add('weighted'); line.style.strokeWidth = (path.width != null ? path.width : 1.6 + 13 * Math.min(wsum / maxWeight, 1)).toFixed(1) + 'px'; }
       markEdge(line, v, false);
       if (v.animated) s('path', { class: 'gx-eflow', d }, g);
       /* cardinalidades en los extremos (1, 0..*, …) */
@@ -1070,6 +1085,10 @@
       const prevBands = new Map(S.bands.map(b => [b.id, b]));
       S.bands = bands;
       S.visible = vis; S.vedges = vedges; S.rects = L.rects; S.bbox = L.bbox;
+      /* ejes, marcas y curvas de un layout propio: se rehacen con cada layout */
+      gDeco.innerHTML = '';
+      (L.deco || []).forEach(t => toSVG(t, gDeco));
+      if (L.deco && L.deco.length && !reduce) { gDeco.classList.remove('gx-in'); raf(() => gDeco.classList.add('gx-in')); }
       syncDepthUI();
 
       /* cámara: la pieza que se abre o se cierra se queda donde estaba en pantalla */
@@ -1091,10 +1110,10 @@
         /* una forma se dibuja a su tamaño: si cambia (al girar el diagrama, la bifurcación se tumba),
            se rehace y se anima desde el rectángulo que ocupaba */
         let reshaped = null;
-        if (el && el._shape && kind === 'leaf') { const z = leafSize(n); if (z.w !== el._sz.w || z.h !== el._sz.h) { reshaped = el._r; el.remove(); el = null; } }
+        if (el && el._shape && kind === 'leaf' && (Math.abs(r.w - el._sz.w) > .5 || Math.abs(r.h - el._sz.h) > .5)) { reshaped = el._r; el.remove(); el = null; }
         const fresh = !el;
         if (fresh) {
-          el = kind === 'group' ? makeGroup(n) : makeLeaf(n);
+          el = kind === 'group' ? makeGroup(n) : makeLeaf(n, r);
           (kind === 'group' ? gGroups : gNodes).appendChild(el);
           bindNode(el, n.id);
         } else if (kind === 'group') gGroups.appendChild(el);

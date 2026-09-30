@@ -456,7 +456,24 @@ import { GraphX, GraphXShape, GraphXScope, Shapes } from 'graphx/react';
 `graphx-shapes.js`. Los tipos están en `react/index.d.ts`. La galería (`node examples/gallery/build.mjs
 <salida.html>`) enseña cada tipo de Mermaid lado a lado con GraphX y el catálogo de formas en React.
 
-`node tools/verify-shapes.mjs` comprueba las formas, su uso en el motor y que React dibuja lo mismo.
+### 7.2 · Layouts propios por tipo
+
+Un gantt no es un grafo de flechas: es una fila por tarea sobre un eje de fechas. Con `layout.mode`,
+el motor coloca las piezas con un layout propio (`graphx-layouts.js`, funciones puras) en vez de con
+ELK, y dibuja detrás una capa con ejes y marcas; tooltip, panel, selección, plegar y animación siguen
+igual. El conversor de Mermaid lo pone solo:
+
+| `layout.mode` | Qué hace | Lo usa |
+|---|---|---|
+| `gantt` | una fila por tarea sobre un eje de fechas común (marcas, fines de semana con `layout.weekends`, hoy); secciones como bandas que al plegarse son una barra resumen; dependencias en escuadra | gantt |
+| `git` | un carril por rama y una columna por commit, en orden cronológico; ramas y merges en curva, sin flechas | gitGraph |
+| `sankey` | columnas por profundidad, barras con altura según el valor y cintas apiladas del color de su origen | sankey-beta |
+| `treemap` | teselado *squarified*: el área de cada hoja es proporcional a su `value` | treemap-beta |
+| `timeline` | periodos sobre un eje con sus eventos debajo; `section: true` marca las secciones | timeline |
+| `journey` | las tareas en fila y, debajo, la curva de emoción con una cara según su `score` | journey |
+| `grid` | la rejilla de block-beta: `grid: { r, c, span }` en cada pieza, `gridCols` en un contenedor y `layout.columns` en la raíz; aristas rectas o en L/U si chocan | block-beta |
+
+`node tools/verify-shapes.mjs` comprueba las formas, los layouts, su uso en el motor y que React dibuja lo mismo.
 
 ## 8 · Verificar sin navegador
 

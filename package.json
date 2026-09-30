@@ -24,7 +24,8 @@
     "./react": {
       "types": "./react/index.d.ts",
       "import": "./react/index.mjs"
-    }
+    },
+    "./layouts": "./graphx-layouts.js"
   },
   "peerDependencies": {
     "react": ">=16.8"

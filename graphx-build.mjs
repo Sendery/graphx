@@ -38,6 +38,7 @@ const sandbox = { console: { warn() {}, error() {}, log() {} } };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-shapes.js'), 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-layouts.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8'), sandbox);
 
@@ -76,6 +77,7 @@ const EKINDS = new Set(['call', 'http', 'rpc', 'event', 'queue', 'data', 'depend
 /* iconos propios, estados propios y leyenda (1.4) */
 const PATH_RE = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]+$/;
 const SHAPE_NAMES = new Set(sandbox.GraphX.shapes.names);
+if (spec.layout && spec.layout.mode != null && !sandbox.GraphX.layouts[spec.layout.mode]) warns.push(`layout.mode «${spec.layout.mode}» desconocido (válidos: ${Object.keys(sandbox.GraphX.layouts).filter(k => k !== 'squarify').join(', ')}); se usa ELK`);
 const MARKER_NAMES = new Set(['arrow', 'none', 'line', ...Object.keys(sandbox.GraphX.shapes.markers)]);
 for (const [k, v] of Object.entries(spec.icons || {})) {
   const d = typeof v === 'string' ? v : v && v.path;
@@ -246,7 +248,7 @@ else {
   const mode = opt('--mode', 'full');
   const D = f => path.join(HERE, 'dist', f);
   /* dist/ vale si su huella coincide con la de las fuentes (tools/build-dist.mjs la escribe) */
-  const srcHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(HERE, 'graphx.js'))).update(fs.readFileSync(path.join(HERE, 'graphx.css'))).update(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-shapes.js'))).digest('hex');
+  const srcHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(HERE, 'graphx.js'))).update(fs.readFileSync(path.join(HERE, 'graphx.css'))).update(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-shapes.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-layouts.js'))).digest('hex');
   const distOK = fs.existsSync(D('SOURCE_HASH')) && fs.readFileSync(D('SOURCE_HASH'), 'utf8').trim() === srcHash;
   const fresh = f => distOK && fs.existsSync(D(f));
   let engine;
@@ -255,7 +257,7 @@ else {
   }
   if (mode === 'lite' && fresh('graphx.lite.min.js')) engine = `<script>${fs.readFileSync(D('graphx.lite.min.js'), 'utf8')}</script>`;
   else if (mode !== 'dev' && mode !== 'lite' && fresh('graphx.bundle.min.js')) engine = `<script>${fs.readFileSync(D('graphx.bundle.min.js'), 'utf8')}</script>`;
-  else engine = `<style>${fs.readFileSync(path.join(HERE, 'graphx.css'), 'utf8')}</style>\n<script>${fs.readFileSync(path.join(HERE, 'vendor', 'elk.bundled.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-shapes.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8')}</script>\n<script>GraphX.mountAll(document);</script>`;
+  else engine = `<style>${fs.readFileSync(path.join(HERE, 'graphx.css'), 'utf8')}</style>\n<script>${fs.readFileSync(path.join(HERE, 'vendor', 'elk.bundled.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-shapes.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-layouts.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8')}</script>\n<script>GraphX.mountAll(document);</script>`;
   out = `<!doctype html>
 <html lang="${spec.lang || 'es'}">
 <head>

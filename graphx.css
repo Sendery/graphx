@@ -670,6 +670,43 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 /* aristas curvas (mindmap): más gruesas y redondeadas, del color de su rama */
 .gx-edge.curved .gx-eline { stroke-width: 2.3; stroke-linecap: round; opacity: .9; }
 
+/* ---------- layouts propios (graphx-layouts.js): ejes, marcas y curvas de fondo ---------- */
+.gx-deco { pointer-events: none; }
+.gx-deco.gx-in { animation: gx-fadein .5s ease-out both; }
+.gx-lg-axis { fill: none; stroke: var(--gx-line); stroke-width: 1.2; }
+.gx-lg-grid { fill: none; stroke: color-mix(in srgb, var(--gx-line) 70%, transparent); stroke-width: 1; stroke-dasharray: 2 4; }
+.gx-lg-tick { font: 10.5px var(--gx-mono); fill: var(--gx-muted); }
+.gx-lg-wknd { fill: color-mix(in srgb, var(--gx-glyph-bg) 60%, transparent); }
+.gx-lg-today { fill: none; stroke: var(--gx-del); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.gx-lg-todayt { font-size: 10.5px; font-weight: 700; fill: var(--gx-del); letter-spacing: .06em; text-transform: uppercase; }
+.gx-lg-tl { fill: none; stroke: var(--gx-muted); stroke-width: 2.4; stroke-linecap: round; }
+.gx-lg-tlhead { fill: none; stroke: var(--gx-muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.gx-lg-tlstem { fill: none; stroke: var(--gx-line); stroke-width: 1.4; stroke-dasharray: 3 3; }
+.gx-lg-tldot { fill: var(--gx-accent); stroke: var(--gx-canvas); stroke-width: 2.5; }
+.gx-lg-lv { fill: none; stroke: color-mix(in srgb, var(--gx-line) 70%, transparent); stroke-dasharray: 2 5; }
+.gx-lg-jcurve { fill: none; stroke: var(--gx-muted); stroke-width: 2.2; stroke-linecap: round; opacity: .65; }
+.gx-lg-jstem { fill: none; stroke: var(--gx-line); stroke-dasharray: 2 4; }
+.gx-lg-facebg { fill: var(--gx-accent); stroke: var(--gx-canvas); stroke-width: 2; }
+.gx-lg-eye { fill: var(--gx-canvas); }
+.gx-lg-mouth { fill: none; stroke: var(--gx-canvas); stroke-width: 1.8; stroke-linecap: round; }
+/* barras de gantt y de sankey */
+.gx-shape.sh-gbar > .gx-card { fill: color-mix(in srgb, var(--gx-accent) 24%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 55%, var(--gx-card-line)); }
+.gx-shape.sh-gbar.has-c > .gx-card { fill: color-mix(in srgb, var(--gx-c) 80%, var(--gx-card)); stroke: var(--gx-c); }
+.gx-shape.sh-gbar > .gx-gbms { fill: var(--gx-ink); stroke: var(--gx-card); }
+.gx-shape.sh-gbar.has-c > .gx-gbms { fill: var(--gx-c); }
+.gx-gbt { font-size: 12px; font-weight: 600; fill: var(--gx-ink); }
+.gx-bar-live.gx-gbar-live { stroke-width: 3; stroke: rgba(255, 255, 255, .7); stroke-dasharray: 4 4; }
+.gx-shape.has-c .gx-gbt:not(.out) { fill: #fff; }
+.gx-shape.sh-sbar > .gx-card, .gx-shape.sh-sbar.has-c > .gx-card { fill: var(--gx-accent); stroke: none; }
+.gx-shape.sh-sbar.has-c > .gx-card { fill: var(--gx-c); }
+.gx-node.sh-sbar.lit > .gx-card, .gx-node.sh-sbar.sel > .gx-card { stroke: var(--gx-accent); stroke-width: 2; }
+/* gitGraph: las líneas de las ramas, gruesas y del color de la rama */
+.gx-mode-git .gx-edge .gx-eline { stroke-width: 3.2; opacity: .95; stroke-linecap: round; }
+.gx-mode-git .gx-edge.dashed .gx-eline { stroke-dasharray: 6 5; }
+/* sankey: la cinta, translúcida; al pasar por encima, se aviva */
+.gx-mode-sankey .gx-edge.weighted .gx-eline { opacity: .38; }
+.gx-mode-sankey .gx-edge.weighted:hover .gx-eline, .gx-mode-sankey .gx-dim .gx-edge.weighted.lit .gx-eline { opacity: .7; }
+
 @media (prefers-reduced-motion: reduce) {
   .gx-pulse, .gx-bar-live { animation: none; }
   .gx-leaf { transition: none; }
