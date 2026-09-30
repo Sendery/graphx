@@ -81,8 +81,11 @@
     const tree = S.render(node, w, hh, ctx, lay);
     const icons = p.icons || GX.icons || {};
     /* color de acento, relleno y texto: props o, si son texto, los de la pieza ({ light, dark } → el claro) */
-    const pick = v => (typeof v === 'string' ? v : v && v.light) || null;
-    const color = p.color || pick(node.color), fill = p.fill || pick(node.fill), text = p.textColor || pick(node.textColor);
+    /* un color que venga de los datos solo pasa si es un color CSS (va dentro de un atributo style) */
+    const COLOR = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\([0-9.,%\s/+-]+(deg|turn|rad)?[0-9.,%\s/+-]*\)|[a-z]{3,20})$/i;
+    const safe = v => (typeof v === 'string' && COLOR.test(v.trim()) ? v.trim() : null);
+    const pick = v => safe(typeof v === 'string' ? v : v && v.light);
+    const color = safe(p.color) || pick(node.color), fill = safe(p.fill) || pick(node.fill), text = safe(p.textColor) || pick(node.textColor);
     const cls = ['gx-node', 'gx-leaf', 'gx-shape', 'fam-' + tree.family, 'sh-' + node.shape, 'd-' + (p.delta || node.delta || 'unchanged'), p.state || '', color ? 'has-c' : '', fill ? 'has-f' : '', text ? 'has-t' : '', p.className || ''].filter(Boolean).join(' ');
     const style = color || fill || text ? Object.assign({}, color ? { '--gx-c': color } : null, fill ? { '--gx-f': fill } : null, text ? { '--gx-tc': text } : null) : undefined;
     const pad = p.pad != null ? p.pad : 6;

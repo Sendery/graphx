@@ -350,8 +350,8 @@
     const clipR = s('rect', { rx: 18 }, clip);
     const gBands = s('g', { class: 'gx-bands', 'clip-path': `url(#${I}-clip)` }, world);
     const frameR = s('rect', { class: 'gx-frame', rx: 18 }, world);
-    const gDeco = s('g', { class: 'gx-deco' }, world);
     const gGroups = s('g', { class: 'gx-groups' }, world);
+    const gDeco = s('g', { class: 'gx-deco' }, world);
     const gEdges = s('g', { class: 'gx-edges' }, world);
     const gNodes = s('g', { class: 'gx-nodes' }, world);
     const gLabels = s('g', { class: 'gx-elabels' }, world);
@@ -550,8 +550,9 @@
       if (!SHP) return;
       const clipEnd = (pts, i, j, id) => {
         const n = M.get(id), r = rects.get(id);
-        if (!r || (exp.has(id) && n.children.some(c => vis.has(c)))) return;
-        const hl = (hasShape(n) && SHP.hull(n, r.w, r.h)) || { poly: [[0, 0], [r.w, 0], [r.w, r.h], [0, r.h]] };
+        if (!r) return;
+        const open = exp.has(id) && n.children.some(c => vis.has(c));
+        const hl = (!open && hasShape(n) && SHP.hull(n, r.w, r.h)) || { poly: [[0, 0], [r.w, 0], [r.w, r.h], [0, r.h]] };
         const q = SHP.hit(hl, { x: pts[j].x - r.x, y: pts[j].y - r.y }, { x: pts[i].x - r.x, y: pts[i].y - r.y });
         if (q) pts[i] = { x: q.x + r.x, y: q.y + r.y };
       };
@@ -563,7 +564,7 @@
     }
     /* layouts propios por tipo de diagrama (graphx-layouts.js), elegidos con `layout.mode` */
     const LAYOUTS = global.GraphX && global.GraphX.layouts ? global.GraphX.layouts : null;
-    const MODE = spec.layout && spec.layout.mode && LAYOUTS && LAYOUTS[spec.layout.mode] ? spec.layout.mode : null;
+    const MODE = spec.layout && spec.layout.mode && LAYOUTS && LAYOUTS.has && LAYOUTS.has(spec.layout.mode) ? spec.layout.mode : null;
     if (MODE) { host.classList.add('gx-mode-' + MODE); bDir.style.display = 'none'; }
     async function layout(vis, vedges) {
       /* foto del estado: la segunda pasada de ELK ocurre tras un await, y para entonces otra
@@ -720,7 +721,7 @@
           parts.exp.addEventListener('click', ev => { ev.stopPropagation(); toggle(n.id); });
         }
       }
-      g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: W, h: H };
+      g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: W, h: H }; g._side = n.labelSide;
       return g;
     }
     function makeLeaf(n, size) {
@@ -1110,7 +1111,7 @@
         /* una forma se dibuja a su tamaño: si cambia (al girar el diagrama, la bifurcación se tumba),
            se rehace y se anima desde el rectángulo que ocupaba */
         let reshaped = null;
-        if (el && el._shape && kind === 'leaf' && (Math.abs(r.w - el._sz.w) > .5 || Math.abs(r.h - el._sz.h) > .5)) { reshaped = el._r; el.remove(); el = null; }
+        if (el && el._shape && kind === 'leaf' && (Math.abs(r.w - el._sz.w) > .5 || Math.abs(r.h - el._sz.h) > .5 || el._side !== n.labelSide)) { reshaped = el._r; el.remove(); el = null; }
         const fresh = !el;
         if (fresh) {
           el = kind === 'group' ? makeGroup(n) : makeLeaf(n, r);
@@ -1750,7 +1751,8 @@
         if (m.kind === 'create') { const hd = heads[P.findIndex(p => p.node === m.node)]; rows.push({ m, y: y + 6 }); y += (hd ? hd.h : 56) + 18; return; }
         if (m.kind === 'note') { const L = noteLines(m); rows.push({ m, y: y + 6, lines: L }); y += L.length * 15 + 42; return; }
         /* una etiqueta larga se parte en líneas en vez de salirse de su tramo */
-        const lines = isMsg(m) ? wrapLines(m.label + (m.repeat ? `  ×${m.repeat}` : ''), spanOf(m), 12).slice(0, 3) : [m.label];
+        let lines = isMsg(m) ? wrapLines(m.label + (m.repeat ? `  ×${m.repeat}` : ''), spanOf(m), 12) : [m.label];
+        if (lines.length > 3) lines = lines.slice(0, 2).concat(fitText(lines.slice(2).join(' ') + '…', spanOf(m), 12, 400).replace(/…?$/, '…'));
         const hh = rowH + (m.note ? 22 : 0) + (m.kind === 'self' ? 14 : 0) + (lines.length - 1) * 15; rows.push({ m, y: y + 18 + (lines.length - 1) * 15, lines }); y += hh;
       });
       const H = y + 30, W = 40 + P.length * (colW + 26) + 180;

@@ -220,6 +220,8 @@
     if (!st) return null;
     const out = {}, CANVAS = '#161b22';
     const f = safeColor(st.fill) ? toHex(safeColor(st.fill)) : null;
+    /* un relleno que no es hex (nombre sin tabla, hsl()…): tal cual en los dos temas; el texto, solo si lo dice */
+    if (f && !/^#/.test(f)) { out.fill = { light: f, dark: f }; if (safeColor(st.color)) out.text = { light: safeColor(st.color), dark: safeColor(st.color) }; return out; }
     if (f && /^#/.test(f) && lum(f) != null) {
       const dark = blend(f, CANVAS, lum(f) > .5 ? .72 : .38);
       out.fill = { light: f, dark };
@@ -237,7 +239,11 @@
   }
   function parseStyle(s) {
     const o = {};
-    String(s || '').split(/[,;]/).forEach(kv => { const i = kv.indexOf(':'); if (i > 0) o[kv.slice(0, i).trim().toLowerCase()] = kv.slice(i + 1).trim(); });
+    /* separa por `,` o `;` fuera de paréntesis: `fill:rgb(200,0,0),stroke:#333` */
+    let depth = 0, cur = '';
+    const push = () => { const i = cur.indexOf(':'); if (i > 0) o[cur.slice(0, i).trim().toLowerCase()] = cur.slice(i + 1).trim(); cur = ''; };
+    for (const ch of String(s || '')) { if (ch === '(') depth++; if (ch === ')') depth = Math.max(0, depth - 1); if ((ch === ',' || ch === ';') && !depth) push(); else cur += ch; }
+    push();
     return o;
   }
   /* objetos sueltos de Mermaid: `@{ shape: rect, label: "Hola" }` o `{ assigned: 'x' }` */
@@ -676,6 +682,7 @@
     }
     /* grueso = énfasis, pero «hero» solo sirve si hay una o dos */
     for (const e of b.edges) { if (e._thick && thick <= 2) e.emphasis = 'hero'; delete e._thick; }
+    while (block && grids.length > 1) { const g = grids.pop(); if (isFinite(g.cols)) g.node.gridCols = g.cols; }
     if (block) b.layout = Object.assign({ mode: 'grid' }, isFinite(grids[0].cols) ? { columns: grids[0].cols } : {});
     /* las formas que Mermaid pinta como contenedor vacío (subgrafo sin nada dentro) siguen siendo grupo */
     const used = new Set(b.edges.map(e => e.kind));
@@ -1090,6 +1097,8 @@
       }
       b.warn(T.ignored(t), n);
     }
+    const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const off = t => { const d = new Date(t), dow = d.getUTCDay(), iso = d.toISOString().slice(0, 10); return excl.includes(iso) || excl.includes(DAYS[dow]) || (excl.includes('weekends') && (dow === 0 || dow === 6)); };
     /* fechas: se calculan si vienen como AAAA-MM-DD; si no, se muestra lo que dice el texto */
     const endOf = task => task._end;
     for (const task of tasks) {
@@ -1098,14 +1107,15 @@
       if (deps) { const ends = deps.map(d => byId.get(d)).filter(Boolean).map(endOf).filter(x => x != null); s = ends.length ? Math.max(...ends) : null; }
       else if (task.start) s = parseDate(task.start);
       else if (prev) s = prev._end;
+      /* lo que empieza detrás de otra tarea no empieza en un día excluido: pasa al siguiente hábil */
+      if (s != null && excl.length && !task.start) { let g = 0; while (off(s) && g++ < 366) s = Date.UTC(new Date(s).getUTCFullYear(), new Date(s).getUTCMonth(), new Date(s).getUTCDate() + 1); }
+      else if (s != null && excl.length && deps) { let g = 0; while (off(s) && g++ < 366) s = Date.UTC(new Date(s).getUTCFullYear(), new Date(s).getUTCMonth(), new Date(s).getUTCDate() + 1); }
       let e = null;
       const dm = task.end && /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d|w|M|y)$/.exec(task.end);
-      if (dm && s != null && dm[2] === 'd' && excl.length) {
-        /* se avanza día a día y solo cuentan los que no están excluidos */
-        const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const off = t => { const d = new Date(t), dow = d.getUTCDay(), iso = d.toISOString().slice(0, 10); return excl.includes(iso) || excl.includes(DAYS[dow]) || (excl.includes('weekends') && (dow === 0 || dow === 6)); };
-        let left = parseFloat(dm[1]), t = s, guard = 0;
-        while (left > 0 && guard++ < 3660) { if (!off(t)) left -= Math.min(1, left); t += DUR_MS.d; }
+      if (dm && s != null && (dm[2] === 'd' || dm[2] === 'w') && excl.length) {
+        /* se avanza día a día y solo cuentan los que no están excluidos (una semana, siete días) */
+        let left = parseFloat(dm[1]) * (dm[2] === 'w' ? 7 : 1), t = s, guard = 0;
+        while (left > 0 && guard++ < 3660) { if (off(t)) { t += DUR_MS.d; continue; } const step = Math.min(1, left); t += step * DUR_MS.d; left -= step; }
         e = t;
       } else if (dm && s != null) e = s + parseFloat(dm[1]) * DUR_MS[dm[2]];
       else if (task.end && parseDate(task.end) != null) e = parseDate(task.end);

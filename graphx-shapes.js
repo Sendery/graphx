@@ -503,7 +503,15 @@
   Object.keys(PTS).forEach(k => { if (!HULLS[k]) HULLS[k] = (w, h) => ({ poly: PTS[k](w, h) }); });
   function hull(n, w, h) { const f = HULLS[n && n.shape]; return f ? f(w, h) : null; }
   /* primer corte de la recta que va de `a` a `b` (y más allá) con el casco, en coordenadas del casco */
+  function inHull(hl, p) {
+    if (hl.ellipse) { const [cx, cy, rx, ry] = hl.ellipse; return ((p.x - cx) / rx) ** 2 + ((p.y - cy) / ry) ** 2 < 1; }
+    let c = false; const q = hl.poly;
+    for (let i = 0, j = q.length - 1; i < q.length; j = i++) if ((q[i][1] > p.y) !== (q[j][1] > p.y) && p.x < (q[j][0] - q[i][0]) * (p.y - q[i][1]) / (q[j][1] - q[i][1]) + q[i][0]) c = !c;
+    return c;
+  }
   function hit(hl, a, b) {
+    /* desde dentro no hay «primera entrada»: se deja el punto como está */
+    if (inHull(hl, a)) return null;
     const dx = b.x - a.x, dy = b.y - a.y; let best = Infinity;
     if (hl.ellipse) {
       const [cx, cy, rx, ry] = hl.ellipse, ox = (a.x - cx) / rx, oy = (a.y - cy) / ry, ex = dx / rx, ey = dy / ry;

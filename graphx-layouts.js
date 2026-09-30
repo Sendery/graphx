@@ -91,7 +91,10 @@
     if (spec.layout && spec.layout.weekends) {
       for (let d = first.getTime(); d < hi; d += DAY) { const dow = new Date(d).getUTCDay(); if (dow === 0 || dow === 6) deco.push(E('rect', { class: 'gx-lg-wknd', x: r1(xOf(Math.max(d, lo))), y: TOP - 8, width: r1(Math.max(0, Math.min(d + DAY, hi) - Math.max(d, lo)) * k), height: bottom - TOP + 8 })); }
     }
-    for (; t <= hi; t += step * DAY) {
+    /* por meses, cada marca cae el día 1 (un mes no son 30 días) */
+    const nextT = t0 => { if (step < 30) return t0 + step * DAY; const d = new Date(t0), m = { 30: 1, 61: 2, 91: 3, 182: 6, 365: 12 }[step] || 1; return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + m, 1); };
+    if (step >= 30) { const d = new Date(lo); t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); }
+    for (; t <= hi; t = nextT(t)) {
       if (t < lo) continue;
       const x = r1(xOf(t)), d = new Date(t);
       deco.push(E('path', { class: 'gx-lg-grid', d: `M${x},${TOP - 8}V${bottom}` }));
@@ -135,6 +138,8 @@
     const paths = new Map();
     for (const v of vedges) {
       const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      /* una rama plegada es una tarjeta al margen: su historia no se dibuja como línea */
+      if (M.get(v.from).isLane || M.get(v.to).isLane) continue;
       const ca = center(a), cb = center(b);
       if (Math.abs(ca.y - cb.y) < 1) { paths.set(v.id, { pts: [ca, cb], label: null }); continue; }
       const sx = ca.x + 11, ex = cb.x - 11, dx = Math.max((ex - sx) * .55, 20);
@@ -152,10 +157,17 @@
     nodes.forEach(n => { ins.set(n.id, []); outs.set(n.id, []); });
     const links = vedges.filter(v => ins.has(v.to) && outs.has(v.from) && v.from !== v.to);
     links.forEach(v => { outs.get(v.from).push(v); ins.get(v.to).push(v); });
-    /* columna = camino más largo desde un origen (con tope, por si hay ciclos) */
+    /* columna = camino más largo desde un origen; las aristas que cierran un ciclo (retornos de un
+       recorrido en profundidad) no cuentan, y las columnas que quedan vacías se compactan */
+    const back = new Set(), state = new Map();
+    const dfs = id => { state.set(id, 1); outs.get(id).forEach(v => { const s = state.get(v.to); if (s === 1) back.add(v.id); else if (!s) dfs(v.to); }); state.set(id, 2); };
+    nodes.forEach(n => { if (!state.get(n.id)) dfs(n.id); });
+    const fwd = links.filter(v => !back.has(v.id));
     const depth = new Map(nodes.map(n => [n.id, 0]));
-    for (let it = 0; it < nodes.length; it++) { let ch = false; links.forEach(v => { if (depth.get(v.to) < depth.get(v.from) + 1) { depth.set(v.to, depth.get(v.from) + 1); ch = true; } }); if (!ch) break; }
-    const ncol = Math.max(...depth.values(), 0) + 1;
+    for (let it = 0; it < nodes.length; it++) { let ch = false; fwd.forEach(v => { if (depth.get(v.to) < depth.get(v.from) + 1) { depth.set(v.to, depth.get(v.from) + 1); ch = true; } }); if (!ch) break; }
+    const used = [...new Set(depth.values())].sort((a, b) => a - b), dense = new Map(used.map((d, i) => [d, i]));
+    depth.forEach((d, id) => depth.set(id, dense.get(d)));
+    const ncol = used.length || 1;
     const value = id => Math.max(ins.get(id).reduce((s, v) => s + wOf(v), 0), outs.get(id).reduce((s, v) => s + wOf(v), 0), 1);
     const cols = Array.from({ length: ncol }, () => []);
     nodes.forEach(n => cols[depth.get(n.id)].push(n.id));
@@ -221,7 +233,7 @@
     const top = roots.filter(r => vis.has(r)), total = top.reduce((s, r) => s + val(r), 0) || 1;
     const W = 1100, H = clamp(Math.sqrt(total) * 18, 460, 760);
     if (top.length === 1) place(top[0], { x: 0, y: 0, w: W, h: H });
-    else squarify(top.map(r => ({ id: r, v: val(r) || 1 })), { x: 0, y: 0, w: W, h: H }).forEach(c => place(c.id, { x: c.x + GAP / 2, y: c.y + GAP / 2, w: c.w - GAP, h: c.h - GAP }));
+    else squarify(top.map(r => ({ id: r, v: val(r) || 1 })), { x: 0, y: 0, w: W, h: H }).forEach(c => place(c.id, { x: c.x + GAP / 2, y: c.y + GAP / 2, w: Math.max(c.w - GAP, 1), h: Math.max(c.h - GAP, 1) }));
     return { rects, paths: new Map(), bbox: bboxOf(rects), deco: [] };
   }
 
@@ -277,7 +289,7 @@
     /* cinco niveles: arriba, muy buena; abajo, muy mala */
     const top = secBottom + 30, LV = 30, pts = [];
     for (let s = 5; s >= 1; s--) deco.push(E('path', { class: 'gx-lg-lv', d: `M4,${top + (5 - s) * LV}H${x}` }));
-    tasks.forEach(id => { const n = M.get(id), r = rects.get(id), sc = clamp(Math.round(n.score || 3), 1, 5); pts.push({ x: r.x + r.w / 2, y: top + (5 - sc) * LV, sc, id }); });
+    tasks.filter(id => typeof M.get(id).score === 'number').forEach(id => { const n = M.get(id), r = rects.get(id), sc = clamp(Math.round(n.score), 1, 5); pts.push({ x: r.x + r.w / 2, y: top + (5 - sc) * LV, sc, id }); });
     if (pts.length > 1) {
       let d = `M${r1(pts[0].x)},${pts[0].y}`;
       for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], mx = (a.x + b.x) / 2; d += ` C${r1(mx)},${a.y} ${r1(mx)},${b.y} ${r1(b.x)},${b.y}`; }
@@ -300,14 +312,25 @@
     const ROUND = { circle: 1, dcircle: 1, start: 1, end: 1, junction: 1, choice: 1 };
     /* tamaño de un contenedor abierto: celdas de ancho uniforme; alto, el mayor de cada fila */
     const sizeOf = id => (open(id) ? layoutBox(id).size : ctx.size(id));
-    const cache = new Map();
+    const cache = new Map(), cells = new Map();
+    /* la celda de cada pieza: la que trae (`grid`) o, si no trae, la siguiente libre */
+    const place0 = (items, own) => {
+      const int = (v, d) => (Number.isFinite(+v) && +v >= 0 ? Math.floor(+v) : d);
+      const given = items.filter(c => M.get(c).grid);
+      const cols = Math.max(1, own || 0, ...given.map(c => int(M.get(c).grid.c, 0) + Math.max(1, int(M.get(c).grid.span, 1))), own ? 0 : items.length);
+      let r = 0, cc = 0;
+      given.forEach(c => { const g = M.get(c).grid; const cell = { r: int(g.r, 0), c: int(g.c, 0), span: Math.max(1, int(g.span, 1)) }; cells.set(c, cell); if (cell.r > r || (cell.r === r && cell.c + cell.span > cc)) { r = cell.r; cc = cell.c + cell.span; } });
+      items.filter(c => !M.get(c).grid).forEach(c => { if (cc >= cols) { r++; cc = 0; } cells.set(c, { r, c: cc, span: 1 }); cc++; });
+      return cols;
+    };
+    const cellOf = c => cells.get(c) || { r: 0, c: 0, span: 1 };
     function layoutBox(id, list) {
       if (cache.has(id)) return cache.get(id);
       const own = id != null ? M.get(id).gridCols : (ctx.spec.layout && ctx.spec.layout.columns);
-      const items = list || kids(id), cols = Math.max(1, ...items.map(c => { const g = M.get(c).grid; return g ? g.c + (g.span || 1) : 1; }), own || 0);
-      const colW = Math.max(60, ...items.map(c => { const g = M.get(c).grid || { span: 1 }; return (sizeOf(c).w - (g.span - 1) * GAP) / (g.span || 1); }));
-      const rowsN = Math.max(1, ...items.map(c => (M.get(c).grid || { r: 0 }).r + 1));
-      const rowH = Array.from({ length: rowsN }, (_, r) => Math.max(40, ...items.filter(c => (M.get(c).grid || { r: 0 }).r === r).map(c => sizeOf(c).h)));
+      const items = list || kids(id), cols = place0(items, own);
+      const colW = Math.max(60, ...items.map(c => { const g = cellOf(c); return (sizeOf(c).w - (g.span - 1) * GAP) / g.span; }));
+      const rowsN = Math.max(1, ...items.map(c => cellOf(c).r + 1));
+      const rowH = Array.from({ length: rowsN }, (_, r) => Math.max(40, ...items.filter(c => cellOf(c).r === r).map(c => sizeOf(c).h)));
       const head = id != null ? HEAD : 0;
       const size = { w: PAD * 2 + cols * colW + (cols - 1) * GAP, h: head + PAD + rowH.reduce((s, h) => s + h, 0) + (rowsN - 1) * GAP + PAD - (id != null ? 6 : 0) };
       const out = { size, items, colW, rowH, head };
@@ -320,7 +343,7 @@
       const rowY = []; let acc = y + b.head + PAD - (id != null ? 6 : 0);
       b.rowH.forEach((h, i) => { rowY[i] = acc; acc += h + GAP; });
       b.items.forEach(c => {
-        const g = M.get(c).grid || { r: 0, c: 0, span: 1 }, span = g.span || 1;
+        const g = cellOf(c), span = g.span;
         const cx = x + PAD + g.c * (b.colW + GAP), cw = span * b.colW + (span - 1) * GAP, ch = b.rowH[g.r];
         if (open(c)) { const s = layoutBox(c).size; place(c, cx + (cw - s.w) / 2, rowY[g.r] + (ch - s.h) / 2); return; }
         const z = ctx.size(c), n = M.get(c);
@@ -331,7 +354,9 @@
     place(null, 0, 0, roots.filter(r => vis.has(r)));
     /* recta de centro a centro; si atraviesa otra pieza, en L por el lado libre */
     const leaves = [...rects.entries()].filter(([id]) => !open(id));
+    const inside = (id, anc) => { let p = M.get(id).parent; while (p != null) { if (p === anc) return true; p = M.get(p).parent; } return false; };
     const crosses = (p, q, skip) => leaves.some(([id, r]) => {
+      if ([...skip].some(s => inside(id, s))) return false;
       if (skip.has(id)) return false;
       const x0 = r.x - 4, y0 = r.y - 4, x1 = r.x + r.w + 4, y1 = r.y + r.h + 4;
       for (let t = 0; t <= 1; t += 1 / 24) { const x = p.x + (q.x - p.x) * t, y = p.y + (q.y - p.y) * t; if (x > x0 && x < x1 && y > y0 && y < y1) return true; }
@@ -355,5 +380,6 @@
     return { rects, paths, bbox: bboxOf(rects), deco: [] };
   }
 
-  return { gantt, git, sankey, treemap, timeline, journey, grid, squarify };
+  const modes = { gantt, git, sankey, treemap, timeline, journey, grid };
+  return Object.assign({ names: Object.keys(modes), squarify, has: m => Object.prototype.hasOwnProperty.call(modes, m) }, modes);
 });

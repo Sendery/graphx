@@ -77,7 +77,8 @@ const EKINDS = new Set(['call', 'http', 'rpc', 'event', 'queue', 'data', 'depend
 /* iconos propios, estados propios y leyenda (1.4) */
 const PATH_RE = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]+$/;
 const SHAPE_NAMES = new Set(sandbox.GraphX.shapes.names);
-if (spec.layout && spec.layout.mode != null && !sandbox.GraphX.layouts[spec.layout.mode]) warns.push(`layout.mode «${spec.layout.mode}» desconocido (válidos: ${Object.keys(sandbox.GraphX.layouts).filter(k => k !== 'squarify').join(', ')}); se usa ELK`);
+if (spec.layout && spec.layout.mode != null && !sandbox.GraphX.layouts.has(spec.layout.mode)) warns.push(`layout.mode «${spec.layout.mode}» desconocido (válidos: ${sandbox.GraphX.layouts.names.join(', ')}); se usa ELK`);
+if (spec.layout && spec.layout.backEdges != null && spec.layout.backEdges !== 'route') warns.push(`layout.backEdges «${spec.layout.backEdges}» desconocido (válido: route)`);
 const MARKER_NAMES = new Set(['arrow', 'none', 'line', ...Object.keys(sandbox.GraphX.shapes.markers)]);
 for (const [k, v] of Object.entries(spec.icons || {})) {
   const d = typeof v === 'string' ? v : v && v.path;
@@ -109,6 +110,7 @@ for (const n of spec.nodes || []) {
   }
   ['score', 'value'].forEach(k => { if (n[k] != null && typeof n[k] !== 'number') errors.push(`nodo ${n.id}: ${k} debe ser un número`); });
   ['badge', 'avatar'].forEach(k => { if (n[k] != null && typeof n[k] !== 'string') errors.push(`nodo ${n.id}: ${k} debe ser texto`); });
+  if (n.grid != null && (typeof n.grid !== 'object' || ['r', 'c', 'span'].some(k => n.grid[k] != null && !(Number.isInteger(n.grid[k]) && n.grid[k] >= (k === 'span' ? 1 : 0))))) errors.push(`nodo ${n.id}: grid debe ser { r, c, span } con enteros (r y c desde 0, span desde 1)`);
   if (n.frame != null && !['dashed', 'dotted', 'solid'].includes(n.frame)) warns.push(`nodo ${n.id}: frame «${n.frame}» desconocido`);
 }
 for (const e of spec.edges || []) {
