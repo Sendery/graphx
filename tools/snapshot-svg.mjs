@@ -49,6 +49,8 @@ for (const u of new Set([...svg.matchAll(/hc-(u\d+)/g)].map(m => m[1]))) {
   const col = tok[u]; if (!col) continue;
   for (const [, sel, body] of hasC) extra += sel.split(',').map(x => x.replace(/\.has-c/g, '.hc-' + u).trim()).join(',') + '{' + body.replace(/var\(--gx-c\)/g, col) + '}';
 }
+/* variables en atributos style (puntas de arista, rellenos calculados): también se resuelven */
+svg = svg.replace(/style="([^"]*var\(--[^"]*)"/g, (m, st) => `style="${res(st.replace(/&quot;/g, '"'))}"`);
 const bg = res('var(--gx-canvas)');
 svg = svg.replace(/<svg([^>]*)>/, (m, a) => `<svg${a}><style><![CDATA[text{font-family:Helvetica,Arial,sans-serif}${(rules + res(extra)).replace(/]]>/g, ']] >')}]]></style><rect x="-5000" y="-5000" width="20000" height="20000" fill="${bg}"/>`);
 fs.writeFileSync(inp.replace('.svg', `.${theme}.resolved.svg`), svg);
