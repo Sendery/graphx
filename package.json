@@ -1,6 +1,6 @@
 {
   "name": "graphx",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "description": "Motor de diagramas navegables para artifacts: un JSON → layout ELK jerárquico, niveles plegables, tooltips, panel, secuencias y recorrido guiado.",
   "type": "module",
@@ -9,5 +9,9 @@
     "check": "node graphx-build.mjs --check",
     "verify:mermaid": "node tools/verify-mermaid.mjs"
   },
-  "devDependencies": { "jsdom": "^24.0.0" }
+  "devDependencies": {
+    "jsdom": "^24.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
 }
