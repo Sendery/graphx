@@ -328,7 +328,8 @@ const GROUPS = [
   ['table', 'Tablas: ER, clases y requisitos', 'Filas con claves (PK, FK, UK), visibilidad UML y compartimentos. Pasa el ratón por una fila.'],
   ['tile', 'Iconos: arquitectura y actores', 'Una baldosa con el icono grande y la etiqueta debajo.'],
   ['c4', 'C4', 'Cajas rellenas del color de la notación, con tipo y descripción.'],
-  ['card', 'Tarjetas con datos: gantt, journey, kanban, sankey y treemap', 'La tarjeta de GraphX con algo más: la barra de fechas, la puntuación, el ticket, el nivel o un área que crece con el valor.']
+  ['card', 'Tarjetas con datos: gantt, journey, kanban, sankey y treemap', 'La tarjeta de GraphX con algo más: la barra de fechas, la puntuación, el ticket, el nivel o un área que crece con el valor.'],
+  ['bar', 'Barras de los layouts propios', 'En un gantt, la barra mide lo que dura la tarea; en un sankey, lo alta que es su valor. Aquí, a su tamaño por defecto.']
 ];
 const HINTS = {
   rect: 'A[texto]', rounded: 'A(texto)', terminal: 'A([texto])', subroutine: 'A[[texto]]', datastore: 'A[(texto)]', 'cylinder-h': '@{ shape: h-cyl }', circle: 'A((texto))', dcircle: 'A(((texto)))',
@@ -339,7 +340,7 @@ const HINTS = {
   commit: 'gitGraph: commit', 'commit-merge': 'gitGraph: merge rama', 'commit-highlight': 'commit type: HIGHLIGHT', 'commit-reverse': 'commit type: REVERSE',
   table: 'erDiagram: CLIENTE { … }', class: 'classDiagram: class A { … }', requirement: 'requirementDiagram', tile: 'architecture: service a(server)[…]', actor: 'sequence: actor U',
   person: 'C4: Person(…)', c4: 'C4: System(…) · Container(…)', 'c4-db': 'C4: SystemDb(…)', 'c4-queue': 'C4: SystemQueue(…)',
-  bar: 'gantt: tarea :a1, 2026-09-08, 6d', score: 'journey: Tarea: 4: Yo', ticket: 'kanban: t1[…]@{ ticket, assigned }', flowbar: 'sankey-beta', block: 'treemap-beta: "Hoja": 7'
+  bar: 'gantt: tarea :a1, 2026-09-08, 6d (en tarjeta)', gbar: 'gantt: tarea :a1, 2026-09-08, 6d', sbar: 'sankey-beta: A,B,10', score: 'journey: Tarea: 4: Yo', ticket: 'kanban: t1[…]@{ ticket, assigned }', flowbar: 'sankey-beta', block: 'treemap-beta: "Hoja": 7'
 };
 const LABELS = { flow: 'Revisar pedido', dot: 'v1.0', note: 'Se guarda 30 días y luego se borra', table: 'CLIENTE', tile: 'Base de datos', c4: 'Banca online', card: 'Preparar envío' };
 const sampleNode = (name, fam) => {
@@ -358,6 +359,8 @@ const sampleNode = (name, fam) => {
   if (name === 'ticket') { n.kind = 'card'; n.subtitle = 'ana'; n.badge = 'PRJ-7'; n.avatar = 'A'; }
   if (name === 'flowbar') { n.kind = 'flowpoint'; n.label = 'Red'; n.subtitle = '105'; n.value = 7; }
   if (name === 'block') { n.label = 'Salarios'; n.subtitle = '700'; n.value = 7; }
+  if (name === 'gbar') { n.label = 'Backend'; n.kind = 'job'; n.span = { start: '2026-09-08', end: '2026-09-14', live: true }; }
+  if (name === 'sbar') { n.label = 'Red'; n.subtitle = '105'; }
   if (name === 'start' || name === 'end' || name === 'junction' || name === 'choice' || name === 'fork') n.label = name;
   return n;
 };
