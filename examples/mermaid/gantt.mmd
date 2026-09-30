@@ -1,0 +1,14 @@
+gantt
+    title Lanzamiento
+    dateFormat YYYY-MM-DD
+    excludes weekends
+    section Diseño
+    Investigación        :done, des1, 2026-09-01, 5d
+    Prototipo            :active, des2, after des1, 7d
+    section Desarrollo
+    Backend              :crit, dev1, after des2, 10d
+    Frontend             :dev2, after des2, 8d
+    Integración          :dev3, after dev1 dev2, 3d
+    section Salida
+    Beta                 :milestone, m1, after dev3, 0d
+    Comunicación         :4d

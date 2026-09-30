@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+*.bak-*
+# páginas generadas desde su JSON con graphx-build.mjs
+examples/*.html
