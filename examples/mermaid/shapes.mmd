@@ -1,0 +1,25 @@
+---
+title: Formas de flowchart
+---
+flowchart LR
+    inicio@{ shape: sm-circ, label: "Inicio" } --> pedido@{ shape: rect, label: "Recibir pedido" }
+    pedido --> revisar@{ shape: rounded, label: "Revisar datos" }
+    revisar --> ok@{ shape: diam, label: "¿Completo?" }
+    ok -- No --> pedir@{ shape: lean-r, label: "Pedir lo que falta" }
+    pedir --> espera@{ shape: delay, label: "Esperar respuesta" }
+    espera --> revisar
+    ok -- Sí --> preparar@{ shape: hex, label: "Preparar envío" }
+    preparar --> stock@{ shape: cyl, label: "Stock" }
+    preparar --> cola@{ shape: h-cyl, label: "Cola de envíos" }
+    cola --> reparto@{ shape: fr-rect, label: "Reparto" }
+    reparto --> manual@{ shape: trap-t, label: "Firma manual" }
+    manual --> fusion@{ shape: fork, label: "Unión" }
+    reparto --> albaran@{ shape: doc, label: "Albarán" }
+    albaran --> fusion
+    fusion --> extraer@{ shape: tri, label: "Extraer datos" }
+    extraer --> cotejar@{ shape: hourglass, label: "Cotejar" }
+    cotejar --> nube@{ shape: cloud, label: "Copia en la nube" }
+    cotejar --> fin@{ shape: fr-circ, label: "Fin" }
+    nube -.- aviso@{ shape: comment, label: "Se guarda 30 días y luego se borra" }
+    classDef entrada stroke:#1a7f37,fill:#e6f4ea
+    class inicio,pedido entrada

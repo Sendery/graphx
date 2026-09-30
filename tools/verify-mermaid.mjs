@@ -25,8 +25,10 @@ const edge = (s, a, b) => s.edges.find(e => e.from === a && e.to === b);
 const CHECKS = {
   flowchart: s => {
     ok(s.direction === 'right', 'LR → direction right');
-    ok(node(s, 'valida').kind === 'decision' && node(s, 'db').kind === 'datastore' && node(s, 'reserva').kind === 'subroutine', 'formas: rombo, cilindro, subrutina');
-    ok(node(s, 'correo').kind === 'document' && node(s, 'correo').label === 'Correo de confirmación', 'sintaxis nueva @{ shape, label }');
+    ok(node(s, 'valida').shape === 'decision' && node(s, 'db').shape === 'datastore' && node(s, 'reserva').shape === 'subroutine' && node(s, 'web').shape === 'rect', 'formas: rombo, cilindro, subrutina, rectángulo');
+    ok(node(s, 'fin').shape === 'dcircle' && node(s, 'cache').shape === 'circle' && node(s, 'aviso').shape === 'flag' && node(s, 'pago').shape === 'io', 'formas: doble círculo, círculo, bandera, entrada/salida');
+    ok((edge(s, 'aviso', 'cliente') || {}).head === 'cross', '--x → punta en aspa');
+    ok(node(s, 'correo').shape === 'document' && node(s, 'correo').label === 'Correo de confirmación', 'sintaxis nueva @{ shape, label }');
     ok(node(s, 'db').parent === 'datos' && node(s, 'datos').parent === 'backend', 'subgrafos anidados → niveles');
     ok((edge(s, 'valida', 'reserva') || {}).label === 'Sí' && (edge(s, 'cliente', 'web') || {}).label === 'hace un pedido', 'texto de enlace (-- x --> y |x|)');
     ok((edge(s, 'api', 'cache') || {}).kind === 'async' && (edge(s, 'reserva', 'pago') || {}).emphasis === 'hero', 'punteado → discontinua, grueso → hero');
@@ -40,9 +42,12 @@ const CHECKS = {
     ok(s.graphTab === false && f.participants.length === 5, 'solo secuencia, 5 participantes');
     ok(node(s, 'U').kind === 'actor' && node(s, 'DB').kind === 'datastore', 'actor y participante de tipo database');
     ok(s.lanes.length === 2 && node(s, 'A').lane === s.lanes[1].id, 'box → carril');
-    ok(f.messages.filter(m => m.kind === 'phase').length >= 4, 'alt/else/loop → fases');
+    ok(f.messages.filter(m => m.kind === 'block').length === 2 && f.messages.filter(m => m.kind === 'else').length === 1 && f.messages.filter(m => m.kind === 'end').length === 2, 'alt/else/loop → marcos con separador');
+    ok(node(s, 'U').shape === 'actor' && node(s, 'DB').shape === 'datastore', 'cabeceras con forma: actor y base de datos');
+    ok(f.messages.some(m => m.activate === 'A') && f.messages.some(m => m.deactivate === 'A'), '+/- → barras de activación');
+    ok(f.messages.some(m => m.head === 'cross') && f.messages.some(m => m.head === 'open'), 'puntas de mensaje: aspa y abierta');
     ok(f.messages.some(m => m.kind === 'self') && f.messages.some(m => m.kind === 'return') && f.messages.some(m => m.kind === 'async'), 'self, return (-->>) y async (-))');
-    ok(f.messages.some(m => /redirección/.test(m.note || '')), 'Note → nota del mensaje');
+    ok(f.messages.some(m => m.kind === 'note' && m.side === 'right' && /redirección/.test(m.label)), 'Note → caja de nota a su lado');
     ok((node(s, 'A').links || []).length === 1, 'link A: … @ url');
   },
   class: s => {
@@ -51,13 +56,18 @@ const CHECKS = {
     ok(/Perro se compone de Collar/.test((edge(s, 'Collar', 'Perro') || {}).summary || ''), 'composición: el todo es el extremo con marca');
     ok(node(s, 'Collar').label === 'Collar<T>' && node(s, 'Veterinario').label === 'Clínica veterinaria', 'genéricos ~T~ y etiqueta ["…"]');
     ok(/hacerRuido/.test(node(s, 'Animal').details_html) && node(s, 'Animal').subtitle === '«abstract»', 'miembros en el panel y anotación');
-    ok(node(s, 'Nadador').subtitle === '«interface»' && (node(s, 'Perro').notes || []).length === 1, '<<interface>> suelto y note for');
+    ok(node(s, 'Nadador').subtitle === '«interface»', '<<interface>> suelto');
+    ok(s.nodes.some(n => n.shape === 'note' && n.label === 'El mejor amigo') && s.edges.some(e => e.to === 'Perro' && e.head === 'none'), 'note for → nota unida a su clase');
+    ok(node(s, 'Animal').shape === 'class' && node(s, 'Animal').rows.some(r => r.section === 'method' && r.name === 'hacerRuido()' && r.type === 'void' && r.abstract), 'caja UML: filas con sección, tipo y abstracto');
+    ok(edge(s, 'Perro', 'Animal').head === 'triangle' && edge(s, 'Collar', 'Perro').head === 'diamond' && edge(s, 'Animal', 'Veterinario').head === 'odiamond', 'puntas UML: triángulo, rombo lleno y hueco');
+    ok(edge(s, 'Collar', 'Perro').headLabel === '1' && edge(s, 'Collar', 'Perro').tailLabel === '0..1', 'cardinalidades en los extremos');
   },
   state: s => {
     ok(node(s, 'start').kind === 'start' && node(s, 'end').kind === 'end', '[*] → inicio y fin');
     ok(node(s, 'Programado').parent === 'Aprobado' && s.nodes.some(n => n.kind === 'start' && n.parent === 'Aprobado'), 'estado compuesto con su propio [*]');
     ok(node(s, 'EnRevision').label === 'En revisión' && node(s, 'decide').kind === 'choice', 'state "…" as X y <<choice>>');
-    ok((node(s, 'EnRevision').notes || []).length === 1 && !!node(s, 'Aprobado').color, 'note right of y classDef');
+    ok(s.nodes.some(n => n.shape === 'note' && /otra persona/.test(n.label)) && !!node(s, 'Aprobado').color, 'note right of → nota; classDef');
+    ok(node(s, 'Borrador').shape === 'rounded' && node(s, 'start').shape === 'start' && node(s, 'decide').shape === 'choice', 'formas de estado: redondeado, inicio, elección');
     ok(s.layout.cycles === 'dfs', 'ciclos rotos en profundidad, como dagre');
   },
   er: s => {
@@ -65,6 +75,8 @@ const CHECKS = {
     ok(/cero o más ORDER/.test(edge(s, 'CUSTOMER', 'ORDER').summary), 'cardinalidad ||--o{ en palabras');
     ok(edge(s, 'CUSTOMER', 'DELIVERY-ADDRESS').kind === 'async', 'relación no identificativa discontinua');
     ok(/email/.test(node(s, 'CUSTOMER').details_html) && node(s, 'CUSTOMER').tags.includes('email'), 'atributos en el panel y en la búsqueda');
+    ok(node(s, 'CUSTOMER').shape === 'table' && node(s, 'CUSTOMER').rows.some(r => r.name === 'id' && r.keys === 'PK'), 'entidad como tabla con claves');
+    ok(edge(s, 'CUSTOMER', 'ORDER').tail === 'one' && edge(s, 'CUSTOMER', 'ORDER').head === 'zero-many', 'patas de gallo ||--o{');
   },
   mindmap: s => {
     ok(s.nodes.length === 13 && s.edges.length === 12, 'árbol: 13 ideas, 12 ramas');
@@ -77,7 +89,8 @@ const CHECKS = {
     ok(b.status === 'crit' && s.statuses.done && s.statuses.active, 'done/active/crit → estados');
     ok((b.metrics || []).some(m => m.value === '2026-09-13'), 'fechas calculadas (after + duración)');
     ok(s.edges.filter(e => e.to === i.id).length === 2, 'after dev1 dev2 → dos dependencias');
-    ok(s.nodes.some(n => n.kind === 'milestone'), 'hito');
+    ok(s.nodes.some(n => n.kind === 'milestone' && n.span && n.span.milestone), 'hito');
+    ok(b.shape === 'bar' && b.span.start === '2026-09-13' && s.nodes.some(n => n.span && n.span.live), 'barras con su intervalo; la activa, en movimiento');
   },
   journey: s => {
     ok(s.nodes.filter(n => n.kind === 'job').every(n => n.status && n.metrics[0].label), 'puntuación → estado y métrica con nombre');
@@ -90,17 +103,20 @@ const CHECKS = {
   git: s => {
     ok(s.lanes.map(l => l.label).join() === 'main,develop,feature/login', 'una rama por carril');
     ok(s.edges.some(e => e.label === 'merge') && s.edges.some(e => e.label === 'cherry-pick'), 'merge y cherry-pick');
-    ok(node(s, 'feat-a').subtitle === 'v0.1', 'tag');
+    ok(node(s, 'feat-a').badge === 'v0.1', 'tag como etiqueta del commit');
+    ok(s.nodes.some(n => n.shape === 'commit-merge') && s.nodes.some(n => n.shape === 'commit-highlight') && s.nodes.filter(n => n.head).length === 3, 'commits: fusión, destacado y un HEAD por rama');
   },
   c4: s => {
     ok(node(s, 'cliente').kind === 'actor' && node(s, 'mainframe').kind === 'datastore' && node(s, 'correo').kind === 'external', 'Person, SystemDb, System_Ext');
     ok(node(s, 'mainframe').parent === 'b1' && node(s, 'b1').parent === 'b0', 'boundaries anidados');
     ok(!!edge(s, 'correo', 'cliente'), 'Rel_Back invierte el sentido');
     ok(!!node(s, 'cliente').color, 'UpdateElementStyle');
+    ok(node(s, 'cliente').shape === 'person' && node(s, 'mainframe').shape === 'c4-db' && node(s, 'b0').frame === 'dashed', 'C4: persona, base de datos y frontera discontinua');
   },
   architecture: s => {
     ok(node(s, 'db').parent === 'api' && node(s, 'db').kind === 'datastore', 'service … in grupo');
     ok(node(s, 'j1').kind === 'junction' && !!edge(s, 'j1', 'server'), 'junction y arista con lados');
+    ok(node(s, 'db').shape === 'tile' && node(s, 'disk1').kind === 'disk' && node(s, 'api').frame === 'dashed', 'baldosas con icono y grupo discontinuo');
   },
   block: s => {
     ok(!s.nodes.some(n => n.label === 'space'), 'space no es una pieza');
@@ -113,14 +129,17 @@ const CHECKS = {
   },
   sankey: s => {
     ok(s.edges.length === 5 && s.edges.filter(e => e.emphasis === 'hero').length === 2, 'flujos, los dos mayores con énfasis');
+    ok(s.edges.every(e => typeof e.weight === 'number') && s.nodes.every(n => n.shape === 'flowbar' && typeof n.value === 'number'), 'grosor por valor y barra de nivel');
     ok(s.nodes.some(n => n.label === 'Mermas, transporte'), 'CSV con comillas');
   },
   kanban: s => {
     ok(s.lanes.length === 3 && node(s, 't3').lane === 'doing', 'columnas → carriles');
     ok((node(s, 't1').links || [])[0].url === 'https://example.atlassian.net/browse/PRJ-1', 'ticketBaseUrl del frontmatter');
+    ok(node(s, 't1').shape === 'ticket' && node(s, 't1').badge === 'PRJ-1' && node(s, 't4').avatar === 'l', 'ticket con número y avatar');
   },
   treemap: s => {
     ok(s.nodes.find(n => n.label === 'Presupuesto').subtitle === '1450', 'totales sumados hacia arriba');
+    ok(s.nodes.filter(n => n.shape === 'block').every(n => typeof n.value === 'number'), 'hojas con área según su valor');
   }
 };
 

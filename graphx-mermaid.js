@@ -52,7 +52,8 @@
         document: 'Documento', cloud: 'Nube', bang: 'Idea destacada', group: 'Grupo', actor: 'Actor', participant: 'Participante', start: 'Inicio', end: 'Fin',
         choice: 'Elección', fork: 'Bifurcación o unión', state: 'Estado', class: 'Clase', table: 'Entidad', idea: 'Idea', job: 'Tarea', milestone: 'Hito',
         event: 'Evento', commit: 'Commit', service: 'Sistema', app: 'Contenedor', module: 'Componente', external: 'Externo', queue: 'Cola', ui: 'Frontera',
-        config: 'Control', package: 'Nodo de despliegue', junction: 'Unión', requirement: 'Requisito', element: 'Elemento', flowpoint: 'Nodo', card: 'Tarjeta', other: 'Otro'
+        config: 'Control', package: 'Nodo de despliegue', junction: 'Unión', requirement: 'Requisito', element: 'Elemento', flowpoint: 'Nodo', card: 'Tarjeta', other: 'Otro',
+        arrow: 'Flecha', triangle: 'Extracción', hourglass: 'Intercalar', delay: 'Espera', text: 'Texto', note: 'Nota', disk: 'Disco', server: 'Servidor', internet: 'Internet'
       }
     },
     en: {
@@ -83,7 +84,8 @@
         document: 'Document', cloud: 'Cloud', bang: 'Highlighted idea', group: 'Group', actor: 'Actor', participant: 'Participant', start: 'Start', end: 'End',
         choice: 'Choice', fork: 'Fork or join', state: 'State', class: 'Class', table: 'Entity', idea: 'Idea', job: 'Task', milestone: 'Milestone',
         event: 'Event', commit: 'Commit', service: 'System', app: 'Container', module: 'Component', external: 'External', queue: 'Queue', ui: 'Boundary',
-        config: 'Control', package: 'Deployment node', junction: 'Junction', requirement: 'Requirement', element: 'Element', flowpoint: 'Node', card: 'Card', other: 'Other'
+        config: 'Control', package: 'Deployment node', junction: 'Junction', requirement: 'Requirement', element: 'Element', flowpoint: 'Node', card: 'Card', other: 'Other',
+        arrow: 'Arrow', triangle: 'Extract', hourglass: 'Collate', delay: 'Delay', text: 'Text', note: 'Note', disk: 'Disk', server: 'Server', internet: 'Internet'
       }
     }
   };
@@ -123,7 +125,16 @@
     requirement: 'M4 2h8v12H4zM6 5h4M6 8h4M6 11h2',
     element: 'M2.5 6.5h11v7h-11zM2.5 6.5L4 3h8l1.5 3.5',
     flowpoint: 'M2.5 5h4v6h-4zM9.5 5h4v6h-4zM6.5 8h3',
-    card: 'M3 3h10v10H3zM5.5 6h5M5.5 9h3'
+    card: 'M3 3h10v10H3zM5.5 6h5M5.5 9h3',
+    arrow: 'M2 6h7V3l5 5-5 5v-3H2z',
+    triangle: 'M8 2.5l6 10.5H2z',
+    hourglass: 'M3 2.5h10L3 13.5h10z',
+    delay: 'M2.5 3.5h6.5a4.5 4.5 0 0 1 0 9H2.5z',
+    text: 'M3.5 4h9M8 4v8.5',
+    note: 'M3 2.5h7.5L13 5v8.5H3zM10.5 2.5V5H13M5.5 8h5M5.5 10.5h3.5',
+    disk: 'M2.5 5h11v6h-11zM11 8h.01M4.5 8h4',
+    server: 'M3 2.5h10v4H3zM3 9.5h10v4H3zM5.5 4.5h.01M5.5 11.5h.01M8.5 4.5h2M8.5 11.5h2',
+    internet: 'M8 2.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM2.5 8h11M8 2.5c1.6 1.6 2.3 3.5 2.3 5.5S9.6 11.9 8 13.5M8 2.5C6.4 4.1 5.7 6 5.7 8s.7 3.9 2.3 5.5'
   };
   /* colores de estado (gantt, journey, kanban, requisitos) y de carriles (ramas de git) */
   const C = {
@@ -321,6 +332,14 @@
       this.edges.push(e); return e;
     },
     status(key, label, color) { this.statuses[key] = { label, color }; return key; },
+    /* una nota de Mermaid es una pieza propia, unida a lo que anota por una línea sin flecha */
+    note(text, target) {
+      const nd = this.node('\u0000note' + this.nodes.size, { label: clean(text) || ' ', kind: 'note', shape: 'note' });
+      const t = target && this.nodes.get(target);
+      if (t && t.parent) this.setParent(nd.id, t.parent);
+      if (t) this.edge(nd.id, t.id, { kind: 'async', head: 'none', emphasis: 'muted' });
+      return nd;
+    },
     finish(type, meta, extra) {
       const T = this.T;
       const nodes = [...this.nodes.values()], lanes = [...this.lanes.values()];
@@ -378,23 +397,28 @@
   /* ================= flowchart / graph (también block-beta) ================= */
   const SHAPES = [
     ['(((', ')))', 'dcircle'], ['((', '))', 'circle'], ['([', '])', 'terminal'], ['[[', ']]', 'subroutine'], ['[(', ')]', 'datastore'],
-    ['{{', '}}', 'hexagon'], ['[/', ['/]', '\\]'], 'io'], ['[\\', ['\\]', '/]'], 'io'], ['<[', ']>', 'flag'], ['(', ')', 'rounded'], ['[', ']', 'step'],
+    ['{{', '}}', 'hexagon'], ['[/', ['/]', '\\]'], 'io'], ['[\\', ['\\]', '/]'], 'io-l'], ['<[', ']>', 'arrow-right'], ['(', ')', 'rounded'], ['[', ']', 'rect'],
     ['{', '}', 'decision'], ['>', ']', 'flag']
   ];
+  /* el tipo (icono de la leyenda) de cada forma: la mayoría se llaman igual */
+  const KIND_OF_SHAPE = { rect: 'step', 'io-l': 'io', 'trapezoid-t': 'trapezoid', 'triangle-down': 'triangle', 'cylinder-h': 'queue', 'arrow-right': 'arrow', 'arrow-left': 'arrow', 'arrow-up': 'arrow', 'arrow-down': 'arrow' };
+  const kindOfShape = sh => KIND_OF_SHAPE[sh] || sh;
   /* nombres de forma de la sintaxis nueva `id@{ shape: … }` */
   const NEW_SHAPES = {
-    rect: 'step', proc: 'step', process: 'step', rectangle: 'step', rounded: 'rounded', event: 'rounded', stadium: 'terminal', pill: 'terminal', terminal: 'terminal',
+    rect: 'rect', proc: 'rect', process: 'rect', rectangle: 'rect', rounded: 'rounded', event: 'rounded', stadium: 'terminal', pill: 'terminal', terminal: 'terminal',
     'fr-rect': 'subroutine', subproc: 'subroutine', subprocess: 'subroutine', subroutine: 'subroutine', 'framed-rectangle': 'subroutine',
-    cyl: 'datastore', db: 'datastore', database: 'datastore', cylinder: 'datastore', 'h-cyl': 'datastore', das: 'datastore', 'lin-cyl': 'datastore', disk: 'datastore', 'bow-rect': 'datastore', 'stored-data': 'datastore',
+    cyl: 'datastore', db: 'datastore', database: 'datastore', cylinder: 'datastore', 'lin-cyl': 'datastore', disk: 'datastore', 'bow-rect': 'datastore', 'stored-data': 'datastore',
+    'h-cyl': 'cylinder-h', das: 'cylinder-h', 'horizontal-cylinder': 'cylinder-h',
     circle: 'circle', circ: 'circle', 'sm-circ': 'start', start: 'start', 'small-circle': 'start', 'fr-circ': 'end', stop: 'end', 'dbl-circ': 'dcircle', 'double-circle': 'dcircle', 'cross-circ': 'circle', summary: 'circle',
     diam: 'decision', diamond: 'decision', decision: 'decision', question: 'decision', hex: 'hexagon', hexagon: 'hexagon', prepare: 'hexagon',
-    'lean-r': 'io', 'lean-right': 'io', 'in-out': 'io', 'lean-l': 'io', 'lean-left': 'io', 'out-in': 'io', 'trap-b': 'trapezoid', priority: 'trapezoid', trapezoid: 'trapezoid',
-    'trap-t': 'trapezoid', manual: 'trapezoid', 'inv-trapezoid': 'trapezoid', 'curv-trap': 'trapezoid', display: 'trapezoid',
+    'lean-r': 'io', 'lean-right': 'io', 'in-out': 'io', 'lean-l': 'io-l', 'lean-left': 'io-l', 'out-in': 'io-l', 'trap-b': 'trapezoid', priority: 'trapezoid', trapezoid: 'trapezoid',
+    'trap-t': 'trapezoid-t', manual: 'trapezoid-t', 'inv-trapezoid': 'trapezoid-t', 'curv-trap': 'trapezoid-t', display: 'trapezoid-t',
     doc: 'document', document: 'document', docs: 'document', documents: 'document', 'lin-doc': 'document', 'tag-doc': 'document', 'lined-document': 'document', 'st-doc': 'document',
     cloud: 'cloud', bang: 'bang', flag: 'flag', 'paper-tape': 'flag', odd: 'flag', fork: 'fork', join: 'fork', 'notch-rect': 'card', card: 'card',
-    'st-rect': 'subroutine', procs: 'subroutine', processes: 'subroutine', 'div-rect': 'step', 'win-pane': 'step', 'lin-rect': 'step', 'tag-rect': 'step',
-    'notch-pent': 'hexagon', 'loop-limit': 'hexagon', tri: 'io', extract: 'io', 'flip-tri': 'io', hourglass: 'fork', collate: 'fork', bolt: 'flag', 'com-link': 'flag',
-    brace: 'step', comment: 'step', 'brace-r': 'step', braces: 'step', text: 'step', delay: 'rounded', 'half-rounded-rectangle': 'rounded'
+    'st-rect': 'subroutine', procs: 'subroutine', processes: 'subroutine', 'div-rect': 'rect', 'win-pane': 'rect', 'lin-rect': 'rect', 'tag-rect': 'rect',
+    'notch-pent': 'hexagon', 'loop-limit': 'hexagon', tri: 'triangle', extract: 'triangle', 'flip-tri': 'triangle-down', 'manual-file': 'triangle-down',
+    hourglass: 'hourglass', collate: 'hourglass', bolt: 'flag', 'com-link': 'flag',
+    brace: 'note', comment: 'note', 'brace-r': 'note', braces: 'note', text: 'text', delay: 'delay', 'half-rounded-rectangle': 'delay'
   };
 
   function Scan(s) { this.s = s; this.p = 0; }
@@ -457,8 +481,12 @@
       if (!r) { sc.p = save; continue; }
       node.label = r.text; node.shape = shape;
       if (open === '[/' && r.closer === '\\]') node.shape = 'trapezoid';
-      if (open === '[\\' && r.closer === '/]') node.shape = 'trapezoid';
-      if (open === '<[') { const m = /^\(\s*\w+(?:\s*,\s*\w+)*\s*\)/.exec(sc.rest()); if (m) sc.p += m[0].length; }
+      if (open === '[\\' && r.closer === '/]') node.shape = 'trapezoid-t';
+      /* flecha de block-beta: `id<["texto"]>(right)`; la dirección da la forma */
+      if (open === '<[') {
+        const m = /^\(\s*(\w+)(?:\s*,\s*\w+)*\s*\)/.exec(sc.rest());
+        if (m) { sc.p += m[0].length; const d = { right: 'right', left: 'left', up: 'up', down: 'down', x: 'right', y: 'down' }[m[1].toLowerCase()]; node.shape = 'arrow-' + (d || 'right'); }
+      }
       break;
     }
     if (sc.at('@{')) {
@@ -517,10 +545,10 @@
       const props = {};
       if (nd.label != null) props.label = clean(nd.label) || ' ';
       if (nd.meta && nd.meta.label) props.label = clean(nd.meta.label);
-      const shape = nd.meta && nd.meta.shape ? (NEW_SHAPES[nd.meta.shape.toLowerCase()] || 'step') : nd.shape;
+      const shape = nd.meta && nd.meta.shape ? (NEW_SHAPES[nd.meta.shape.toLowerCase()] || 'rect') : nd.shape;
       const n = b.node(nd.raw, props);
-      if (shape) { n.kind = shape; b.kinds.add(shape); }
-      else if (!n.kind) { n.kind = 'step'; b.kinds.add('step'); }
+      if (shape) { n.shape = shape; n.kind = kindOfShape(shape); b.kinds.add(n.kind); }
+      else if (!n.kind) { n.shape = 'rect'; n.kind = 'step'; b.kinds.add('step'); }
       if (nd.cls) nodeClass.set(n.id, (nodeClass.get(n.id) || []).concat(nd.cls));
       if (stack.length) b.setParent(n.id, stack[stack.length - 1]);
       return n;
@@ -534,7 +562,9 @@
       if (!l.head && !l.tail) notes.push(T.open);
       if (l.style === 'thick') { notes.push(T.thick); thick++; }
       if (l.style === 'dotted') notes.push(T.dotted);
-      const e = b.edge(a.id, c.id, { kind: l.style === 'dotted' ? 'async' : 'call', label: l.label || null, summary: notes.join(' ') || null, _thick: l.style === 'thick' || null });
+      const END = { '>': null, x: 'cross', o: 'circle', '<': 'arrow' };
+      const e = b.edge(a.id, c.id, { kind: l.style === 'dotted' ? 'async' : 'call', label: l.label || null, summary: notes.join(' ') || null, _thick: l.style === 'thick' || null,
+        head: l.head ? END[l.head] : 'none', tail: l.tail ? END[l.tail] : null });
       linkIdx.push(e);
       if (l.eid) edgeById.set(l.eid, e);
     };
@@ -616,19 +646,19 @@
     const T = b.T;
     const flow = { id: 'secuencia', title: P.meta.title || T.sequence, participants: [], messages: [] };
     const seen = new Set(), sent = new Map(), recv = new Map();
-    const blocks = []; let box = null, pendingPhase = null, pendingNote = null, title = null;
+    const blocks = []; let box = null, title = null;
     const TYPES = { participant: 'participant', actor: 'actor', boundary: 'ui', control: 'config', entity: 'table', database: 'datastore', collections: 'queue', queue: 'queue' };
+    /* forma de la cabecera: el actor es una figura; la base de datos, un cilindro; la cola, un tubo */
+    const HEAD = { actor: 'actor', datastore: 'datastore', queue: 'cylinder-h' };
     const part = (raw, props) => {
       raw = raw.trim();
       const n = b.node(raw, props || {});
       if (!n.kind) { n.kind = 'participant'; b.kinds.add('participant'); }
+      if (HEAD[n.kind]) n.shape = HEAD[n.kind];
       if (!seen.has(n.id)) { seen.add(n.id); flow.participants.push(n.id); }
       return n;
     };
-    const push = m => {
-      if (pendingPhase && m.kind !== 'phase') { flow.messages.push({ id: 'm' + (flow.messages.length + 1), kind: 'phase', label: pendingPhase }); pendingPhase = null; }
-      m.id = 'm' + (flow.messages.length + 1); flow.messages.push(m);
-    };
+    const push = m => { m.id = 'm' + (flow.messages.length + 1); flow.messages.push(m); return m; };
     for (const { t, n } of statements(P.lines.slice(1), false)) {
       let m;
       if ((m = /^title\s*:?\s*(.+)$/.exec(t))) { title = clean(m[1]); continue; }
@@ -637,6 +667,7 @@
         const at = /^(.+?)@\{(.*)\}$/.exec(raw); if (at) { raw = at[1]; meta = parseObj(at[2].replace(/"(\w+)"\s*:/g, '$1:')); }
         const kind = meta && TYPES[meta.type] ? TYPES[meta.type] : TYPES[m[1]];
         const nd = part(raw, { label: m[3] ? clean(m[3]) : (meta && meta.alias ? clean(meta.alias) : null), kind });
+        if (HEAD[kind]) nd.shape = HEAD[kind]; else delete nd.shape;
         b.kinds.add(kind);
         if (box) nd.lane = box.id;
         continue;
@@ -649,28 +680,27 @@
         if (styleColor({ fill: color })) box.color = styleColor({ fill: color });
         blocks.push({ type: 'box' }); continue;
       }
-      if ((m = /^(loop|alt|opt|par|critical|break|rect)\b\s*(.*)$/.exec(t))) {
-        const lbl = m[1] === 'rect' ? null : T.blocks[m[1]] + (m[2] ? ': ' + clean(m[2]) : '');
-        blocks.push({ type: m[1], label: lbl });
-        if (lbl) pendingPhase = lbl;
+      /* bloques: un marco con su tipo en una pestaña y la condición al lado; `else`/`and`/`option`
+         lo parten con una línea discontinua */
+      if ((m = /^(loop|alt|opt|par|par_over|critical|break|rect)\b\s*(.*)$/.exec(t))) {
+        const type = m[1] === 'par_over' ? 'par' : m[1];
+        blocks.push({ type });
+        const blk = { kind: 'block', block: type, title: type === 'rect' ? '' : T.blocks[type], label: type === 'rect' ? '' : clean(m[2]) };
+        if (type === 'rect') { const col = styleColor({ fill: m[2].trim() }); if (col) blk.color = col; }
+        push(blk);
         continue;
       }
-      if ((m = /^(else|and|option)\b\s*(.*)$/.exec(t))) { pendingPhase = T.blocks[m[1]] + (m[2] ? ': ' + clean(m[2]) : ''); continue; }
+      if ((m = /^(else|and|option)\b\s*(.*)$/.exec(t))) { push({ kind: 'else', title: T.blocks[m[1]], label: clean(m[2]) }); continue; }
       if (/^end$/.test(t)) {
         const bl = blocks.pop();
         if (!bl) { b.warn(T.ignored(t), n); continue; }
         if (bl.type === 'box') { box = null; continue; }
-        if (!bl.label) continue;
-        const outer = [...blocks].reverse().find(x => x.label);
-        pendingPhase = outer ? T.back(outer.label) : T.endOf(bl.label);
+        push({ kind: 'end' });
         continue;
       }
-      if ((m = /^note\s+(?:left of|right of|over)\s+([^:]+?)\s*:\s*(.*)$/i.exec(t))) {
-        m[1].split(',').forEach(p => part(p));
-        const txt = clean(m[2]);
-        const last = flow.messages[flow.messages.length - 1];
-        if (last && last.kind !== 'phase' && !pendingPhase) last.note = last.note ? last.note + ' · ' + txt : txt;
-        else pendingNote = pendingNote ? pendingNote + ' · ' + txt : txt;
+      if ((m = /^note\s+(left of|right of|over)\s+([^:]+?)\s*:\s*(.*)$/i.exec(t))) {
+        const over = m[2].split(',').map(p => part(p).id);
+        push({ kind: 'note', side: /left/i.test(m[1]) ? 'left' : /right/i.test(m[1]) ? 'right' : 'over', over, label: clean(m[3]) || ' ' });
         continue;
       }
       if ((m = /^links?\s+([^:]+?)\s*:\s*(.*)$/.exec(t))) {
@@ -679,7 +709,8 @@
         else { try { const o = JSON.parse(m[2]); for (const k in o) if (httpURL(o[k])) links.push({ kind: 'url', url: o[k], label: clean(k) }); } catch (_) { b.warn(T.ignored(t), n); } }
         continue;
       }
-      if (/^(autonumber|activate|deactivate|destroy|properties|details)\b/.test(t)) continue;
+      if ((m = /^(activate|deactivate)\s+(.+)$/.exec(t))) { push({ kind: m[1], node: part(m[2]).id }); continue; }
+      if (/^(autonumber|destroy|properties|details)\b/.test(t)) continue;
       if ((m = SEQ_ARROW.exec(t))) {
         const a = part(m[1]), c = part(m[4]), arrow = m[2];
         const dotted = arrow.startsWith('--') || arrow === '<<-->>';
@@ -688,21 +719,28 @@
         if (/x$/.test(arrow)) notes.push(T.lost);
         if (/^<</.test(arrow)) notes.push(T.bidir);
         const msg = { from: a.id, to: c.id, label: clean(m[5] || '') || '…', kind };
+        if (/x$/.test(arrow)) msg.head = 'cross';
+        else if (/\)$/.test(arrow)) msg.head = 'open';
+        else if (!/>>$/.test(arrow)) msg.head = 'line';
+        if (/^<</.test(arrow)) msg.tail = 'arrow';
+        /* `A->>+B` activa a B; `B-->>-A` desactiva a quien envía */
+        if (m[3] === '+') msg.activate = c.id;
+        if (m[3] === '-') msg.deactivate = a.id;
         if (notes.length) msg.summary = notes.join(' ');
-        if (pendingNote) { msg.note = pendingNote; pendingNote = null; }
         push(msg);
         sent.set(a.id, (sent.get(a.id) || 0) + 1); recv.set(c.id, (recv.get(c.id) || 0) + 1);
         continue;
       }
       b.warn(T.ignored(t), n);
     }
+    while (blocks.length) { const bl = blocks.pop(); if (bl.type !== 'box') push({ kind: 'end' }); }
     if (!flow.participants.length) throw new MermaidError('sequenceDiagram sin participantes');
     if (title) flow.title = title;
     for (const id of flow.participants) {
       const nd = b.nodes.get(id);
       nd.summary = `${T.kinds[nd.kind] || ''}${nd.summary ? '. ' + nd.summary : ''}. ${T.sends(sent.get(id) || 0)}, ${T.receives(recv.get(id) || 0)}.`.replace(/^\. /, '');
     }
-    if (!flow.messages.some(m => m.kind !== 'phase')) throw new MermaidError('sequenceDiagram sin mensajes');
+    if (!flow.messages.some(m => m.from)) throw new MermaidError('sequenceDiagram sin mensajes');
     b.flows.push(flow); b.graphTab = false;
     return { title };
   }
@@ -751,17 +789,21 @@
         const [from, to] = !lm && rm ? [A, B] : lm && !rm ? [B, A] : [A, B];
         const kindOf = mk => mk === '<|' || mk === '|>' ? (dotted ? 'realize' : 'inherit') : mk === '*' ? 'compose' : mk === 'o' ? 'aggregate' : mk === '()' ? 'lollipop' : mk ? (dotted ? 'depend' : 'assoc') : 'link';
         const rk = kindOf(mark);
+        const MK = x => x === '<|' || x === '|>' ? 'triangle' : x === '*' ? 'diamond' : x === 'o' ? 'odiamond' : x === '()' ? 'lollipop' : x ? 'arrow' : null;
+        const aEnd = MK(lm), bEnd = MK(rm);
+        const head = (to === B ? bEnd : aEnd) || 'none', tail = (from === A ? aEnd : bEnd) || null;
+        const headLabel = (to === B ? m[6] : m[2]) || null, tailLabel = (from === A ? m[2] : m[6]) || null;
         const card = [m[2], m[6]].some(Boolean) ? `${A.label} ${m[2] || '·'} — ${m[6] || '·'} ${B.label}` : null;
         const label = clean(m[8] || '') || T.rel[rk];
         /* en la composición y la agregación, el todo es el extremo con marca (el destino) */
         const sentence = rk === 'link' ? T.linked(from.label, to.label) : rk === 'compose' || rk === 'aggregate' ? `${to.label} ${T.rel[rk]} ${from.label}.` : `${from.label} ${T.rel[rk]} ${to.label}.`;
         const sum = [sentence, card ? card + '.' : ''].filter(Boolean).join(' ');
-        b.edge(from.id, to.id, { kind: dotted ? 'async' : (rk === 'inherit' || rk === 'realize' ? 'dependency' : 'call'), label, summary: sum, _rk: rk });
+        b.edge(from.id, to.id, { kind: dotted ? 'async' : (rk === 'inherit' || rk === 'realize' ? 'dependency' : 'call'), label, summary: sum, _rk: rk, head, tail, headLabel, tailLabel });
         continue;
       }
       if ((m = new RegExp(`^${CLASS_NAME}\\s*:\\s*(.+)$`).exec(t))) { addMember(cls(m[1]), m[2]); continue; }
-      if ((m = /^note\s+for\s+(\S+)\s+"(.*)"$/.exec(t))) { const nd = cls(m[1]); (nd.notes = nd.notes || []).push({ tone: 'info', text: clean(m[2]) }); continue; }
-      if (/^note\s+"/.test(t)) continue;
+      if ((m = /^note\s+for\s+(\S+)\s+"(.*)"$/.exec(t))) { b.note(m[2], cls(m[1]).id); continue; }
+      if ((m = /^note\s+"(.*)"$/.exec(t))) { b.note(m[1]); continue; }
       if ((m = /^classDef\s+([\w,-]+)\s+(.+)$/.exec(t))) { m[1].split(',').forEach(c => classes.set(c.trim(), parseStyle(m[2]))); continue; }
       if ((m = /^cssClass\s+"([^"]+)"\s+([\w-]+)$/.exec(t))) { m[1].split(',').forEach(r => nodeClass.set(b.id(r.trim()), [m[2]])); continue; }
       if ((m = /^style\s+(\S+)\s+(.+)$/.exec(t))) { nodeStyle.set(b.id(m[1]), parseStyle(m[2])); continue; }
@@ -778,17 +820,33 @@
       delete nd._labelled;
       if (nd.kind !== 'class') continue;
       const mem = members.get(nd.id) || [];
+      if (!mem.length && !annos.get(nd.id)) { nd.shape = 'class'; nd.rows = []; }
       const meth = mem.filter(x => /\(/.test(x)), attrs = mem.filter(x => !/\(/.test(x));
       const anno = annos.get(nd.id);
       if (anno) { nd.subtitle = `«${anno}»`; nd.tags = [anno]; }
       nd._desc = [anno ? `«${anno}»` : '', attrs.length ? T.nAttrs(attrs.length) : '', meth.length ? T.nMethods(meth.length) : ''].filter(Boolean).join(' · ') || null;
       const ul = (h, arr) => arr.length ? `<h4>${esc(h)}</h4><ul class="gx-mmd-members">${arr.map(x => `<li><code>${esc(x)}</code></li>`).join('')}</ul>` : '';
       if (mem.length) nd.details_html = ul(T.attrs, attrs) + ul(T.methods, meth);
+      /* la caja UML: un compartimento de atributos y otro de métodos, con su visibilidad */
+      const row = (x, section) => {
+        let txt = x.trim(), vis = null, st = false, ab = false;
+        if (/^[+\-#~]/.test(txt)) { vis = txt[0]; txt = txt.slice(1).trim(); }
+        if (/\$\s*$/.test(txt) || /\)\$/.test(txt)) { st = true; txt = txt.replace(/\$(?=\s|$)/, '').trim(); }
+        if (/\*\s*$/.test(txt) || /\)\*/.test(txt)) { ab = true; txt = txt.replace(/\*(?=\s|$)/, '').trim(); }
+        const mm = section === 'method' ? /^(.*\))\s*(.*)$/.exec(txt) : null;
+        const r = { name: mm ? mm[1] : txt, section };
+        if (mm && mm[2]) r.type = mm[2];
+        if (vis) r.vis = vis; if (st) r.static = true; if (ab) r.abstract = true;
+        return r;
+      };
+      nd.shape = 'class';
+      nd.rows = attrs.map(x => row(x, 'attr')).concat(meth.map(x => row(x, 'method')));
+      if (anno && /abstract/i.test(anno)) nd.abstract = true;
       let st = null; (nodeClass.get(nd.id) || []).forEach(c => { if (classes.has(c)) st = Object.assign(st || {}, classes.get(c)); });
       if (nodeStyle.has(nd.id)) st = Object.assign(st || {}, nodeStyle.get(nd.id));
       const col = styleColor(st); if (col) nd.color = col;
     }
-    const rks = new Set(b.edges.map(e => e._rk)); b.edges.forEach(e => delete e._rk);
+    const rks = new Set(b.edges.map(e => e._rk).filter(Boolean)); b.edges.forEach(e => delete e._rk);
     const LE = { inherit: 'solid', realize: 'dashed', compose: 'solid', aggregate: 'solid', assoc: 'solid', depend: 'dashed', link: 'solid', lollipop: 'solid' };
     b.legendEdges = [...rks].map(k => ({ label: T.rel[k], style: LE[k] }));
     if (b.edges.some(e => e.kind === 'async') && !b.legendEdges.some(x => x.style === 'dashed')) b.legendEdges.push({ label: T.dotted.replace(/\.$/, ''), style: 'dashed' });
@@ -808,33 +866,34 @@
       if (raw === '[*]') return null;
       n = b.node(raw, props || {});
       if (!n.kind) { n.kind = 'state'; b.kinds.add('state'); }
+      if (n.kind === 'state') n.shape = 'rounded';
       if (cl) nodeClass.set(n.id, [cl]);
       if (scope()) b.setParent(n.id, scope());
       return n;
     };
     const pseudo = (which) => {
       const sc = scope();
-      const n = b.node(`\u0000${which}@${sc}`, { label: which === 'start' ? T.start : T.end, kind: which });
+      const n = b.node(`\u0000${which}@${sc}`, { label: which === 'start' ? T.start : T.end, kind: which, shape: which });
       b.kinds.add(which);
       if (sc) b.setParent(n.id, sc);
       return n;
     };
     for (const { t, n } of statements(P.lines.slice(1), false)) {
       let m;
-      if (note) { if (/^end note$/i.test(t)) { (note.notes = note.notes || []).push({ tone: 'info', text: clean(note._txt.join(' ')) }); delete note._txt; note = null; } else note._txt.push(t); continue; }
+      if (note) { if (/^end note$/i.test(t)) { b.note(note._txt.join(' '), note.id); delete note._txt; note = null; } else note._txt.push(t); continue; }
       if ((m = /^direction\s+(\w+)$/.exec(t))) { if (!stack.length) b.direction = /^(LR|RL)$/i.test(m[1]) ? 'right' : 'down'; continue; }
       if (/^(hide empty description|scale\s)/.test(t) || t === '--') continue;
       if (t === '}') { stack.pop(); continue; }
       if ((m = /^state\s+"([^"]*)"\s+as\s+([\w.-]+)\s*(\{)?$/.exec(t)) || (m = /^state\s+([\w.-]+)\s+as\s+"([^"]*)"\s*(\{)?$/.exec(t))) {
         const [label, raw] = /^state\s+"/.test(t) ? [m[1], m[2]] : [m[2], m[1]];
         const nd = state(raw, { label: clean(label) });
-        if (m[3]) { nd.kind = 'group'; b.kinds.add('group'); stack.push(nd.id); }
+        if (m[3]) { nd.kind = 'group'; delete nd.shape; b.kinds.add('group'); stack.push(nd.id); }
         continue;
       }
-      if ((m = /^state\s+([\w.-]+)\s*<<(choice|fork|join)>>$/.exec(t))) { const nd = state(m[1], { kind: m[2] === 'choice' ? 'choice' : 'fork' }); b.kinds.add(nd.kind); if (m[2] !== 'choice') nd.label = m[1]; continue; }
-      if ((m = /^state\s+([\w.-]+)\s*\{$/.exec(t))) { const nd = state(m[1], { kind: 'group' }); b.kinds.add('group'); stack.push(nd.id); continue; }
+      if ((m = /^state\s+([\w.-]+)\s*<<(choice|fork|join)>>$/.exec(t))) { const k = m[2] === 'choice' ? 'choice' : 'fork'; const nd = state(m[1], { kind: k }); nd.kind = k; nd.shape = k; b.kinds.add(k); if (m[2] !== 'choice') nd.label = m[1]; continue; }
+      if ((m = /^state\s+([\w.-]+)\s*\{$/.exec(t))) { const nd = state(m[1], { kind: 'group' }); nd.kind = 'group'; delete nd.shape; b.kinds.add('group'); stack.push(nd.id); continue; }
       if ((m = /^state\s+([\w.-]+)$/.exec(t))) { state(m[1]); continue; }
-      if ((m = /^note\s+(left|right)\s+of\s+([\w.-]+)\s*:\s*(.*)$/i.exec(t))) { const nd = state(m[2]); (nd.notes = nd.notes || []).push({ tone: 'info', text: clean(m[3]) }); continue; }
+      if ((m = /^note\s+(left|right)\s+of\s+([\w.-]+)\s*:\s*(.*)$/i.exec(t))) { b.note(m[3], state(m[2]).id); continue; }
       if ((m = /^note\s+(left|right)\s+of\s+([\w.-]+)$/i.exec(t))) { note = state(m[2]); note._txt = []; continue; }
       if ((m = /^classDef\s+([\w,-]+)\s+(.+)$/.exec(t))) { m[1].split(',').forEach(c => classes.set(c.trim(), parseStyle(m[2]))); continue; }
       if ((m = /^class\s+(.+?)\s+([\w-]+)$/.exec(t))) { m[1].split(',').forEach(r => nodeClass.set(b.id(r.trim()), [m[2]])); continue; }
@@ -864,7 +923,7 @@
     b.direction = 'right';
     const attrs = new Map(); let body = null;
     const ENT = '("[^"]+"|[\\w$\\u00C0-\\uFFFF-]+)(?:\\[("?)([^\\]"]*)\\2\\])?';
-    const ent = (raw, alias) => { const n = b.node(unq(raw), { kind: 'table', label: alias ? clean(alias) : null }); if (!attrs.has(n.id)) attrs.set(n.id, []); return n; };
+    const ent = (raw, alias) => { const n = b.node(unq(raw), { kind: 'table', shape: 'table', label: alias ? clean(alias) : null }); if (!attrs.has(n.id)) attrs.set(n.id, []); return n; };
     const REL = new RegExp(`^${ENT}\\s*(\\|o|\\|\\||\\}o|\\}\\|)(--|\\.\\.)(o\\||\\|\\||o\\{|\\|\\{)\\s*${ENT}\\s*:\\s*(.+)$`);
     const REL_W = new RegExp(`^${ENT}\\s+(.+?)\\s+(to|optionally to)\\s+(.+?)\\s+${ENT}\\s*:\\s*(.+)$`);
     for (const { t, n } of statements(P.lines.slice(1), false)) {
@@ -882,7 +941,8 @@
       if ((m = REL.exec(t))) { a = ent(m[1], m[3]); c = ent(m[7], m[9]); ca = ER_L[m[4]]; cb = ER_R[m[6]]; dotted = m[5] === '..'; label = m[10]; }
       else if ((m = REL_W.exec(t)) && ER_WORDS[m[4].toLowerCase()] && ER_WORDS[m[6].toLowerCase()]) { a = ent(m[1], m[3]); c = ent(m[7], m[9]); ca = ER_WORDS[m[4].toLowerCase()]; cb = ER_WORDS[m[6].toLowerCase()]; dotted = m[5] !== 'to'; label = m[10]; }
       if (a) {
-        b.edge(a.id, c.id, { kind: dotted ? 'async' : 'data', label: clean(label), summary: `${T.erSentence(a.label, T.card[ca], c.label, T.card[cb])} ${dotted ? T.nonIdentifying : T.identifying}` });
+        const CF = { zo: 'zero-one', one: 'one', zm: 'zero-many', om: 'one-many' };
+        b.edge(a.id, c.id, { kind: dotted ? 'async' : 'data', label: clean(label), summary: `${T.erSentence(a.label, T.card[ca], c.label, T.card[cb])} ${dotted ? T.nonIdentifying : T.identifying}`, tail: CF[ca], head: CF[cb] });
         continue;
       }
       if ((m = new RegExp(`^${ENT}$`).exec(t))) { ent(m[1], m[3]); continue; }
@@ -895,6 +955,7 @@
       nd._desc = T.nAttrs(at.length) + (at.some(x => /PK/.test(x.keys)) ? ' · PK: ' + at.filter(x => /PK/.test(x.keys)).map(x => x.name).join(', ') : '');
       nd.details_html = `<h4>${esc(T.attrs)}</h4><ul class="gx-mmd-members">${at.map(x => `<li><code>${esc(x.name)}</code> <i>${esc(x.type)}</i>${x.keys ? ` <b>${esc(x.keys)}</b>` : ''}${x.comment ? ` — ${esc(x.comment)}` : ''}</li>`).join('')}</ul>`;
       nd.tags = at.map(x => x.name);
+      nd.rows = at.map(x => Object.assign({ name: x.name, type: x.type }, x.keys ? { keys: x.keys.replace(/\s+/g, ',') } : {}));
     }
     if (b.edges.some(e => e.kind === 'async')) b.legendEdges = [{ label: T.identifying.replace(/\.$/, ''), style: 'solid' }, { label: T.nonIdentifying.replace(/ \(.*$/, '').replace(/\.$/, ''), style: 'dashed' }];
   }
@@ -919,7 +980,7 @@
       if (/^::icon\(/.test(L.t) || /^:::/.test(L.t)) continue;
       const x = mmText(L.t);
       while (stack.length && stack[stack.length - 1].indent >= L.indent) stack.pop();
-      const nd = b.node(x.raw && !b.has(x.raw) ? x.raw : '\u0000mm' + L.n, { label: clean(x.label) || ' ', kind: x.kind });
+      const nd = b.node(x.raw && !b.has(x.raw) ? x.raw : '\u0000mm' + L.n, { label: clean(x.label) || ' ', kind: x.kind, shape: { idea: 'rounded', step: 'rect' }[x.kind] || x.kind });
       if (stack.length) { const up = stack[stack.length - 1].id; if (nest) b.setParent(nd.id, up); else b.edge(up, nd.id, { kind: 'call' }); }
       else if (b.nodes.size > 1) b.warn('mindmap con más de una raíz', L.n);
       else nd.subtitle = b.lang === 'en' ? 'Central topic' : 'Tema central';
@@ -986,7 +1047,8 @@
     };
     for (const task of tasks) {
       const ms = task.tags.includes('milestone');
-      const nd = b.node(task.id || '\u0000task' + task.n, { label: task.label, kind: ms ? 'milestone' : 'job', status: st(task) });
+      const nd = b.node(task.id || '\u0000task' + task.n, { label: task.label, kind: ms ? 'milestone' : 'job', status: st(task), shape: 'bar' });
+      if (task._start != null) nd.span = Object.assign({ start: fmtDate(task._start), end: fmtDate(task._end != null ? task._end : task._start) }, ms ? { milestone: true } : {}, task.tags.includes('active') ? { live: true } : {});
       task.node = nd;
       if (task.section) b.setParent(nd.id, task.section.id);
       const metrics = [];
@@ -1019,7 +1081,7 @@
       if ((m = /^(.+?)\s*:\s*(\d+)\s*(?::\s*(.*))?$/.exec(t))) {
         const score = Math.max(1, Math.min(5, +m[2]));
         const actors = (m[3] || '').split(',').map(x => clean(x)).filter(Boolean);
-        const nd = b.node('\u0000task' + n, { label: clean(m[1]), kind: 'job', status: b.status('s' + score, T.scoreText(score), SC[score]) });
+        const nd = b.node('\u0000task' + n, { label: clean(m[1]), kind: 'job', status: b.status('s' + score, T.scoreText(score), SC[score]), shape: 'score', score });
         nd.metrics = [{ label: T.score, value: score + '/5' }].concat(actors.length ? [{ label: T.actors, value: actors.join(', ') }] : []);
         if (actors.length) { nd.tags = actors; nd.subtitle = actors.join(', '); }
         if (section) b.setParent(nd.id, section.id);
@@ -1071,7 +1133,7 @@
     const head = P.lines[0].t;
     b.direction = /\bTB\b|\bBT\b/.test(head) ? 'down' : 'right';
     /* las ramas avanzan en paralelo: sin partición de ELK, que las pondría una detrás de otra */
-    b.layout = { lanes: 'flow' };
+    b.layout = { lanes: 'flow', inheritLaneColor: true };
     const main = (/mainBranchName:\s*['"]?([\w/.-]+)/.exec(P.meta.config) || [])[1] || 'main';
     const branches = new Map(); let cur = main, seq = 0;
     const order = [];
@@ -1085,7 +1147,10 @@
     const commit = (o, extraParents, label) => {
       const br = branches.get(cur);
       const id = o.id || `c${++seq}`;
-      const nd = b.node('\u0000' + id, { label: clean(o.msg || o.message || '') || label || id, kind: 'commit', lane: br.lane.id });
+      const merge = (extraParents || []).some(p => p.kind && p.kind.label === 'merge');
+      const nd = b.node('\u0000' + id, { label: clean(o.msg || o.message || '') || label || id, kind: 'commit', lane: br.lane.id,
+        shape: o.type === 'HIGHLIGHT' ? 'commit-highlight' : o.type === 'REVERSE' ? 'commit-reverse' : merge ? 'commit-merge' : 'commit' });
+      if (o.tag) nd.badge = o.tag;
       if (o.id && (o.msg || label)) nd.subtitle = o.id;
       const notes = [];
       if (o.tag) { notes.push({ tone: 'info', text: `${T.tag}: ${o.tag}` }); nd.tags = [o.tag]; nd.subtitle = o.tag; }
@@ -1115,6 +1180,8 @@
       }
       b.warn(T.ignored(t), n);
     }
+    /* el último commit de cada rama es su HEAD: late */
+    for (const br of branches.values()) if (br.head && b.nodes.get(br.head)) b.nodes.get(br.head).head = true;
     /* orden de carriles: `order:` y, si no, el de creación */
     const lanes = [...b.lanes.values()].sort((x, y) => {
       const bx = [...branches.values()].find(v => v.lane === x), by = [...branches.values()].find(v => v.lane === y);
@@ -1152,7 +1219,13 @@
         if (techn) nd.metrics = [{ label: T.techn, value: clean(techn) }];
         if (o.tags) nd.tags = o.tags.split('+');
         if (httpURL(o.link)) nd.links = [{ kind: 'url', url: o.link }];
-        if (em[2]) nd.color = C.gray;
+        /* colores de la notación C4: persona y sistema oscuros, contenedor y componente más claros, externo gris */
+        const C4C = { Person: '#08427b', System: '#1168bd', Container: '#2f6fb3', Component: '#4f86c6' };
+        const base = em[1].replace(/(Db|Queue)$/, '');
+        nd.color = em[2] ? { light: '#737b86', dark: '#5f6772' } : { light: C4C[base] || C4C.System, dark: C4C[base] || C4C.System };
+        nd.shape = em[1] === 'Person' ? 'person' : /Db$/.test(em[1]) ? 'c4-db' : /Queue$/.test(em[1]) ? 'c4-queue' : 'c4';
+        if (!techn) nd.subtitle = `[${em[1] === 'Person' ? (b.lang === 'en' ? 'Person' : 'Persona') : base === 'System' ? (b.lang === 'en' ? 'Software System' : 'Sistema') : base}${em[2] ? (b.lang === 'en' ? ', external' : ', externo') : ''}]`;
+        else nd.subtitle = `[${base}: ${clean(techn)}]`;
         if (stack.length) b.setParent(nd.id, stack[stack.length - 1]);
         if (m[3]) stack.push(nd.id);
         continue;
@@ -1160,6 +1233,8 @@
       if (BOUND.test(fn)) {
         const [alias, label, ty, descr] = pos;
         const nd = b.node(alias, { label: clean(label || alias), kind: fn === 'Deployment_Node' || /^Node/.test(fn) ? 'package' : 'group', subtitle: ty ? clean(ty) : (fn.replace(/_Boundary$/, '').replace('_', ' ') !== 'Boundary' ? fn.replace(/_Boundary$/, '') : null) });
+        nd.frame = /Boundary/.test(fn) ? 'dashed' : null;
+        if (!nd.frame) delete nd.frame;
         if (descr) nd.summary = clean(descr);
         if (stack.length) b.setParent(nd.id, stack[stack.length - 1]);
         if (m[3]) stack.push(nd.id);
@@ -1197,18 +1272,19 @@
   function parseArchitecture(P, b) {
     const T = b.T;
     b.direction = 'right';
-    const ICON_KIND = { database: 'datastore', disk: 'datastore', server: 'service', internet: 'external', cloud: 'cloud' };
+    const ICON_KIND = { database: 'datastore', disk: 'disk', server: 'server', internet: 'internet', cloud: 'cloud' };
     const kindOf = icon => { if (!icon) return 'service'; const i = icon.toLowerCase(); if (ICON_KIND[i]) return ICON_KIND[i]; if (/db|sql|database|dynamo|rds|mongo|redis|s3|storage|bucket/.test(i)) return 'datastore'; if (/queue|sqs|kafka|sns|rabbit/.test(i)) return 'queue'; if (/lambda|function/.test(i)) return 'function'; return 'service'; };
     const pend = [], edges = [];
     for (const { t, n } of statements(P.lines.slice(1), false)) {
       let m;
       if ((m = /^(group|service)\s+([\w-]+)\s*(?:\(([^)]*)\))?\s*(?:\[([^\]]*)\])?\s*(?:in\s+([\w-]+))?$/.exec(t))) {
         const nd = b.node(m[2], { label: clean(m[4] || m[2]), kind: m[1] === 'group' ? 'group' : kindOf(m[3]) });
+        if (m[1] === 'group') nd.frame = 'dashed'; else nd.shape = 'tile';
         if (m[3] && m[1] === 'service') nd.subtitle = m[3];
         if (m[5]) pend.push([nd.id, m[5]]);
         continue;
       }
-      if ((m = /^junction\s+([\w-]+)(?:\s+in\s+([\w-]+))?$/.exec(t))) { const nd = b.node(m[1], { label: m[1], kind: 'junction' }); if (m[2]) pend.push([nd.id, m[2]]); continue; }
+      if ((m = /^junction\s+([\w-]+)(?:\s+in\s+([\w-]+))?$/.exec(t))) { const nd = b.node(m[1], { label: m[1], kind: 'junction', shape: 'junction' }); if (m[2]) pend.push([nd.id, m[2]]); continue; }
       if ((m = /^([\w-]+)(\{group\})?\s*:\s*([LRTB])\s*(<)?-(?:\[([^\]]*)\])?-(>)?\s*([LRTB])\s*:\s*([\w-]+)(\{group\})?$/.exec(t))) {
         if (!b.has(m[1]) || !b.has(m[8])) { b.warn(T.ignored(t), n); continue; }
         edges.push({ m, n }); continue;
@@ -1248,6 +1324,9 @@
           if (metrics.length) cur.metrics = metrics;
           if (f.text) cur.summary = clean(f.text);
           if (f.id) cur.subtitle = `${cur._rtype}${f.id ? ' · ' + f.id : ''}`;
+          cur.shape = 'requirement';
+          cur.subtitle = `«${cur._rtype}»`;
+          cur.rows = [f.id && { name: T.id, type: f.id }, f.text && { name: clean(f.text) }, isEl && f.type && { name: T.type, type: f.type }, f.risk && { name: T.risk, type: f.risk }, f.verifymethod && { name: T.verify, type: f.verifymethod }, f.docref && { name: T.docref, type: f.docref }].filter(Boolean);
           const risk = (f.risk || '').toLowerCase();
           if (RISK[risk]) cur.status = b.status('risk-' + risk, `${T.risk}: ${risk}`, RISK[risk]);
           delete cur._rtype;
@@ -1279,8 +1358,8 @@
     for (const L of P.lines.slice(1)) {
       const [src, dst, val] = csv(L.t);
       if (!src || !dst || isNaN(parseFloat(val))) { b.warn(T.ignored(L.t), L.n); continue; }
-      const a = b.node(src, { kind: 'flowpoint' }), c = b.node(dst, { kind: 'flowpoint' }), v = parseFloat(val);
-      b.edge(a.id, c.id, { kind: 'data', label: String(v), data: `${T.value}: ${v}` });
+      const a = b.node(src, { kind: 'flowpoint', shape: 'flowbar' }), c = b.node(dst, { kind: 'flowpoint', shape: 'flowbar' }), v = parseFloat(val);
+      b.edge(a.id, c.id, { kind: 'data', label: String(v), data: `${T.value}: ${v}`, weight: v, head: 'none' });
       outflow.set(a.id, (outflow.get(a.id) || 0) + v); inflow.set(c.id, (inflow.get(c.id) || 0) + v);
     }
     const fmt = v => Math.round(v * 100) / 100;
@@ -1288,6 +1367,7 @@
       const i = inflow.get(nd.id), o = outflow.get(nd.id);
       nd.metrics = [i != null ? { label: T.inflow, value: String(fmt(i)) } : null, o != null ? { label: T.outflow, value: String(fmt(o)) } : null].filter(Boolean);
       nd.subtitle = String(fmt(Math.max(i || 0, o || 0)));
+      nd.value = fmt(Math.max(i || 0, o || 0));
     }
     /* los dos flujos más gruesos, con énfasis */
     [...b.edges].sort((x, y) => parseFloat(y.label) - parseFloat(x.label)).slice(0, 2).forEach(e => { e.emphasis = 'hero'; });
@@ -1310,10 +1390,11 @@
       const raw = m ? (m[1] || null) : null, label = clean(m ? m[2] : t);
       if (L.indent <= colIndent) { col = b.lane(raw || '\u0000col' + L.n, { label }); continue; }
       if (!col) { b.warn(T.ignored(L.t), L.n); continue; }
-      const nd = b.node(raw || '\u0000card' + L.n, { label, kind: 'card', lane: col.id });
+      const nd = b.node(raw || '\u0000card' + L.n, { label, kind: 'card', lane: col.id, shape: 'ticket' });
       if (meta) {
         const metrics = [];
-        if (meta.assigned) { metrics.push({ label: T.assigned, value: meta.assigned }); nd.subtitle = meta.assigned; }
+        if (meta.assigned) { metrics.push({ label: T.assigned, value: meta.assigned }); nd.subtitle = meta.assigned; nd.avatar = String(meta.assigned).split(/[\s._-]+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2) || meta.assigned.slice(0, 2); }
+        if (meta.ticket) nd.badge = meta.ticket;
         if (meta.ticket) {
           metrics.push({ label: T.ticket, value: meta.ticket });
           if (base && httpURL(base.replace('#TICKET#', meta.ticket))) nd.links = [{ kind: 'url', url: base.replace('#TICKET#', encodeURIComponent(meta.ticket)), label: meta.ticket }];
@@ -1338,6 +1419,7 @@
       if (!m) { b.warn(T.ignored(L.t), L.n); continue; }
       while (stack.length && stack[stack.length - 1].indent >= L.indent) stack.pop();
       const nd = b.node('\u0000tm' + L.n, { label: clean(m[1]), kind: m[2] != null ? 'card' : 'group' });
+      if (m[2] != null) { nd.shape = 'block'; nd.value = parseFloat(m[2]); }
       if (stack.length) b.setParent(nd.id, stack[stack.length - 1].id);
       if (m[2] != null) { value.set(nd.id, parseFloat(m[2])); nd.metrics = [{ label: T.value, value: m[2] }]; nd.subtitle = m[2]; }
       stack.push({ indent: L.indent, id: nd.id });
