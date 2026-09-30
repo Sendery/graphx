@@ -77,6 +77,36 @@ ok(mounted['gantt.mmd'].host.querySelectorAll('.gx-bar-fill').length >= 5 && !!m
   ok([...host.querySelectorAll('.gx-seq-fr')].some(f => f.classList.contains('lit')), 'secuencia: iluminar un mensaje ilumina su marco');
 }
 
+/* regresiones: lo que encontró la revisión de código */
+console.log('— regresiones —');
+async function mountSpec(spec) {
+  const html = `<!doctype html><html><head><style>${R('graphx.css')}</style></head><body><div data-gx><script type="application/json" class="gx-spec">${JSON.stringify(spec).replace(/</g, '\\u003c')}</script></div>
+<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
+  const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, beforeParse(w) { w.matchMedia = q => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }); w.HTMLCanvasElement.prototype.getContext = () => null; } });
+  const w = dom.window; await new Promise(r => w.addEventListener('load', r));
+  const host = w.document.querySelector('[data-gx]'); await host._gx.ready; await new Promise(r => setTimeout(r, 900));
+  return { host, gx: host._gx };
+}
+{
+  const { host, gx } = await mountSpec(globalThis.GraphX.fromMermaid('stateDiagram-v2\n[*] --> A\nstate f <<fork>>\nA --> f\nf --> B\nf --> C').spec);
+  const d0 = host.querySelector('.gx-shape.sh-fork .gx-card').getAttribute('d');
+  await gx.setDirection('right'); await new Promise(r => setTimeout(r, 900));
+  const el = host.querySelector('.gx-shape.sh-fork');
+  ok(el.querySelector('.gx-card').getAttribute('d') !== d0 && /^translate\([^)]*\)$/.test(el.getAttribute('transform')), 'al girar el diagrama, la bifurcación se rehace (sin quedar escalada)');
+}
+{
+  const spec = { title: 't', graphTab: false, nodes: [{ id: 'A', label: 'A', summary: 'a' }, { id: 'B', label: 'B', summary: 'b' }], edges: [],
+    flows: [{ id: 'f', participants: ['A', 'B'], messages: [{ id: 'r1', kind: 'note', side: 'left', over: ['A'], label: 'Una nota bastante larga a la izquierda del primero' }, { id: 'r2', kind: 'note', over: 'B', label: 'over mal formado' }, { id: 'm1', from: 'A', to: 'B', label: 'hola', delta: 'raro' }] }] };
+  const { host, gx } = await mountSpec(spec);
+  ok(gx.state.seq && gx.state.seq.bbox.x < 0, 'una nota a la izquierda del primer participante entra en el encuadre');
+  ok(host.querySelectorAll('.gx-seq-note-b').length === 2 && host.querySelectorAll('.gx-seq-msg').length === 1, 'un over que no es lista no rompe la secuencia');
+  ok(!/raro/.test(host.querySelector('.gx-seq-msg .gx-eline').getAttribute('marker-end')), 'un delta desconocido no llega al marcador');
+}
+{
+  const { host } = await mountSpec({ title: 't', nodes: [{ id: 'a', label: 'A', summary: 'a' }, { id: 'b', label: 'B', summary: 'b' }], edges: [{ id: 'e1', from: 'a', to: 'b', weight: 50 }] });
+  ok(/-m-arrow-/.test(host.querySelector('.gx-edge .gx-eline').getAttribute('marker-end')), 'una arista gruesa lleva la flecha de tamaño fijo');
+}
+
 /* 3 · React dibuja lo mismo que el motor */
 console.log('— React —');
 const { renderToStaticMarkup } = await import('react-dom/server');

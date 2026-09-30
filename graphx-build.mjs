@@ -100,7 +100,11 @@ for (const n of spec.nodes || []) {
   /* formas (graphx-shapes.js) y sus datos */
   if (n.shape != null && !SHAPE_NAMES.has(n.shape)) warns.push(`nodo ${n.id}: shape «${n.shape}» desconocida (se pinta como tarjeta)`);
   if (n.rows != null && (!Array.isArray(n.rows) || n.rows.some(r => !r || typeof r !== 'object' || typeof r.name !== 'string'))) errors.push(`nodo ${n.id}: rows debe ser una lista de { name, type?, keys?, vis?, section? }`);
-  if (n.span != null) { const ok = v => v == null || typeof v === 'number' || !isNaN(Date.parse(String(v).length === 10 ? v + 'T00:00:00Z' : String(v).replace(' ', 'T') + 'Z')); if (typeof n.span !== 'object' || !ok(n.span.start) || !ok(n.span.end)) errors.push(`nodo ${n.id}: span necesita start y end como fecha (AAAA-MM-DD) o número`); }
+  if (n.span != null) {
+    /* la misma lectura de fechas que el motor: AAAA-MM-DD, con hora y, si la trae, zona */
+    const date = v => typeof v === 'number' || !isNaN(Date.parse(String(v).length === 10 ? v + 'T00:00:00Z' : String(v).replace(' ', 'T') + (/Z|[+-]\d\d:?\d\d$/.test(v) ? '' : 'Z')));
+    if (typeof n.span !== 'object' || n.span.start == null || !date(n.span.start) || (n.span.end != null && !date(n.span.end))) errors.push(`nodo ${n.id}: span necesita start (y end, si lo trae) como fecha AAAA-MM-DD o número`);
+  }
   ['score', 'value'].forEach(k => { if (n[k] != null && typeof n[k] !== 'number') errors.push(`nodo ${n.id}: ${k} debe ser un número`); });
   ['badge', 'avatar'].forEach(k => { if (n[k] != null && typeof n[k] !== 'string') errors.push(`nodo ${n.id}: ${k} debe ser texto`); });
   if (n.frame != null && !['dashed', 'dotted', 'solid'].includes(n.frame)) warns.push(`nodo ${n.id}: frame «${n.frame}» desconocido`);
@@ -168,7 +172,11 @@ for (const f of spec.flows || []) {
     if (m.id && mids.has(m.id)) errors.push(`flujo ${f.id}: mensaje duplicado ${m.id}`); mids.add(m.id);
     if (m.kind === 'phase') { if (!m.label) warns.push(`flujo ${f.id}: fase sin label`); continue; }
     if (['block', 'else', 'end'].includes(m.kind)) continue;
-    if (m.kind === 'note') { (m.over || []).forEach(p => { if (!parts.has(p)) errors.push(`flujo ${f.id}, nota ${m.id}: participante desconocido ${p}`); }); if (!(m.over || []).length) errors.push(`flujo ${f.id}, nota ${m.id}: sin over`); continue; }
+    if (m.kind === 'note') {
+      if (!Array.isArray(m.over) || !m.over.length) { errors.push(`flujo ${f.id}, nota ${m.id}: over debe ser una lista de participantes`); continue; }
+      m.over.forEach(p => { if (!parts.has(p)) errors.push(`flujo ${f.id}, nota ${m.id}: participante desconocido ${p}`); });
+      continue;
+    }
     if (m.kind === 'activate' || m.kind === 'deactivate') { if (!parts.has(m.node)) errors.push(`flujo ${f.id}, ${m.kind} ${m.id}: participante desconocido ${m.node}`); continue; }
     [m.activate, m.deactivate].forEach(p => { if (p != null && !parts.has(p)) errors.push(`flujo ${f.id}, mensaje ${m.id}: activación de un participante desconocido ${p}`); });
     if (!parts.has(m.from) || !parts.has(m.to)) errors.push(`flujo ${f.id}, mensaje ${m.id || m.label}: extremo que no es participante`);

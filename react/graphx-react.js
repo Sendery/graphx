@@ -23,6 +23,8 @@
   'use strict';
   const h = React.createElement;
   const { useEffect, useMemo, useRef } = React;
+  /* la última versión de un valor, sin que cambiarla dispare un efecto (callbacks de GraphX) */
+  function useLatest(v) { const r = useRef(v); r.current = v; return r; }
 
   /* atributos del árbol → props de React: class → className, text-anchor → textAnchor, style → objeto */
   const camel = k => (/^(data|aria)-/.test(k) ? k : k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
@@ -95,8 +97,13 @@
      entrada. Los errores de conversión de Mermaid llegan por `onError`. */
   function GraphX(p) {
     const ref = useRef(null);
-    const { spec, mermaid, lang, height, onReady, onError } = p;
+    const { spec, mermaid, lang, height } = p;
+    const cb = useLatest({ onReady: p.onReady, onError: p.onError, onWarnings: p.onWarnings });
+    /* un spec escrito en línea es un objeto nuevo en cada render: se compara por contenido para no
+       volver a montar el motor si no ha cambiado */
+    const specKey = useMemo(() => (spec == null ? null : JSON.stringify(spec)), [spec]);
     useEffect(() => {
+      const { onReady, onError, onWarnings } = cb.current;
       const GX = getGX(), host = ref.current;
       if (!host || !GX.mount) return undefined;
       let inst = null;
@@ -106,14 +113,14 @@
           if (!GX.fromMermaid) throw new Error('GraphX: falta graphx-mermaid.js para convertir Mermaid');
           const r = GX.fromMermaid(mermaid, { lang });
           s = r.spec;
-          if (r.warnings.length && p.onWarnings) p.onWarnings(r.warnings);
+          if (r.warnings.length && onWarnings) onWarnings(r.warnings);
         }
         if (!s) return undefined;
         inst = GX.mount(host, s, { lang, height });
         if (onReady) onReady(inst);
       } catch (e) { if (onError) onError(e); else if (typeof console !== 'undefined') console.error(e); }
       return () => { if (inst) inst.destroy(); };
-    }, [spec, mermaid, lang, height]);
+    }, [specKey, mermaid, lang, height]);
     return h('div', { ref, className: 'gx-host' + (p.className ? ' ' + p.className : ''), style: p.style });
   }
 

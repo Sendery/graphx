@@ -658,7 +658,9 @@
       if (!seen.has(n.id)) { seen.add(n.id); flow.participants.push(n.id); }
       return n;
     };
-    const push = m => { m.id = 'm' + (flow.messages.length + 1); flow.messages.push(m); return m; };
+    /* los mensajes se numeran m1, m2… como antes; marcos, notas y activaciones, r1, r2… */
+    let nMsg = 0, nRow = 0;
+    const push = m => { m.id = m.from != null ? 'm' + (++nMsg) : 'r' + (++nRow); flow.messages.push(m); return m; };
     for (const { t, n } of statements(P.lines.slice(1), false)) {
       let m;
       if ((m = /^title\s*:?\s*(.+)$/.exec(t))) { title = clean(m[1]); continue; }
@@ -1224,8 +1226,10 @@
         const base = em[1].replace(/(Db|Queue)$/, '');
         nd.color = em[2] ? { light: '#737b86', dark: '#5f6772' } : { light: C4C[base] || C4C.System, dark: C4C[base] || C4C.System };
         nd.shape = em[1] === 'Person' ? 'person' : /Db$/.test(em[1]) ? 'c4-db' : /Queue$/.test(em[1]) ? 'c4-queue' : 'c4';
-        if (!techn) nd.subtitle = `[${em[1] === 'Person' ? (b.lang === 'en' ? 'Person' : 'Persona') : base === 'System' ? (b.lang === 'en' ? 'Software System' : 'Sistema') : base}${em[2] ? (b.lang === 'en' ? ', external' : ', externo') : ''}]`;
-        else nd.subtitle = `[${base}: ${clean(techn)}]`;
+        const C4N = b.lang === 'en' ? { Person: 'Person', System: 'Software System', Container: 'Container', Component: 'Component' } : { Person: 'Persona', System: 'Sistema', Container: 'Contenedor', Component: 'Componente' };
+        const tname = C4N[em[1] === 'Person' ? 'Person' : base] || base;
+        if (!techn) nd.subtitle = `[${tname}${em[2] ? (b.lang === 'en' ? ', external' : ', externo') : ''}]`;
+        else nd.subtitle = `[${tname}: ${clean(techn)}]`;
         if (stack.length) b.setParent(nd.id, stack[stack.length - 1]);
         if (m[3]) stack.push(nd.id);
         continue;
@@ -1393,7 +1397,7 @@
       const nd = b.node(raw || '\u0000card' + L.n, { label, kind: 'card', lane: col.id, shape: 'ticket' });
       if (meta) {
         const metrics = [];
-        if (meta.assigned) { metrics.push({ label: T.assigned, value: meta.assigned }); nd.subtitle = meta.assigned; nd.avatar = String(meta.assigned).split(/[\s._-]+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2) || meta.assigned.slice(0, 2); }
+        if (meta.assigned) { metrics.push({ label: T.assigned, value: meta.assigned }); nd.subtitle = meta.assigned; const words = String(meta.assigned).split(/[\s._-]+/).filter(Boolean); nd.avatar = (words.length > 1 ? words.map(w => Array.from(w)[0]).join('') : Array.from(words[0] || '').slice(0, 2).join('')).slice(0, 4); }
         if (meta.ticket) nd.badge = meta.ticket;
         if (meta.ticket) {
           metrics.push({ label: T.ticket, value: meta.ticket });

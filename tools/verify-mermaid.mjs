@@ -46,6 +46,7 @@ const CHECKS = {
     ok(node(s, 'U').shape === 'actor' && node(s, 'DB').shape === 'datastore', 'cabeceras con forma: actor y base de datos');
     ok(f.messages.some(m => m.activate === 'A') && f.messages.some(m => m.deactivate === 'A'), '+/- → barras de activación');
     ok(f.messages.some(m => m.head === 'cross') && f.messages.some(m => m.head === 'open'), 'puntas de mensaje: aspa y abierta');
+    ok(f.messages.filter(m => m.from).map(m => m.id).join() === Array.from({ length: 13 }, (_, i) => 'm' + (i + 1)).join(), 'los mensajes se numeran m1…m13 aunque haya marcos y notas entre ellos');
     ok(f.messages.some(m => m.kind === 'self') && f.messages.some(m => m.kind === 'return') && f.messages.some(m => m.kind === 'async'), 'self, return (-->>) y async (-))');
     ok(f.messages.some(m => m.kind === 'note' && m.side === 'right' && /redirección/.test(m.label)), 'Note → caja de nota a su lado');
     ok((node(s, 'A').links || []).length === 1, 'link A: … @ url');
@@ -112,6 +113,7 @@ const CHECKS = {
     ok(!!edge(s, 'correo', 'cliente'), 'Rel_Back invierte el sentido');
     ok(!!node(s, 'cliente').color, 'UpdateElementStyle');
     ok(node(s, 'cliente').shape === 'person' && node(s, 'mainframe').shape === 'c4-db' && node(s, 'b0').frame === 'dashed', 'C4: persona, base de datos y frontera discontinua');
+    ok(node(s, 'banca').subtitle === '[Sistema]' && node(s, 'correo').subtitle === '[Sistema, externo]', 'C4: tipo traducido');
   },
   architecture: s => {
     ok(node(s, 'db').parent === 'api' && node(s, 'db').kind === 'datastore', 'service … in grupo');
@@ -135,7 +137,7 @@ const CHECKS = {
   kanban: s => {
     ok(s.lanes.length === 3 && node(s, 't3').lane === 'doing', 'columnas → carriles');
     ok((node(s, 't1').links || [])[0].url === 'https://example.atlassian.net/browse/PRJ-1', 'ticketBaseUrl del frontmatter');
-    ok(node(s, 't1').shape === 'ticket' && node(s, 't1').badge === 'PRJ-1' && node(s, 't4').avatar === 'l', 'ticket con número y avatar');
+    ok(node(s, 't1').shape === 'ticket' && node(s, 't1').badge === 'PRJ-1' && node(s, 't4').avatar === 'lu', 'ticket con número y avatar');
   },
   treemap: s => {
     ok(s.nodes.find(n => n.label === 'Presupuesto').subtitle === '1450', 'totales sumados hacia arriba');

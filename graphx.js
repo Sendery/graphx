@@ -822,12 +822,13 @@
     /* Puntas de arista (graphx-shapes.markers): una definición por tipo y color, creada al usarse.
        La flecha por defecto sigue siendo la de siempre. */
     const MK_COLOR = { unchanged: 'var(--gx-neu)', added: 'var(--gx-add)', modified: 'var(--gx-mod)', removed: 'var(--gx-del)', lit: 'var(--gx-accent)' };
-    function markerRef(type, key, prefix) {
+    function markerRef(type, key, prefix, fixed) {
       prefix = prefix || I;
       if (!type || type === 'none' || type === 'line') return null;
-      if (type === 'arrow' || !SHP || !SHP.markers[type]) return MK_COLOR[key] ? `url(#${prefix}-mk-${key})` : colorMarker(key, prefix);
+      /* la flecha de siempre crece con el grosor de la línea; en una arista gruesa (weight) va la de tamaño fijo */
+      if ((type === 'arrow' && !fixed) || !SHP || !SHP.markers[type]) return MK_COLOR[key] ? `url(#${prefix}-mk-${key})` : colorMarker(key, prefix);
       const root = prefix === I ? defs : seqSvg.querySelector('defs');
-      const def = SHP.markers[type], id = `${prefix}-m-${type}-${String(key).replace(/\W/g, '')}`;
+      const def = SHP.markers[type], id = `${prefix}-m-${type}-${String(key).replace(/\W/g, '_')}`;
       if (!root.querySelector('#' + id)) {
         const m = s('marker', { id, viewBox: '0 0 20 20', refX: 19.5, refY: 10, markerWidth: 15, markerHeight: 15, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' }, root);
         const col = MK_COLOR[key] || key, pth = s('path', { d: def.d, class: 'gx-mkx' }, m);
@@ -844,9 +845,9 @@
       return { head: head === undefined ? 'arrow' : (head || 'arrow'), tail: tail || null };
     };
     function markEdge(line, v, lit) {
-      const key = lit && !v.hero ? 'lit' : (v.cvar || v.delta);
+      const key = lit && !v.hero ? 'lit' : (v.cvar || (MK_COLOR[v.delta] ? v.delta : 'unchanged'));
       const { head, tail } = edgeEnds(v);
-      const me = markerRef(head, key), ms = markerRef(tail, key);
+      const me = markerRef(head, key, I, v._weighted), ms = markerRef(tail, key, I, v._weighted);
       if (me) line.setAttribute('marker-end', me); else line.removeAttribute('marker-end');
       if (ms) line.setAttribute('marker-start', ms); else line.removeAttribute('marker-start');
     }
@@ -860,10 +861,11 @@
       v.cvar = (v.list.find(e => e.cvar) || {}).cvar || null;
       paint(g, v.cvar);
       const line = s('path', { class: 'gx-eline', d }, g);
-      markEdge(line, v, false);
       /* grosor por valor (sankey): la arista se lee como un caudal */
       const wsum = v.list.reduce((a, e) => a + (typeof e.weight === 'number' ? e.weight : 0), 0);
-      if (maxWeight && wsum) { g.classList.add('weighted'); line.style.strokeWidth = (1.6 + 13 * Math.min(wsum / maxWeight, 1)).toFixed(1) + 'px'; }
+      v._weighted = !!(maxWeight && wsum);
+      if (v._weighted) { g.classList.add('weighted'); line.style.strokeWidth = (1.6 + 13 * Math.min(wsum / maxWeight, 1)).toFixed(1) + 'px'; }
+      markEdge(line, v, false);
       if (v.animated) s('path', { class: 'gx-eflow', d }, g);
       /* cardinalidades en los extremos (1, 0..*, …) */
       const one = v.list.length === 1 ? v.list[0] : null;
@@ -1049,6 +1051,10 @@
         const kind = isGroup(id) ? 'group' : 'leaf';
         let el = S.els.get(id);
         if (el && el._kind !== kind) { fadeOut(el); el = null; }
+        /* una forma se dibuja a su tamaño: si cambia (al girar el diagrama, la bifurcación se tumba),
+           se rehace y se anima desde el rectángulo que ocupaba */
+        let reshaped = null;
+        if (el && el._shape && kind === 'leaf') { const z = leafSize(n); if (z.w !== el._sz.w || z.h !== el._sz.h) { reshaped = el._r; el.remove(); el = null; } }
         const fresh = !el;
         if (fresh) {
           el = kind === 'group' ? makeGroup(n) : makeLeaf(n);
@@ -1062,9 +1068,9 @@
           const anc = [n.parent].concat(ancestors(M, id)).find(a => a != null && prevRects.has(a));
           const pr = prevRects.get(id) || (anc ? prevRects.get(anc) : null);
           from = pr ? { x: pr.x + pr.w / 2 - r.w * .3, y: pr.y + pr.h / 2 - r.h * .3, w: r.w * .6, h: r.h * .6 } : { x: r.x + r.w * .2, y: r.y + r.h * .2, w: r.w * .6, h: r.h * .6 };
-          el.style.opacity = 0;
+          if (reshaped) from = reshaped; else el.style.opacity = 0;
         }
-        items.push({ el, n, from, to: r, fresh, kind });
+        items.push({ el, n, from, to: r, fresh: fresh && !reshaped, kind });
       }
       for (const [id, el] of S.els) {
         if (next.has(id) && next.get(id) === el) continue;
@@ -1658,14 +1664,23 @@
       seqWorld.innerHTML = '';
       const P = f.participants.filter(p => M.has(p.node));
       const lab = p => p.label || M.get(p.node).label;
+      const overOf = m => [].concat(m.over == null ? [] : m.over).filter(id => typeof id === 'string');
+      if (!P.length) { S.seq = { f, msgEls: [], frames: [], bbox: { x: 0, y: 0, w: 400, h: 200 }, X: new Map() }; seqCtl.innerHTML = ''; return; }
       const colW = Math.max(170, ...P.map(p => textW(lab(p), 13, 600) + 76));
       const X = new Map(); P.forEach((p, i) => X.set(p.node, 40 + colW / 2 + i * (colW + 26)));
       /* cabecera: tarjeta o, si el participante tiene forma (actor, base de datos, cola), su forma */
-      const heads = P.map(p => { const n = M.get(p.node); if (!hasShape(n)) return { n, h: 56 }; const cl = shapeLayout(n); return { n, h: cl.h, cl }; });
+      /* con forma, la cabecera se mide con la etiqueta del participante (puede no ser la de la pieza) */
+      const heads = P.map(p => {
+        const n0 = M.get(p.node);
+        if (!hasShape(n0)) return { n: n0, h: 56 };
+        if (!p.label || p.label === n0.label) { const cl = shapeLayout(n0); return { n: n0, h: cl.h, cl }; }
+        const n = Object.assign({}, n0, { label: p.label }), lay = SHP.measure(n, shapeCtx);
+        return { n, h: lay.h, cl: { w: lay.w, h: lay.h, lay } };
+      });
       const headH = Math.max(56, ...heads.map(x => x.h));
       const rowH = 54, top = headH + 40;
       let y = top; const rows = [];
-      const noteLines = m => wrapLines(m.label, m.side === 'over' && m.over && m.over.length > 1 ? Math.max(Math.abs(X.get(m.over[m.over.length - 1]) - X.get(m.over[0])) + 60, 180) : 190, 12);
+      const noteLines = m => { const ov = overOf(m).filter(id => X.has(id)); return wrapLines(m.label, m.side === 'over' && ov.length > 1 ? Math.max(Math.abs(X.get(ov[ov.length - 1]) - X.get(ov[0])) + 60, 180) : 190, 12); };
       f.messages.forEach(m => {
         if (m.kind === 'phase') { rows.push({ m, y: y + 6 }); y += 40; return; }
         if (m.kind === 'block') { rows.push({ m, y: y + 4 }); y += 34; return; }
@@ -1685,7 +1700,7 @@
         else if (m.kind === 'else' && open.length) open[open.length - 1].elses.push(r);
         else if (m.kind === 'end' && open.length) { const fr = open.pop(); fr.y1 = r.y + 8; frames.push(fr); if (open.length) { open[open.length - 1].xs.push(...fr.xs); } }
         else if (isMsg(m)) open.forEach(fr => { fr.xs.push(X.get(m.from), X.get(m.to)); fr.ids.push(m.id); if (m.kind === 'self' || m.from === m.to) fr.xs.push(X.get(m.from) + 70); });
-        else if (m.kind === 'note') open.forEach(fr => fr.xs.push(...xs(m.over || [])));
+        else if (m.kind === 'note') open.forEach(fr => fr.xs.push(...xs(overOf(m))));
       });
       open.forEach(fr => { fr.y1 = H - 24; frames.push(fr); });
       const gfr = s('g', { class: 'gx-seq-frames' }, seqWorld);
@@ -1760,14 +1775,16 @@
       });
       /* notas: una hoja sobre uno o varios participantes, o a un lado */
       const gnote = s('g', { class: 'gx-seq-notes' }, seqWorld);
+      let minX = 0, maxX = W;
       rows.filter(r => r.m.kind === 'note').forEach(r => {
-        const m = r.m, ox = xs(m.over || []); if (!ox.length) return;
+        const m = r.m, ox = xs(overOf(m)); if (!ox.length) return;
         const lw = Math.max(...r.lines.map(l => textW(l, 12, 400))) + 28;
         let x0, w;
         if (m.side === 'left') { w = Math.max(lw, 110); x0 = ox[0] - 16 - w; }
         else if (m.side === 'right') { w = Math.max(lw, 110); x0 = ox[0] + 16; }
         else { const a = Math.min(...ox), b = Math.max(...ox); w = Math.max(lw, b - a + 70, 120); x0 = (a + b) / 2 - w / 2; }
         const hh = r.lines.length * 15 + 16;
+        minX = Math.min(minX, x0); maxX = Math.max(maxX, x0 + w);
         const g = s('g', { class: 'gx-seq-note-b', transform: `translate(${x0},${r.y})` }, gnote);
         s('path', { class: 'gx-seq-notebox', d: `M0,0H${w - 10}L${w},10V${hh}H0Z` }, g);
         s('path', { class: 'gx-seq-notefold', d: `M${w - 10},0V10H${w}` }, g);
@@ -1800,13 +1817,15 @@
         g.addEventListener('click', ev => { ev.stopPropagation(); litSeq([m.id]); });
         msgEls.push(g);
       });
-      S.seq = { f, msgEls, frames: [...gfr.children], bbox: { x: 0, y: 0, w: W, h: H }, X };
+      /* una nota a la izquierda del primer participante (o a la derecha del último) amplía el encuadre */
+      const bx = Math.min(0, minX - 20), bw = Math.max(W, maxX + 20) - bx;
+      S.seq = { f, msgEls, frames: [...gfr.children], bbox: { x: bx, y: 0, w: bw, h: H }, X };
       seqCtl.innerHTML = `<button type="button" class="gx-btn gx-primary" data-sq="play">▶ ${esc(T.play)}</button>${f.summary ? `<span>${esc(f.summary)}</span>` : ''}`;
       seqCtl.querySelector('[data-sq=play]').onclick = playSeq;
     }
     /* puntas de un mensaje: llena (->>), abierta (-)), aspa (-x), ninguna (->) y doble sentido (<<->>) */
     function markSeq(g, lit) {
-      const m = g._m, key = lit ? 'lit' : (m.cvar || m.delta || 'unchanged');
+      const m = g._m, key = lit ? 'lit' : (m.cvar || (MK_COLOR[m.delta] ? m.delta : 'unchanged'));
       const me = markerRef(m.head || 'arrow', key, I + 's'), mst = m.tail ? markerRef(m.tail, key, I + 's') : null;
       if (me) g._line.setAttribute('marker-end', me); else g._line.removeAttribute('marker-end');
       if (mst) g._line.setAttribute('marker-start', mst); else g._line.removeAttribute('marker-start');

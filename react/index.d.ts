@@ -56,10 +56,25 @@ export interface GraphXInstance {
   ready: Promise<void>;
   destroy(): void;
   expandTo(depth: number): Promise<void>;
+  setDirection(dir: 'right' | 'down'): Promise<void>;
+  toggle(id: string): Promise<void>;
   reveal(id: string): void;
   select(id: string): void;
+  focusNode(id: string): void;
+  trace(id: string, direction: 'up' | 'down'): void;
+  goStep(index: number): void;
   showView(view: string): void;
-  setDirection(dir: 'right' | 'down'): Promise<void>;
+  setPresent(on: boolean): void;
+  setExplore(on: boolean): void;
+  resetView(): void;
+}
+
+/** Nodo del árbol SVG que devuelven las formas. */
+export interface GraphXShapeTree {
+  tag: string;
+  attrs: Record<string, string | number | boolean>;
+  children: GraphXShapeTree[];
+  text?: string;
 }
 
 export interface GraphXProps {
@@ -80,3 +95,6 @@ export declare function GraphX(props: GraphXProps): ReactElement;
 export declare function GraphXShape(props: GraphXShapeProps): ReactElement | null;
 export declare function GraphXScope(props: { children?: ReactNode; className?: string; style?: CSSProperties }): ReactElement;
 export declare const Shapes: Record<string, ComponentType<Omit<GraphXShapeProps, 'shape'>>>;
+export declare function toReact(node: GraphXShapeTree, key: string | number, icons: Record<string, string>): ReactElement;
+declare const api: { GraphX: typeof GraphX; GraphXShape: typeof GraphXShape; GraphXScope: typeof GraphXScope; Shapes: typeof Shapes; toReact: typeof toReact };
+export default api;
