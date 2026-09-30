@@ -72,7 +72,8 @@
       else rects.set(id, { x: xOf(s), y: y + (ROW - BAR) / 2, w: Math.max((e - s) * k, 8), h: BAR });
       y += ROW;
     };
-    const W = X0 + chartW + 24;
+    /* a la derecha, sitio para las etiquetas que no caben dentro de su barra */
+    const W = X0 + chartW + 24 + 170;
     for (const r of roots.filter(v => vis.has(v))) {
       if (open(r)) {
         const y0 = y; y += HEAD - 4;
@@ -111,8 +112,10 @@
       const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
       if (v.list.every(e => e.emphasis === 'muted')) continue;
       const ay = a.y + a.h / 2, by = b.y + b.h / 2, ax = a.x + a.w, bx = b.x;
+      /* con hueco, en escuadra; si la siguiente empieza donde acaba esta, una bajada vertical corta */
+      const xd = clamp(bx + 10, a.x + 4, ax - 4);
       const pts = bx >= ax + 18 ? [{ x: ax, y: ay }, { x: ax + 9, y: ay }, { x: ax + 9, y: by }, { x: bx, y: by }]
-        : [{ x: ax, y: ay }, { x: ax + 9, y: ay }, { x: ax + 9, y: b.y - 5 }, { x: bx - 9, y: b.y - 5 }, { x: bx - 9, y: by }, { x: bx, y: by }];
+        : b.y > a.y ? [{ x: xd, y: a.y + a.h }, { x: xd, y: b.y }] : [{ x: xd, y: a.y }, { x: xd, y: b.y + b.h }];
       paths.set(v.id, { pts, label: null });
     }
     return { rects, paths, bbox: bboxOf(rects, [{ x: 0, y: TOP - 40, w: W, h: 10 }]), deco };
@@ -122,9 +125,11 @@
   function git(ctx) {
     const { M, roots, vis, vedges } = ctx, { open } = helpers(ctx);
     const lanes = roots.filter(r => vis.has(r) && M.get(r).isLane);
-    const LABEL = 150, COL = 88, ROW = 84;
+    const LABEL = 150, ROW = 84;
     const rects = new Map(), laneY = new Map(lanes.map((l, i) => [l, 12 + i * ROW]));
     const commits = [...M.values()].filter(n => !n.isLane && vis.has(n.id)).sort((a, b) => a.order - b.order);
+    /* una columna por commit, tan ancha como su etiqueta más larga (con un mínimo) */
+    const COL = clamp(Math.max(0, ...commits.map(n => ctx.size(n.id).w)) + 18, 88, 190);
     const W = LABEL + 30 + Math.max(commits.length, 1) * COL;
     commits.forEach((n, i) => {
       const z = ctx.size(n.id), cy = (laneY.get(n.laneId) != null ? laneY.get(n.laneId) : 12) + ROW / 2 - 4, cx = LABEL + 30 + i * COL + COL / 2;
@@ -142,8 +147,12 @@
       if (M.get(v.from).isLane || M.get(v.to).isLane) continue;
       const ca = center(a), cb = center(b);
       if (Math.abs(ca.y - cb.y) < 1) { paths.set(v.id, { pts: [ca, cb], label: null }); continue; }
-      const sx = ca.x + 11, ex = cb.x - 11, dx = Math.max((ex - sx) * .55, 20);
-      paths.set(v.id, { d: `M${r1(sx)},${r1(ca.y)} C${r1(sx + dx)},${r1(ca.y)} ${r1(ex - dx)},${r1(cb.y)} ${r1(ex)},${r1(cb.y)}`, label: null });
+      /* como Mermaid: una rama nueva baja (o sube) en vertical desde su commit padre y sigue por su
+         carril; un merge o un cherry-pick sigue por su carril y llega en vertical al commit destino.
+         Así cada línea solo recorre su propio carril y no pasa por encima de commits ajenos. */
+      const merge = v.list.some(e => e.label === 'merge' || e.label === 'cherry-pick');
+      const pts = merge ? [ca, { x: cb.x, y: ca.y }, cb] : [ca, { x: ca.x, y: cb.y }, cb];
+      paths.set(v.id, { pts, label: null, radius: 18 });
     }
     return { rects, paths, bbox: bboxOf(rects), deco: [] };
   }
@@ -372,7 +381,8 @@
       const yb = Math.max(a.y + a.h, b.y + b.h, ...between.map(r => r.y + r.h)) + 16, yt = Math.min(a.y, b.y, ...between.map(r => r.y)) - 16;
       const routes = [[pa, pb], [pa, { x: pb.x, y: pa.y }, pb], [pa, { x: pa.x, y: pb.y }, pb],
         [pa, { x: pa.x, y: yb }, { x: pb.x, y: yb }, pb], [pa, { x: pa.x, y: yt }, { x: pb.x, y: yt }, pb]];
-      const ok = routes.find(rt => rt.every((p, i) => i === 0 || !crosses(rt[i - 1], p, skip))) || routes[0];
+      const hitsOf = rt => rt.reduce((k, p, i) => k + (i && crosses(rt[i - 1], p, skip) ? 1 : 0), 0);
+      const ok = routes.find(rt => !hitsOf(rt)) || routes.slice().sort((x, y) => hitsOf(x) - hitsOf(y))[0];
       let li = 0, best = -1;
       ok.forEach((p, i) => { if (i) { const d = Math.hypot(p.x - ok[i - 1].x, p.y - ok[i - 1].y); if (d > best) { best = d; li = i; } } });
       paths.set(v.id, { pts: ok, label: midLabel(v, ok[li - 1], ok[li], textW) });

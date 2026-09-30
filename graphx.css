@@ -707,6 +707,21 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 .gx-mode-sankey .gx-edge.weighted .gx-eline { opacity: .38; }
 .gx-mode-sankey .gx-edge.weighted:hover .gx-eline, .gx-mode-sankey .gx-dim .gx-edge.weighted.lit .gx-eline { opacity: .7; }
 
+/* formas de flujo sin color: un contorno un punto más firme sobre el lienzo claro */
+.gx-shape.fam-flow:not(.has-c) > .gx-card:not(.ghost) { stroke: color-mix(in srgb, var(--gx-muted) 48%, var(--gx-card-line)); }
+.gx-node.gx-shape.lit > .gx-card:not(.ghost) { stroke: var(--gx-accent); stroke-width: 1.8; }
+.gx-node.gx-shape.sel > .gx-card:not(.ghost) { stroke: var(--gx-accent); stroke-width: 2.4; }
+/* un halo del color del lienzo: el texto se lee aunque pase una línea por debajo */
+.gx-halo, .sh-sbar .gx-t, .sh-sbar .gx-st, .gx-gbt.out { paint-order: stroke; stroke: var(--gx-canvas); stroke-width: 3.5px; stroke-linejoin: round; }
+/* gantt: las dependencias, discretas; se avivan al pasar o al iluminar la cadena */
+.gx-mode-gantt .gx-edge .gx-eline { opacity: .32; }
+.gx-mode-gantt .gx-edge:hover .gx-eline, .gx-mode-gantt .gx-dim .gx-edge.lit .gx-eline { opacity: 1; }
+/* gitGraph: las ramas no se pliegan (una rama plegada no tiene sitio en su carril) */
+.gx-mode-git .gx-lane .gx-col, .gx-mode-git .gx-seg, .gx-mode-git .gx-tools .gx-btn[aria-label="Plegar todo"], .gx-mode-git .gx-tools .gx-btn[aria-label="Collapse all"] { display: none; }
+.gx-seq-box.has-c rect { fill: color-mix(in srgb, var(--gx-c) 55%, transparent); stroke: color-mix(in srgb, var(--gx-c) 70%, var(--gx-line)); }
+.gx-seq-x { stroke-width: 2.8; }
+.gx-seq-n circle { stroke: color-mix(in srgb, var(--gx-muted) 60%, var(--gx-line)); }
+
 @media (prefers-reduced-motion: reduce) {
   .gx-pulse, .gx-bar-live { animation: none; }
   .gx-leaf { transition: none; }

@@ -608,10 +608,22 @@
           return el;
         }),
         edges: list.map(v => ({
-          id: v.id, sources: [v.from], targets: [v.to],
+          id: v.id, sources: [rev.has(v.id) ? v.to : v.from], targets: [rev.has(v.id) ? v.from : v.to],
           labels: v.label ? [{ text: v.label, width: Math.ceil(textW(v.label, 11, 500)) + 16, height: 20 }] : []
         }))
       });
+      /* Con `layout.cycles`, los ciclos se rompen aquí y no en ELK, como hace dagre: un recorrido en
+         profundidad que empieza por las piezas escritas primero marca las aristas que vuelven atrás;
+         a ELK le llegan invertidas (el grafo que ve no tiene ciclos) y después se giran otra vez. */
+      const rev = new Set();
+      if (cycleStrategy) {
+        const out = new Map(), indeg = new Map(), ord = id => M.get(id).order;
+        vedges.forEach(v => { if (!out.has(v.from)) out.set(v.from, []); out.get(v.from).push(v); indeg.set(v.to, (indeg.get(v.to) || 0) + 1); });
+        const ids = [...new Set(vedges.flatMap(v => [v.from, v.to]))].sort((a, b) => ord(a) - ord(b));
+        const st = new Map();
+        const dfs = id => { st.set(id, 1); (out.get(id) || []).forEach(v => { const k = st.get(v.to); if (k === 1) rev.add(v.id); else if (!k) dfs(v.to); }); st.set(id, 2); };
+        ids.filter(id => !indeg.get(id)).concat(ids).forEach(id => { if (!st.get(id)) dfs(id); });
+      }
       if (!elk) elk = new (await loadELK())();
       const rectsOf = res => { const r = new Map(); const walk = n => { if (n.id !== ' gx-root') r.set(n.id, { x: n.x, y: n.y, w: n.width, h: n.height }); (n.children || []).forEach(walk); }; walk(res); return r; };
       /* Una arista que acaba «antes» que su origen obliga a ELK a rodear contenedores enteros
@@ -645,6 +657,7 @@
         }
         secs.forEach(x => { if (!seen.has(x.id)) pts.push(x.startPoint, ...(x.bendPoints || []), x.endPoint); });
         const lab = (e.labels || [])[0];
+        if (rev.has(e.id)) pts.reverse();
         paths.set(e.id, { pts, label: lab ? { x: lab.x, y: lab.y, w: lab.width, h: lab.height } : null });
       });
       clipPaths(rects, paths, vedges, vis, exp);
@@ -906,7 +919,7 @@
     function makeEdge(v, path) {
       const g = s('g', { class: `gx-edge d-${v.delta} k-${v.kind}${v.back ? ' back' : ''}${v.hero ? ' hero' : ''}${v.muted ? ' muted' : ''}${v.lifted ? ' lifted' : ''}${DASHED_KINDS[v.kind] ? ' dashed' : ''}`, 'data-id': v.id });
       const curve = v.list.every(e => e.curve);
-      const d = path.d || (curve ? smoothPath(path.pts) : roundedPath(path.pts, 9));
+      const d = path.d || (curve ? smoothPath(path.pts) : roundedPath(path.pts, path.radius || 9));
       if (curve) g.classList.add('curved');
       s('path', { class: 'gx-ehit', d }, g);
       /* halo en vez de filtro: un filtro sobre una línea recta tiene caja de altura 0 y no se pinta */
@@ -925,7 +938,7 @@
       if (one && path.pts && path.pts.length > 1 && (one.headLabel || one.tailLabel)) {
         const endLab = (a, b, text) => {
           const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
-          const t = s('text', { class: 'gx-eend', x: a.x + ux * 17 - uy * 9, y: a.y + uy * 17 + ux * 9 + 4 }, g); t.textContent = text;
+          const t = s('text', { class: 'gx-eend gx-halo', x: a.x + ux * 20 - uy * 13, y: a.y + uy * 20 + ux * 13 + 4 }, g); t.textContent = text;
         };
         const P0 = path.pts;
         if (one.tailLabel) endLab(P0[0], P0[1], one.tailLabel);
@@ -1723,7 +1736,11 @@
       const lab = p => p.label || M.get(p.node).label;
       const overOf = m => [].concat(m.over == null ? [] : m.over).filter(id => typeof id === 'string');
       if (!P.length) { S.seq = { f, msgEls: [], frames: [], bbox: { x: 0, y: 0, w: 400, h: 200 }, X: new Map() }; seqCtl.innerHTML = ''; return; }
-      const colW = Math.max(170, ...P.map(p => textW(lab(p), 13, 600) + 76));
+      const colIx = new Map(f.participants.map((p, i) => [p.node, i]));
+      /* ancho de columna: lo que pida el nombre más largo y lo que pida cada mensaje entre sus dos columnas */
+      const msgNeed = f.messages.filter(m => m.from != null && m.to != null && m.from !== m.to && colIx.has(m.from) && colIx.has(m.to))
+        .map(m => { const k = Math.abs(colIx.get(m.to) - colIx.get(m.from)) || 1; return (Math.max(...String(m.label).split('\n').map(l => textW(l, 12, 550))) + 40) / k - 26; });
+      const colW = Math.min(Math.max(170, ...P.map(p => Math.min(textW(lab(p), 13, 600) + 76, 340)), ...msgNeed), 420);
       const X = new Map(); P.forEach((p, i) => X.set(p.node, 40 + colW / 2 + i * (colW + 26)));
       /* cabecera: tarjeta o, si el participante tiene forma (actor, base de datos, cola), su forma */
       /* con forma, la cabecera se mide con la etiqueta del participante (puede no ser la de la pieza) */
@@ -1778,7 +1795,7 @@
         g._ids = new Set(fr.ids);
         s('rect', { class: fr.m.block === 'rect' ? 'gx-seq-rect' : 'gx-seq-frame', x: x0, y: fr.y0, width: x1 - x0, height: fr.y1 - fr.y0, rx: 6 }, g);
         if (fr.m.block !== 'rect') {
-          const tab = String(fr.m.title || fr.m.block).toUpperCase(), tw0 = textW(tab, 10.5, 700) * 1.1 + 18;
+          const tab = String(fr.m.title || fr.m.block).toUpperCase(), tw0 = textW(tab, 10.5, 700) * 1.1 + tab.length * .9 + 24;
           s('path', { class: 'gx-seq-ftab', d: `M${x0},${fr.y0 + 6}a6,6 0 0 1 6,-6H${x0 + tw0}V${fr.y0 + 13}l-7,7H${x0}Z` }, g);
           const tt = s('text', { class: 'gx-seq-ftt', x: x0 + 9, y: fr.y0 + 14 }, g); tt.textContent = tab;
           if (fr.m.label) { const tl = s('text', { class: 'gx-seq-fl', x: x0 + tw0 + 10, y: fr.y0 + 14 }, g); tl.textContent = '[' + fitText(fr.m.label, x1 - x0 - tw0 - 24, 11.5, 500) + ']'; }
@@ -1802,16 +1819,17 @@
         if (t.textContent !== lab) { const tt = s('title', null, g); tt.textContent = r.m.label; }
       });
       /* `create`: la cabecera nace en su fila; `destroy`: la línea acaba en el siguiente mensaje, con un aspa */
-      const created = new Map(), destroyed = new Map();
+      const created = new Map(), destroyed = new Map(), born = new Set(), waiting = new Set();
       rows.forEach((r, i) => {
-        if (r.m.kind === 'create') created.set(r.m.node, r.y);
+        if (r.m.kind === 'create') { created.set(r.m.node, r.y); waiting.add(r.m.node); }
+        if (isMsg(r.m) && waiting.has(r.m.to)) { born.add(r.m.id); waiting.delete(r.m.to); }
         if (r.m.kind === 'destroy') { const nx = rows.slice(i + 1).find(q => isMsg(q.m) && (q.m.from === r.m.node || q.m.to === r.m.node)); destroyed.set(r.m.node, nx ? nx.y + 14 : H - 26); }
       });
       const gl = s('g', { class: 'gx-seq-life' }, seqWorld);
       P.forEach((p, i) => {
         const cx = X.get(p.node), y0 = created.has(p.node) ? created.get(p.node) + heads[i].h + 4 : headH + 16 + boxPad, y1 = destroyed.has(p.node) ? destroyed.get(p.node) : H - 20;
         s('path', { d: `M${cx},${y0} V${y1}` }, gl);
-        if (destroyed.has(p.node)) s('path', { class: 'gx-seq-x', d: `M${cx - 8},${y1 - 8}L${cx + 8},${y1 + 8}M${cx + 8},${y1 - 8}L${cx - 8},${y1 + 8}` }, gl);
+        if (destroyed.has(p.node)) s('path', { class: 'gx-seq-x', d: `M${cx - 11},${y1 - 11}L${cx + 11},${y1 + 11}M${cx + 11},${y1 - 11}L${cx - 11},${y1 + 11}` }, gl);
       });
       /* barras de activación: se abren con `+`/activate y se cierran con `-`/deactivate; anidables */
       const gact = s('g', { class: 'gx-seq-acts' }, seqWorld);
@@ -1870,7 +1888,10 @@
       rows.forEach(row => {
         const m = row.m; if (!isMsg(m) || !X.has(m.from) || !X.has(m.to)) return;
         const i = num++;
-        const x1 = X.get(m.from), x2 = X.get(m.to), yy = row.y;
+        const x1 = X.get(m.from), yy = row.y;
+        /* el mensaje que crea a un participante acaba en su cabecera, no en su línea de vida */
+        const hIx = P.findIndex(p => p.node === m.to);
+        const x2 = born.has(m.id) && m.from !== m.to && heads[hIx] ? X.get(m.to) + (X.get(m.to) > x1 ? -1 : 1) * ((heads[hIx].cl ? heads[hIx].cl.w : colW) / 2 - 6) : X.get(m.to);
         const g = s('g', { class: `gx-seq-msg k-${m.kind} d-${m.delta || 'unchanged'}${m.animated ? ' anim' : ''}`, 'data-id': m.id, tabindex: 0, role: 'button' }, seqWorld);
         let d;
         if (m.kind === 'self' || m.from === m.to) d = `M${x1},${yy} h46 v20 h-44`;
@@ -1922,9 +1943,12 @@
       if (mst) g._line.setAttribute('marker-start', mst); else g._line.removeAttribute('marker-start');
     }
     function wrapLines(text, max, size) {
-      const words = String(text || '').split(/\s+/).filter(Boolean), out = []; let cur = '';
-      words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (!cur || textW(t, size, 400) <= max) cur = t; else { out.push(cur); cur = w; } });
-      if (cur) out.push(cur);
+      const out = [];
+      String(text || '').split('\n').forEach(par => {
+        let cur = '';
+        par.split(/\s+/).filter(Boolean).forEach(w => { const t = cur ? cur + ' ' + w : w; if (!cur || textW(t, size, 400) <= max) cur = t; else { out.push(cur); cur = w; } });
+        if (cur) out.push(cur);
+      });
       return (out.length ? out : ['']).slice(0, 8).map(l => fitText(l, max, size, 400));
     }
     function litSeq(ids) {

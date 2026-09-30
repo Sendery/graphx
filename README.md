@@ -138,7 +138,7 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `initialDepth` | nivel al abrir; por defecto 1 |
 | | `initialView` | `"flow:<id>"` — abre en ese flujo en vez de en el grafo |
 | | `graphTab` | `false` — solo secuencia: sin vista de grafo; las piezas son solo participantes y pulsarlas ilumina sus mensajes |
-| | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order", "backEdges": "route" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs`: como Mermaid); `route`: ELK traza también las aristas que vuelven atrás (esquivan piezas) en vez de arcos |
+| | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order", "backEdges": "route" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs` u `order`: el motor recorre en profundidad desde lo escrito primero y solo vuelven atrás las aristas de retorno, como en dagre/Mermaid); `route`: ELK traza también las aristas que vuelven atrás (esquivan piezas) en vez de arcos |
 | | `collapsed` | ids que arrancan plegados aunque su nivel diga lo contrario |
 | | `statuses` | estados propios `{ "<clave>": { "label", "color" } }` — ver §4.1 |
 | | `legend` | `{ "edges": [{ "label", "style", "color" }], "kinds": { "<kind>": "etiqueta" }, "delta": false }` — ver §4.1 |

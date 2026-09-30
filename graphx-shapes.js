@@ -40,13 +40,16 @@
   }
   /* reparte un texto en como mucho `maxLines` líneas de `max` px; la última se recorta con … */
   function wrap(ctx, text, max, size, weight, maxLines, mono) {
-    const words = String(text == null ? '' : text).split(/\s+/).filter(Boolean);
-    const lines = []; let cur = '';
-    for (const w of words) {
-      const t = cur ? cur + ' ' + w : w;
-      if (!cur || tw(ctx, t, size, weight, mono) <= max) cur = t; else { lines.push(cur); cur = w; }
-    }
-    if (cur) lines.push(cur);
+    const lines = [];
+    /* cada salto de línea escrito (<br> en Mermaid) empieza una línea nueva */
+    String(text == null ? '' : text).split('\n').forEach(par => {
+      const words = par.split(/\s+/).filter(Boolean); let cur = '';
+      for (const w of words) {
+        const t = cur ? cur + ' ' + w : w;
+        if (!cur || tw(ctx, t, size, weight, mono) <= max) cur = t; else { lines.push(cur); cur = w; }
+      }
+      if (cur) lines.push(cur);
+    });
     if (!lines.length) return [''];
     if (lines.length > maxLines) { const head = lines.slice(0, maxLines - 1); head.push(lines.slice(maxLines - 1).join(' ')); lines.length = 0; lines.push(...head); }
     return lines.map(l => fit(ctx, l, max, size, weight, mono));
@@ -99,8 +102,8 @@
     return {
       family: 'flow',
       measure(n, ctx) {
-        const maxW = o.maxW || 170;
-        const lines = wrap(ctx, n.label, maxW, 13, 600, o.maxLines || 2);
+        const maxW = Math.max(o.maxW || 170, n.maxWidth || 0);
+        const lines = wrap(ctx, n.label, maxW, 13, 600, Math.max(o.maxLines || 2, String(n.label || '').split('\n').length));
         const sub = n.subtitle ? fit(ctx, n.subtitle, maxW, 11, 400, true) : '';
         const w0 = Math.max(widest(ctx, lines, 13, 600), sub ? tw(ctx, sub, 11, 400, true) : 0, 24);
         const h0 = lines.length * 17 + (sub ? 15 : 0);
@@ -304,12 +307,12 @@
   /* una baldosa con el icono grande; la etiqueta, debajo */
   SHAPES.tile = {
     family: 'tile',
-    measure(n, ctx) { const label = fit(ctx, n.label, 150, 12, 600); return { w: Math.round(Math.max(96, tw(ctx, label, 12, 600) + 18)), h: 104, label }; },
+    measure(n, ctx) { const label = fit(ctx, n.label, 150, 12, 600); return { w: Math.round(Math.max(68, tw(ctx, label, 12, 600) + 12)), h: 68, label }; },
     render(n, w, h, ctx, lay) {
       const x = w / 2 - 30;
       return {
-        children: [E('rect', { class: 'gx-shhit', width: w, height: h }), P(rectD(60, 60, 16, x, 4), 'gx-card'),
-          E('glyph', { kind: n.kind || 'service', x: x + 12, y: 16, size: 36, bare: true }), T(w / 2, 86, lay.label, 'gx-tl')],
+        children: [E('rect', { class: 'gx-shhit', width: w, height: h + 24 }), P(rectD(60, 60, 16, x, 4), 'gx-card'),
+          E('glyph', { kind: n.kind || 'service', x: x + 12, y: 16, size: 36, bare: true }), T(w / 2, h + 16, lay.label, 'gx-tl gx-halo')],
         chrome: { x: x + 66, y: 10 }
       };
     }
@@ -442,9 +445,12 @@
       return { w, h, l1: fit(ctx, n.label, w - 24, 13, 600), f, val: n.subtitle || (n.value != null ? String(n.value) : '') };
     },
     render(n, w, h, ctx, lay) {
-      const kids = [P(rectD(w, h, 10), 'gx-card'), E('rect', { class: 'gx-blk', x: 1, y: 1, width: w - 2, height: h - 2, rx: 9, style: `opacity:${r1(.1 + lay.f * .22)}` }),
-        T(12, 24, lay.l1, 'gx-t', 'start'), T(w - 12, h - 12, lay.val, 'gx-bignum', 'end', { style: `font-size:${r1(14 + lay.f * 12)}px` })];
-      return { children: kids, chrome: { x: w - 8, y: 18 } };
+      /* el layout (treemap) decide el tamaño: el texto se ajusta a él y se calla si no cabe */
+      const r = Math.min(10, w / 2, h / 2), fs = clamp(Math.min(14 + lay.f * 12, h * .38, w * .3), 10, 26);
+      const kids = [P(rectD(w, h, r), 'gx-card'), E('rect', { class: 'gx-blk', x: 1, y: 1, width: Math.max(w - 2, 0), height: Math.max(h - 2, 0), rx: Math.max(r - 1, 0), style: `opacity:${r1(.1 + lay.f * .22)}` })];
+      if (w >= 44 && h >= 30) kids.push(T(Math.min(12, w * .15), Math.min(24, h * .55), fit(ctx, n.label, w - Math.min(24, w * .3), 13, 600), 'gx-t', 'start'));
+      if (w >= 40 && h >= 52 && lay.val) kids.push(T(w - Math.min(12, w * .15), h - 10, fit(ctx, lay.val, w - 16, fs, 700), 'gx-bignum', 'end', { style: `font-size:${r1(fs)}px` }));
+      return { children: kids, chrome: w >= 60 && h >= 40 ? { x: w - 8, y: 18 } : null };
     }
   };
 
@@ -498,6 +504,7 @@
     start: (w, h) => ell(w / 2, h / 2, 9, 9), end: (w, h) => ell(w / 2, h / 2, 12, 12), junction: (w, h) => ell(w / 2, h / 2, 5.5, 5.5),
     commit: (w, h) => ell(w / 2, h / 2, 10, 10), 'commit-merge': (w, h) => ell(w / 2, h / 2, 12, 12), 'commit-highlight': (w, h) => ({ poly: [[w / 2 - 10, h / 2 - 10], [w / 2 + 10, h / 2 - 10], [w / 2 + 10, h / 2 + 10], [w / 2 - 10, h / 2 + 10]] }), 'commit-reverse': (w, h) => ell(w / 2, h / 2, 10, 10),
     tile: w => ({ poly: [[w / 2 - 30, 4], [w / 2 + 30, 4], [w / 2 + 30, 64], [w / 2 - 30, 64]] }),
+    hourglass: (w, h) => ({ poly: [[w / 2 - 1, h / 2 - 1], [w / 2 + 1, h / 2 - 1], [w / 2 + 1, h / 2 + 1], [w / 2 - 1, h / 2 + 1]] }),
     actor: w => ({ poly: [[w / 2 - 19, 3], [w / 2 + 19, 3], [w / 2 + 19, 70], [w / 2 - 19, 70]] })
   };
   Object.keys(PTS).forEach(k => { if (!HULLS[k]) HULLS[k] = (w, h) => ({ poly: PTS[k](w, h) }); });

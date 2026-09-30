@@ -28,7 +28,7 @@
       untitled: 'Diagrama', converted: t => `Convertido desde Mermaid (${t}).`,
       from: 'Llega desde', to: 'Sale hacia', more: n => `y ${n} más`, contains: n => `Contiene ${n} ${n === 1 ? 'pieza' : 'piezas'}`,
       level: n => `Nivel ${n}`, sends: n => `envía ${n} ${n === 1 ? 'mensaje' : 'mensajes'}`, receives: n => `recibe ${n}`,
-      blocks: { loop: 'Bucle', alt: 'Alternativa', else: 'Si no', opt: 'Opcional', par: 'En paralelo', and: 'Y a la vez', critical: 'Región crítica', option: 'Opción', break: 'Interrupción', rect: 'Bloque' },
+      blocks: { loop: 'Bucle', alt: 'Alternativa', else: 'Si no', opt: 'Opcional', par: 'En paralelo', and: 'Y', critical: 'Región crítica', option: 'Opción', break: 'Interrupción', rect: 'Bloque' },
       endOf: b => `Fin de: ${b}`, back: b => `Sigue: ${b}`, bidir: 'En los dos sentidos.', lost: 'Mensaje perdido (✕).', crossEnd: 'Termina en aspa (✕).', circleEnd: 'Termina en círculo (○).', open: 'Enlace sin flecha.',
       link: 'enlace', thick: 'Enlace grueso.', dotted: 'Enlace punteado.', start: 'Inicio', end: 'Fin', attrs: 'Atributos', methods: 'Métodos', members: 'Miembros',
       nAttrs: n => `${n} ${n === 1 ? 'atributo' : 'atributos'}`, nMethods: n => `${n} ${n === 1 ? 'método' : 'métodos'}`,
@@ -155,13 +155,14 @@
   function clean(s) {
     s = unq(s);
     if (s.length > 1 && s[0] === '`' && s.endsWith('`')) s = s.slice(1, -1);
-    s = s.replace(/<br\s*\/?>/gi, ' ').replace(/\\n/g, ' ').replace(/<\/?[a-z][^>]*>/gi, '')
+    /* <br> (y \n escrito) es un salto de línea: las formas y la secuencia lo respetan */
+    s = s.replace(/<br\s*\/?>/gi, '\n').replace(/\\n/g, '\n').replace(/<\/?[a-z][^>]*>/gi, '')
       .replace(/#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
       .replace(/[#&](\w+);/g, (m, k) => ENT[k] != null ? ENT[k] : m)
       .replace(/\bfa[bsrlk]?:fa-[\w-]+\s*/g, '')
       .replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, a, b) => a || b)
       .replace(/(^|[\s(])[*_](\S(?:.*?\S)?)[*_](?=$|[\s).,;:!?])/g, '$1$2');
-    return s.replace(/\s+/g, ' ').trim();
+    return s.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n');
   }
   const COLOR_RE = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\([0-9.,%\s/+-]+(deg|turn|rad)?[0-9.,%\s/+-]*\)|[a-z]{3,20})$/i;
   const safeColor = v => typeof v === 'string' && COLOR_RE.test(v.trim()) && !/^(none|transparent|inherit|initial|unset|currentcolor)$/i.test(v.trim()) ? v.trim() : null;
@@ -565,6 +566,8 @@
     const dir = (/^\S+\s+(\w+)/.exec(head) || [])[1] || 'TD';
     b.direction = /^(LR|RL)$/i.test(dir) ? 'right' : 'down';
     const block = opts.block;
+    /* en un flowchart, la arista que vuelve a algo escrito antes es la del bucle (como en dagre) */
+    b.layout = { cycles: 'order' };
     const classes = new Map(), nodeClass = new Map(), nodeStyle = new Map(), linkStyles = [];
     const linkIdx = [], edgeById = new Map(), stack = [];
     let thick = 0;
@@ -702,11 +705,13 @@
     const TYPES = { participant: 'participant', actor: 'actor', boundary: 'ui', control: 'config', entity: 'table', database: 'datastore', collections: 'queue', queue: 'queue' };
     /* forma de la cabecera: el actor es una figura; la base de datos, un cilindro; la cola, un tubo */
     const HEAD = { participant: 'rect', actor: 'actor', datastore: 'datastore', queue: 'cylinder-h' };
+    const WIDE = 300;
     const part = (raw, props) => {
       raw = raw.trim();
       const n = b.node(raw, props || {});
       if (!n.kind) { n.kind = 'participant'; b.kinds.add('participant'); }
       if (HEAD[n.kind]) n.shape = HEAD[n.kind];
+      n.maxWidth = WIDE;
       if (!seen.has(n.id)) { seen.add(n.id); flow.participants.push(n.id); }
       return n;
     };
@@ -734,7 +739,9 @@
         const cm = /^(rgba?\([^)]*\)|hsla?\([^)]*\)|#[0-9a-f]{3,8}\b|[a-z]+\b)\s*(.*)$/i.exec(rest);
         if (cm && safeColor(cm[1]) && (cm[2] || /^(rgb|hsl|#)/i.test(cm[1]) || /^(aqua|blue|red|green|yellow|orange|purple|pink|gray|grey|lightblue|lightgreen|lightyellow|transparent|white|black|teal|navy|olive|maroon|silver|lime|fuchsia|cyan|magenta)$/i.test(cm[1]))) { color = cm[1]; rest = cm[2]; }
         box = b.lane('\u0000box' + n, { label: clean(rest) || ' ' });
-        if (styleColor({ fill: color })) box.color = styleColor({ fill: color });
+        /* el tono de `box` es un fondo: se usa tal cual, también los pastel (en oscuro, hacia el lienzo) */
+        const hex = color && safeColor(color) ? toHex(safeColor(color)) : null;
+        if (hex && /^#/.test(hex) && !/^transparent$/i.test(color)) box.color = { light: hex, dark: blend(hex, '#0d1117', .72) };
         blocks.push({ type: 'box' }); continue;
       }
       /* bloques: un marco con su tipo en una pestaña y la condición al lado; `else`/`and`/`option`
@@ -920,6 +927,7 @@
 
   /* ================= stateDiagram ================= */
   function parseState(P, b) {
+    b.layout = { cycles: 'order' };
     const T = b.T;
     b.direction = 'down';
     const stack = [], classes = new Map(), nodeClass = new Map(), nodeStyle = new Map();

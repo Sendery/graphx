@@ -70,7 +70,7 @@ const CHECKS = {
     ok(node(s, 'EnRevision').label === 'En revisión' && node(s, 'decide').kind === 'choice', 'state "…" as X y <<choice>>');
     ok(s.nodes.some(n => n.shape === 'note' && /otra persona/.test(n.label)) && !!node(s, 'Aprobado').color, 'note right of → nota; classDef');
     ok(node(s, 'Borrador').shape === 'rounded' && node(s, 'start').shape === 'start' && node(s, 'decide').shape === 'choice', 'formas de estado: redondeado, inicio, elección');
-    ok(s.layout.cycles === 'dfs', 'ciclos rotos en profundidad, como dagre');
+    ok(['dfs', 'order'].includes(s.layout.cycles), 'ciclos rotos en profundidad, como dagre');
   },
   er: s => {
     ok(s.nodes.every(n => n.kind === 'table'), 'entidades');
