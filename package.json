@@ -7,11 +7,31 @@
   "scripts": {
     "build": "node graphx-build.mjs",
     "check": "node graphx-build.mjs --check",
-    "verify:mermaid": "node tools/verify-mermaid.mjs"
+    "verify:mermaid": "node tools/verify-mermaid.mjs",
+    "verify:shapes": "node tools/verify-shapes.mjs",
+    "gallery": "node examples/gallery/build.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "exports": {
+    "./engine": "./graphx.js",
+    "./shapes": "./graphx-shapes.js",
+    "./mermaid": "./graphx-mermaid.js",
+    "./graphx.css": "./graphx.css",
+    "./react": {
+      "types": "./react/index.d.ts",
+      "import": "./react/index.mjs"
+    }
+  },
+  "peerDependencies": {
+    "react": ">=16.8"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   }
 }

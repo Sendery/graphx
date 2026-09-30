@@ -7,8 +7,9 @@ tooltips, panel de detalle, búsqueda, trazado de dependencias, secuencias anima
 guiado con modo presentación. Funciona igual como artifact de claude.ai, fichero local o bloque
 dentro de otra página.
 
-Versión **1.6.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
-nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7).
+Versión **1.7.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
+nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7), y
+desde la 1.7 dibuja sus formas y tiene componentes de **React** (§7.1).
 
 ```
 graphx.js           el motor (≈1 500 líneas, sin dependencias salvo ELK)
@@ -16,12 +17,15 @@ graphx.css          estilos; todo sale de tokens CSS, tema claro y oscuro
 vendor/elk.bundled.js  el layout (ELK 0.12, ≈1,6 MB, se incrusta en la página)
 graphx-build.mjs    valida el JSON (o un .mmd/.md de Mermaid), lo enriquece (opcional, con git) y emite la página
 graphx-mermaid.js   conversor de Mermaid → JSON de GraphX, sin depender de Mermaid (§7)
+graphx-shapes.js    las formas (rombos, tablas, barras de gantt…) como funciones puras (§7.1)
+react/              componentes de React sobre las mismas formas (§7.1)
 dist/               versión compacta — ver §1.1 (se regenera con tools/build-dist.mjs)
 examples/           pr-review-stack-202.json (73 piezas, 4 niveles)
                     onboarding-proceso.json  (un proceso de RR. HH., vertical y con colores)
                     warehouses-pr-radar.json (seguimiento de PRs entre repos; se genera desde datos)
-                    mermaid/*.mmd            (un ejemplo por cada tipo de Mermaid admitido)
-tools/              verify.mjs (jsdom) · verify-mermaid.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
+                    mermaid/*.mmd            (un ejemplo por cada tipo de Mermaid admitido; shapes.mmd, todas las formas)
+                    gallery/                 (la galería: Mermaid frente a GraphX y el catálogo de formas en React)
+tools/              verify.mjs (jsdom) · verify-mermaid.mjs · verify-shapes.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
                     build-dist.mjs (compacta) · sync.sh (copia el motor a la skill y a desarrollo)
 ```
 
@@ -152,14 +156,24 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `metrics` | `[{ "label": "TTL", "value": "900 s" }]` — cifras en el panel |
 | | `files` | `[{ "path", "lines", "additions", "deletions", "url", "diff_url" }]` |
 | | `color` · `links` | §4 · §5 |
+| | `shape` | una forma de §7.1 en vez de la tarjeta (`decision`, `table`, `bar`…) |
+| | `rows` · `span` · `score` · `value` · `badge` · `avatar` · `head` | los datos que usa su forma (§7.1) |
+| | `frame` | en un contenedor: `dashed` · `dotted` — marco discontinuo (fronteras de C4, grupos de arquitectura) |
 | arista | `id` `from` `to` | |
 | | `kind` | `call http rpc event queue data dependency render async other` (`event`/`queue`/`async` van discontinuas) |
 | | `label` `summary` `data` `trigger` | qué viaja y qué lo dispara aparecen en el tooltip y el panel |
 | | `animated` | flecha que fluye — solo las que cuentan la historia |
 | | `emphasis` | `hero` (una o dos, como mucho) · `normal` · `muted` |
 | | `delta` `color` `links` | |
+| | `head` · `tail` | la punta de cada extremo: `arrow` (defecto en `head`), `none`, `triangle`, `diamond`, `odiamond`, `circle`, `cross`, `open`, `lollipop`, `one`, `zero-one`, `one-many`, `zero-many` |
+| | `headLabel` · `tailLabel` | texto junto a cada extremo (cardinalidades: `1`, `0..*`) |
+| | `weight` | un número: el grosor de la arista crece con él (sankey) |
 | flujo | `id` `title` `summary` `participants[]` `messages[]` | una secuencia, en su propia pestaña con «Reproducir» |
 | mensaje | `id` `from` `to` `label` `kind` | `sync async return self` (`self` exige `from === to`) · `phase`: una banda con `label` que agrupa lo que sigue, sin `from`/`to` ni número |
+| | `head` · `tail` · `activate` · `deactivate` | punta (`line` sin punta, `open`, `cross`), doble sentido, y el participante que se activa o se desactiva |
+| fila de secuencia | `kind`: `block` `else` `end` | un marco (`block`: `block` = `loop`/`alt`/`par`…, `title`, `label`) partido por `else` y cerrado por `end` |
+| | `kind`: `note` | `over: [ids]`, `side`: `over` · `left` · `right`, `label` — una nota como caja |
+| | `kind`: `activate` · `deactivate` | `node` — abre o cierra una barra de activación |
 | | `summary` `data` | salen en el tooltip del mensaje |
 | | `note` `repeat` `animated` `color` | |
 | recorrido | `tour.title` `tour.steps[]` | |
@@ -400,6 +414,45 @@ número de línea, nunca en silencio. Los gráficos de datos (`pie`, `xychart`, 
 como en Mermaid (`layout.cycles: "dfs"`), así que un diagrama se lee en el orden en que se escribió.
 
 `node tools/verify-mermaid.mjs [--mount]` comprueba la conversión de cada ejemplo de `examples/mermaid/`.
+
+### 7.1 · Formas y componentes de React
+
+Una pieza con `shape` se dibuja con esa forma en vez de con la tarjeta. Las formas viven en
+`graphx-shapes.js`: cada una es una función pura que, dado el nodo y su tamaño, devuelve un árbol
+SVG (`{ tag, attrs, children, text }`). El motor lo convierte en nodos SVG y `react/` en elementos
+de React, así que se escriben una vez y se ven igual en los dos sitios. El contorno de todas lleva
+la clase `gx-card`: hover, iluminado, selección, color de pieza y deltas funcionan como en una tarjeta.
+
+| Familia | Formas | Datos |
+|---|---|---|
+| flujo (texto dentro) | `rect rounded terminal subroutine datastore cylinder-h circle dcircle hexagon decision io io-l trapezoid trapezoid-t flag document cloud bang triangle triangle-down hourglass delay card text arrow-right arrow-left arrow-up arrow-down` | `label`, `subtitle` |
+| marcas | `start end junction choice fork commit commit-merge commit-highlight commit-reverse` | `badge` (tag de un commit), `head: true` (late) |
+| notas | `note` | `label` (hasta 6 líneas) |
+| tablas | `table` (entidad de ER), `class` (UML), `requirement` | `rows: [{ name, type, keys, vis, section, static, abstract }]`, `subtitle` («estereotipo») |
+| iconos | `tile` (servicio de arquitectura), `actor` | el icono sale de `kind` |
+| C4 | `person c4 c4-db c4-queue` | `subtitle` ([tipo]), `summary` (descripción dentro), `color` (relleno) |
+| tarjetas con datos | `bar` (gantt), `score` (journey), `ticket` (kanban), `flowbar` (sankey), `block` (treemap) | `span: { start, end, milestone, live }`, `score` 1–5, `badge` + `avatar`, `value` |
+
+Las barras de gantt comparten una pista de fechas (el rango del diagrama entero), con la tarea en
+curso rayada en movimiento y el día de hoy marcado; el HEAD de cada rama de git late; las filas de
+una tabla se iluminan al pasar. Todo respeta `prefers-reduced-motion`.
+
+En React (`react/index.mjs` con un bundler, o `react/graphx-react.js` tras cargar React con un `<script>`):
+
+```js
+import { GraphX, GraphXShape, GraphXScope, Shapes } from 'graphx/react';
+<GraphX mermaid={texto} height={640} onError={e => …} />          // monta el motor
+<GraphXScope>                                                      // tokens de color, claro y oscuro
+  <Shapes.Decision node={{ label: '¿Stock?' }} state="lit" color="#cf222e" />
+  <GraphXShape node={{ label: 'CLIENTE', shape: 'table', rows: [{ name: 'id', keys: 'PK' }] }} />
+</GraphXScope>
+```
+
+`GraphX` necesita además `graphx.js` (y `graphx-mermaid.js` para `mermaid`); las formas sueltas, solo
+`graphx-shapes.js`. Los tipos están en `react/index.d.ts`. La galería (`node examples/gallery/build.mjs
+<salida.html>`) enseña cada tipo de Mermaid lado a lado con GraphX y el catálogo de formas en React.
+
+`node tools/verify-shapes.mjs` comprueba las formas, su uso en el motor y que React dibuja lo mismo.
 
 ## 8 · Verificar sin navegador
 
