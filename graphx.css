@@ -722,7 +722,93 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 .gx-seq-x { stroke-width: 2.8; }
 .gx-seq-n circle { stroke: color-mix(in srgb, var(--gx-muted) 60%, var(--gx-line)); }
 
+/* ---------- árbol de ficheros (layout `tree`): ficheros, carpetas y líneas ---------- */
+/* fichero: insignia de la extensión, nombre, + y −, y la letra de git (A, M, D, R) */
+.gx-fbadge { fill: var(--gx-glyph-bg); }
+.gx-fbt { font: 700 9.5px var(--gx-mono); letter-spacing: .02em; fill: var(--gx-muted); }
+.gx-fbt.sm { font-size: 8.5px; }
+.gx-fsub { font-size: 10.5px; }
+.gx-fmini { fill: none; stroke: var(--gx-muted); stroke-width: 1.1; stroke-linejoin: round; }
+.gx-fmini.lg { stroke-width: 1.4; }
+.gx-fadd { font: 600 11px var(--gx-mono); fill: var(--gx-add); } .gx-fdel { font: 600 11px var(--gx-mono); fill: var(--gx-del); }
+.gx-fadd.sm, .gx-fdel.sm { font-size: 10.5px; }
+.gx-fsq { fill: var(--gx-glyph-bg); } .gx-fsq.a { fill: var(--gx-add); } .gx-fsq.d { fill: var(--gx-del); }
+.gx-gitl { fill: var(--gx-glyph-bg); }
+.gx-gitlt { font: 700 11px var(--gx-mono); fill: var(--gx-muted); }
+.d-added > .gx-gitl { fill: var(--gx-add-soft); } .d-added > .gx-gitlt { fill: var(--gx-add); }
+.d-modified > .gx-gitl { fill: var(--gx-mod-soft); } .d-modified > .gx-gitlt { fill: var(--gx-mod); }
+.d-removed > .gx-gitl { fill: var(--gx-del-soft); } .d-removed > .gx-gitlt { fill: var(--gx-del); }
+.gx-shape.fam-tree.d-removed .gx-t { text-decoration: line-through; fill: var(--gx-muted); }
+.gx-shape.fam-tree.d-added > .gx-card { stroke: color-mix(in srgb, var(--gx-add) 45%, var(--gx-card-line)); }
+.gx-shape.fam-tree.d-modified > .gx-card { stroke: color-mix(in srgb, var(--gx-mod) 45%, var(--gx-card-line)); }
+.gx-shape.fam-tree.d-removed > .gx-card { stroke: color-mix(in srgb, var(--gx-del) 45%, var(--gx-card-line)); }
+/* carpeta: plegada (agrupando, con su pila y la barra de extensiones) o abierta (una cabecera fina) */
+.gx-fold-b { fill: color-mix(in srgb, var(--gx-accent) 16%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 55%, var(--gx-card-line)); stroke-width: 1.2; stroke-linejoin: round; transition: fill .2s; }
+.gx-fold-l { fill: none; stroke: color-mix(in srgb, var(--gx-accent) 40%, var(--gx-card-line)); stroke-width: 1.1; }
+.gx-fold-f { fill: color-mix(in srgb, var(--gx-accent) 30%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 60%, var(--gx-card-line)); stroke-width: 1.2; stroke-linejoin: round; }
+.gx-shape.has-c .gx-fold-b { fill: color-mix(in srgb, var(--gx-c) 18%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-c) 60%, var(--gx-card-line)); }
+.gx-shape.has-c .gx-fold-f { fill: color-mix(in srgb, var(--gx-c) 32%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-c) 65%, var(--gx-card-line)); }
+.gx-shape.fam-tree.has-c > .gx-card { fill: var(--gx-card); stroke: color-mix(in srgb, var(--gx-c) 45%, var(--gx-card-line)); }
+.gx-node.fam-tree:hover .gx-fold-b { fill: color-mix(in srgb, var(--gx-accent) 26%, var(--gx-card)); }
+.gx-fcount { font: 500 11px var(--gx-mono); fill: var(--gx-muted); }
+.gx-fseg { fill: var(--gx-neu); }
+.gx-shape > .gx-card.gx-fopen { fill: color-mix(in srgb, var(--gx-accent) 5%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 32%, var(--gx-card-line)); }
+.gx-shape.has-c > .gx-card.gx-fopen { fill: color-mix(in srgb, var(--gx-c) 6%, var(--gx-card)); }
+.gx-fopen-l { fill: none; stroke: transparent; }
+.gx-ftitle { font-weight: 700; }
+.gx-exp.open rect { fill: var(--gx-card); stroke: color-mix(in srgb, var(--gx-accent) 40%, transparent); }
+/* coincidencias del filtro dentro de una carpeta */
+.gx-hits rect { fill: var(--gx-accent); }
+.gx-hitsd { fill: #fff; }
+.gx-hitst { font-size: 10.5px; font-weight: 700; fill: #fff; font-variant-numeric: tabular-nums; }
+/* el botón del detalle y la tarjeta de detalle */
+.gx-det { cursor: pointer; }
+.gx-det rect { fill: transparent; stroke: transparent; transition: fill .12s, stroke .12s; }
+.gx-det path { fill: none; stroke: var(--gx-muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.gx-node:hover .gx-det rect, .gx-det.on rect { fill: var(--gx-glyph-bg); stroke: var(--gx-card-line); }
+.gx-det:hover rect { fill: var(--gx-accent); stroke: var(--gx-accent); } .gx-det:hover path { stroke: #fff; }
+.gx-ddiv { fill: none; stroke: var(--gx-card-line); stroke-dasharray: 3 3; }
+.gx-dpath { font: 10.5px var(--gx-mono); fill: var(--gx-muted); }
+.gx-dk { font-size: 11px; fill: var(--gx-muted); }
+.gx-dv { font-size: 11.5px; font-weight: 600; fill: var(--gx-ink); font-variant-numeric: tabular-nums; }
+.gx-dn { font-size: 11.5px; font-weight: 500; fill: var(--gx-ink); }
+.gx-dsum { font-size: 12px; fill: var(--gx-ink); }
+.gx-dtrack { fill: var(--gx-glyph-bg); }
+.gx-dfill { fill: var(--gx-accent); }
+.gx-ddot { fill: var(--gx-neu); } .gx-ddot.d-added { fill: var(--gx-add); } .gx-ddot.d-modified { fill: var(--gx-mod); } .gx-ddot.d-removed { fill: var(--gx-del); }
+.gx-node.det { filter: drop-shadow(0 6px 16px rgba(31, 35, 40, .12)); }
+/* líneas del árbol: del color del cambio que llevan debajo; el camino iluminado, en acento y en marcha */
+.gx-wire { fill: none; stroke: color-mix(in srgb, var(--gx-muted) 38%, var(--gx-line)); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s, stroke-width .2s; }
+.gx-wire.d-added { stroke: color-mix(in srgb, var(--gx-add) 55%, var(--gx-line)); }
+.gx-wire.d-modified { stroke: color-mix(in srgb, var(--gx-mod) 55%, var(--gx-line)); }
+.gx-wire.d-removed { stroke: color-mix(in srgb, var(--gx-del) 55%, var(--gx-line)); }
+.gx-wire.more { stroke-dasharray: 3 4; stroke: var(--gx-line); }
+.gx-wire.on { stroke-width: 2.2; }
+.gx-wire.sel { stroke: var(--gx-accent); stroke-width: 2.2; }
+.gx-wire.lit { stroke: var(--gx-accent); stroke-width: 2.4; stroke-dasharray: 7 5; animation: gx-flow .9s linear infinite; }
+/* filtro: lo que coincide, con un anillo; lo que no lleva a nada referenciado, apagado */
+.gx-node.hit:not(.lit):not(.sel) { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gx-accent) 45%, transparent)); }
+.gx-filter-q .gx-node.hit > .gx-card { stroke: var(--gx-accent); stroke-width: 1.6; }
+.gx-node.off { opacity: .38; }
+.gx-node.off:hover { opacity: .8; }
+.gx-more { cursor: pointer; pointer-events: all; }
+.gx-more rect { fill: var(--gx-canvas); stroke: var(--gx-line); stroke-dasharray: 3 3; transition: fill .12s, stroke .12s; }
+.gx-more text { font-size: 11.5px; font-weight: 600; fill: var(--gx-muted); text-anchor: middle; }
+.gx-more:hover rect, .gx-more:focus-visible rect { fill: var(--gx-accent-soft); stroke: var(--gx-accent); stroke-dasharray: none; } .gx-more:hover text { fill: var(--gx-accent); }
+.gx-more:focus { outline: none; }
+/* la pastilla del filtro activo en la barra */
+.gx-filter { display: none; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; font-size: 12px; color: var(--gx-accent); background: var(--gx-accent-soft); border: 1px solid color-mix(in srgb, var(--gx-accent) 35%, transparent); max-width: 280px; }
+.gx-filter.on { display: inline-flex; }
+.gx-filter span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-filter b { font-variant-numeric: tabular-nums; }
+.gx-x2 { font: inherit; font-size: 15px; line-height: 1; width: 22px; height: 22px; border-radius: 50%; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.gx-x2:hover { background: var(--gx-accent); color: #fff; }
+.gx-tip-p { display: block; margin-top: 6px; font: 11px var(--gx-mono); color: var(--gx-muted); word-break: break-all; }
+.gx-flat .gx-node:focus-visible { outline: none; }
+.gx-flat .gx-node:focus-visible > .gx-card { stroke: var(--gx-accent); stroke-width: 2.4; }
+
 @media (prefers-reduced-motion: reduce) {
   .gx-pulse, .gx-bar-live { animation: none; }
   .gx-leaf { transition: none; }
+  .gx-wire.lit { animation: none; stroke-dasharray: none; }
 }

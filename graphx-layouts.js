@@ -49,8 +49,8 @@
   };
   const center = r => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
   const L10N = {
-    es: { months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], today: 'hoy' },
-    en: { months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], today: 'today' }
+    es: { months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], today: 'hoy', more: 'más' },
+    en: { months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], today: 'today', more: 'more' }
   };
 
   /* ---------- gantt: una fila por tarea sobre un eje de fechas común ---------- */
@@ -390,6 +390,94 @@
     return { rects, paths, bbox: bboxOf(rects), deco: [] };
   }
 
-  const modes = { gantt, git, sankey, treemap, timeline, journey, grid };
-  return Object.assign({ names: Object.keys(modes), squarify, has: m => Object.prototype.hasOwnProperty.call(modes, m) }, modes);
+  /* ---------- árbol de ficheros: sangrado como `tree` (hacia abajo) o en columnas (a la derecha) ---------- */
+  /* Una carpeta abierta no es un contenedor: es una tarjeta más, y sus hijos cuelgan de ella con una
+     línea en escuadra (sangrado) o una curva (columnas). Las líneas no van en `paths` sino en `wires`:
+     el motor las redibuja en cada fotograma a partir de dónde está cada tarjeta, así crecen con los
+     hijos que nacen y se recogen con los que se pliegan. `ctx.hidden` dice cuántos hijos ha ocultado
+     el filtro en cada carpeta abierta; en su lugar va una pastilla «··· N más» que los muestra. */
+  const TREE_IND = 44, TREE_TRUNK = 26;
+  function tree(ctx) {
+    const { M, roots, vis, exp, vedges, textW } = ctx, { kids } = helpers(ctx), Lx = L10N[ctx.lang] || L10N.es;
+    const hidden = ctx.hidden || new Map(), down = ctx.dir !== 'right';
+    const rects = new Map(), heads = new Map(), wires = [], deco = [], order = [], pills = [];
+    const sz = id => ctx.size(id), headOf = id => { const z = sz(id); return z.head || z.h; };
+    const more = (id, x, y) => {
+      const k = hidden.get(id), text = `··· ${k} ${Lx.more}`, w = Math.ceil(textW(text, 11.5, 600)) + 26, box = { x, y, w, h: 26 };
+      pills.push(box);
+      deco.push(E('g', { class: 'gx-more', 'data-more': id, transform: `translate(${x},${y})`, role: 'button', tabindex: 0 }, [
+        E('rect', { width: w, height: 26, rx: 13 }), E('text', { x: w / 2, y: 17 }, null, text)]));
+      wires.push({ from: id, toBox: box, kind: down ? 'indent' : 'cols', more: true });
+      return box;
+    };
+    const top = roots.filter(r => vis.has(r));
+    if (down) {
+      let y = 0;
+      const walk = (id, depth) => {
+        const z = sz(id);
+        rects.set(id, { x: depth * TREE_IND, y, w: z.w, h: z.h }); heads.set(id, headOf(id)); order.push(id);
+        y += z.h + 8;
+        if (!exp.has(id)) return;
+        kids(id).forEach(c => { wires.push({ from: id, to: c, kind: 'indent' }); walk(c, depth + 1); });
+        if (hidden.get(id)) { more(id, (depth + 1) * TREE_IND, y); y += 34; }
+      };
+      top.forEach(r => walk(r, 0));
+    } else {
+      /* columnas: cada nivel, una columna tan ancha como su tarjeta más ancha; el padre, centrado en sus hijos */
+      const colW = [];
+      const measure = (id, d) => { colW[d] = Math.max(colW[d] || 0, sz(id).w); if (exp.has(id)) kids(id).forEach(c => measure(c, d + 1)); if (exp.has(id) && hidden.get(id)) colW[d + 1] = Math.max(colW[d + 1] || 0, 90); };
+      top.forEach(r => measure(r, 0));
+      const colX = [0]; for (let d = 1; d < colW.length + 1; d++) colX[d] = colX[d - 1] + (colW[d - 1] || 0) + 64;
+      const place = (id, d, y) => {
+        const z = sz(id), ks = exp.has(id) ? kids(id) : [], hd = headOf(id);
+        order.push(id); heads.set(id, hd);
+        if (!ks.length && !(exp.has(id) && hidden.get(id))) { rects.set(id, { x: colX[d], y, w: z.w, h: z.h }); return y + z.h; }
+        let cy = y; const anchors = [];
+        ks.forEach(c => { wires.push({ from: id, to: c, kind: 'cols' }); const b = place(c, d + 1, cy); const r = rects.get(c); anchors.push(r.y + heads.get(c) / 2); cy = b + 10; });
+        if (exp.has(id) && hidden.get(id)) { const box = more(id, colX[d + 1], cy); anchors.push(box.y + 13); cy += 36; }
+        const py = Math.max(y, (anchors[0] + anchors[anchors.length - 1]) / 2 - hd / 2);
+        rects.set(id, { x: colX[d], y: py, w: z.w, h: z.h });
+        return Math.max(cy - 10, py + z.h);
+      };
+      let y = 0; top.forEach(r => { y = place(r, 0, y) + 18; });
+      /* el orden de lectura es el de la pantalla: de arriba abajo */
+      order.sort((a, b) => rects.get(a).y - rects.get(b).y || rects.get(a).x - rects.get(b).x);
+    }
+    /* referencias entre ficheros (imports, usos): un arco por fuera, a la derecha de las tarjetas */
+    const paths = new Map(), arcs = [];
+    for (const v of vedges) {
+      const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      let d, lx, ly;
+      if (down) {
+        const ya = a.y + heads.get(v.from) / 2, yb = b.y + heads.get(v.to) / 2, xa = a.x + a.w, xb = b.x + b.w;
+        const cx = Math.max(xa, xb) + clamp(30 + Math.abs(yb - ya) * .2, 40, 180);
+        d = `M${xa},${ya} C${cx},${ya} ${cx},${yb} ${xb + 6},${yb}`; lx = .125 * xa + .75 * cx + .125 * xb; ly = (ya + yb) / 2;
+        arcs.push({ x: lx, y: ly, w: 1, h: 1 });
+      } else {
+        const pa = { x: a.x + a.w / 2, y: a.y + heads.get(v.from) / 2 }, pb = { x: b.x + b.w / 2, y: b.y + heads.get(v.to) / 2 };
+        d = `M${pa.x},${pa.y} C${pa.x},${pa.y - 60} ${pb.x},${pb.y - 60} ${pb.x},${pb.y}`; lx = (pa.x + pb.x) / 2; ly = Math.min(pa.y, pb.y) - 45;
+        arcs.push({ x: lx, y: ly, w: 1, h: 1 });
+      }
+      const lw = v.label ? Math.ceil(textW(v.label, 11, 500)) + 16 : 0;
+      paths.set(v.id, { d, label: v.label ? { x: lx - lw / 2, y: ly - 10, w: lw, h: 20 } : null });
+    }
+    return { rects, paths, bbox: bboxOf(rects, pills.concat(arcs)), deco, wires, heads, order };
+  }
+  /* El trazo de una línea del árbol entre dos tarjetas en su sitio actual (a mitad de animación
+     también): en escuadra desde el tronco del padre, o en curva de su lado derecho al izquierdo del hijo. */
+  function wire(kind, a, b, ha, hb) {
+    if (kind === 'cols') {
+      const x0 = a.x + a.w, y0 = a.y + ha / 2, x1 = b.x, y1 = b.y + hb / 2, mx = x0 + Math.max((x1 - x0) / 2, 14);
+      return `M${r1(x0)},${r1(y0)} C${r1(mx)},${r1(y0)} ${r1(mx)},${r1(y1)} ${r1(x1)},${r1(y1)}`;
+    }
+    const x0 = a.x + Math.min(TREE_TRUNK, a.w / 2), y0 = a.y + a.h, x1 = b.x, y1 = b.y + hb / 2;
+    const r = Math.min(10, y1 - y0, x1 - x0);
+    if (r < 1) return `M${r1(x0)},${r1(y0)} L${r1(x1)},${r1(y1)}`;
+    return `M${r1(x0)},${r1(y0)} V${r1(y1 - r)} Q${r1(x0)},${r1(y1)} ${r1(x0 + r)},${r1(y1)} H${r1(x1)}`;
+  }
+
+  const modes = { gantt, git, sankey, treemap, timeline, journey, grid, tree };
+  /* `flat`: modos en los que una pieza abierta no envuelve a sus hijos (sigue siendo una tarjeta) */
+  const FLAT = { tree: 1 };
+  return Object.assign({ names: Object.keys(modes), squarify, wire, has: m => Object.prototype.hasOwnProperty.call(modes, m), flat: m => Object.prototype.hasOwnProperty.call(FLAT, m) }, modes);
 });
