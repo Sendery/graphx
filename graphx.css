@@ -756,17 +756,40 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 .gx-shape.has-c > .gx-card.gx-fopen { fill: color-mix(in srgb, var(--gx-c) 6%, var(--gx-card)); }
 .gx-fopen-l { fill: none; stroke: transparent; }
 .gx-ftitle { font-weight: 700; }
-.gx-exp.open rect { fill: var(--gx-card); stroke: color-mix(in srgb, var(--gx-accent) 40%, transparent); }
+.gx-exp.open rect { fill: var(--gx-card); stroke: color-mix(in srgb, var(--gx-accent) 58%, transparent); }
 /* coincidencias del filtro dentro de una carpeta */
 .gx-hits rect { fill: var(--gx-accent); }
 .gx-hitsd { fill: #fff; }
 .gx-hitst { font-size: 10.5px; font-weight: 700; fill: #fff; font-variant-numeric: tabular-nums; }
+/* en una carpeta abierta, la variante suave: no compite con el nombre */
+.gx-hits.soft rect { fill: var(--gx-accent-soft); stroke: color-mix(in srgb, var(--gx-accent) 35%, transparent); }
+.gx-hits.soft .gx-hitsd { fill: var(--gx-accent); } .gx-hits.soft .gx-hitst { fill: var(--gx-accent); }
+.gx-gitlt.sm { font-size: 9.5px; }
+.gx-shape.fam-tree.d-removed > .gx-accent { display: none; }
+/* la pila de una carpeta plegada se abre un poco al pasar por encima */
+.gx-node.fam-tree > .gx-stack { transition: transform .22s cubic-bezier(.2, .8, .2, 1); }
+.gx-node.fam-tree > .gx-stack:nth-of-type(1) { transform: translate(8px, 8px); }
+.gx-node.fam-tree > .gx-stack:nth-of-type(2) { transform: translate(4px, 4px); }
+.gx-node.fam-tree:hover > .gx-stack:nth-of-type(1) { transform: translate(12px, 11px); }
+.gx-node.fam-tree:hover > .gx-stack:nth-of-type(2) { transform: translate(6px, 5.5px); }
+/* al abrir el detalle, sus barras crecen desde la izquierda */
+.gx-node.det .gx-dfill, .gx-node.det .gx-dbar-a, .gx-node.det .gx-dbar-d { transform-box: fill-box; transform-origin: left center; animation: gx-grow .7s cubic-bezier(.2, .8, .2, 1) both .12s; }
+@keyframes gx-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* al filtrar, lo que coincide hace un pulso */
+.gx-node.gx-ping { animation: gx-ping 1.2s ease-out; }
+@keyframes gx-ping { 0% { filter: drop-shadow(0 0 0 transparent); } 30% { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--gx-accent) 75%, transparent)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+.gx-filter.warn { color: var(--gx-warn); background: color-mix(in srgb, var(--gx-warn) 12%, transparent); border-color: color-mix(in srgb, var(--gx-warn) 40%, transparent); }
+.gx-filter.warn .gx-x2:hover { background: var(--gx-warn); }
 /* el botón del detalle y la tarjeta de detalle */
 .gx-det { cursor: pointer; }
 .gx-det rect { fill: transparent; stroke: transparent; transition: fill .12s, stroke .12s; }
 .gx-det path { fill: none; stroke: var(--gx-muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.gx-node:hover .gx-det rect, .gx-det.on rect { fill: var(--gx-glyph-bg); stroke: var(--gx-card-line); }
-.gx-det:hover rect { fill: var(--gx-accent); stroke: var(--gx-accent); } .gx-det:hover path { stroke: #fff; }
+.gx-det path.gx-det-ring { stroke-width: 1.2; }
+.gx-det.on rect { fill: var(--gx-accent-soft); } .gx-det.on path { stroke: var(--gx-accent); }
+.gx-det:hover rect { fill: var(--gx-accent); } .gx-det:hover path { stroke: #fff; }
+/* el botón del detalle de un fichero aparece al pasar por encima (el clic en la tarjeta ya lo abre) */
+.gx-node.sh-file .gx-det { opacity: 0; transition: opacity .15s; }
+.gx-node.sh-file:hover .gx-det, .gx-node.sh-file:focus-visible .gx-det, .gx-node.sh-file .gx-det.on { opacity: 1; }
 .gx-ddiv { fill: none; stroke: var(--gx-card-line); stroke-dasharray: 3 3; }
 .gx-dpath { font: 10.5px var(--gx-mono); fill: var(--gx-muted); }
 .gx-dk { font-size: 11px; fill: var(--gx-muted); }
@@ -811,4 +834,6 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
   .gx-pulse, .gx-bar-live { animation: none; }
   .gx-leaf { transition: none; }
   .gx-wire.lit { animation: none; stroke-dasharray: none; }
+  .gx-node.det .gx-dfill, .gx-node.det .gx-dbar-a, .gx-node.det .gx-dbar-d, .gx-node.gx-ping { animation: none; }
+  .gx-node.fam-tree > .gx-stack { transition: none; }
 }

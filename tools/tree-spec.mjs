@@ -46,15 +46,18 @@ if (opt('--tree')) {
     } catch (_) { return {}; }
   };
   const rootName = opt('--root', path.basename(dir));
+  /* un directorio que git ignora (node_modules…) no tiene ficheros en ls-files: se recorre a mano */
+  let files = [];
+  if (inRepo) { files = git('ls-files', '-z').split('\0').filter(Boolean); if (!files.length) inRepo = false; }
   if (inRepo) {
-    const files = git('ls-files', '-z').split('\0').filter(Boolean);
     const base = opt('--base'), head = opt('--head');
     const range = base ? (head ? [`${base}...${head}`] : [base]) : null;
-    const numstat = range ? git('diff', '--numstat', '-M', ...range) : '';
-    const nameStatus = range ? git('diff', '--name-status', '-M', ...range) : '';
-    spec = TREE.fromGit({ files, numstat, nameStatus, extra: files.map(f => Object.assign({ path: f }, statOf(f))) },
+    /* -z: rutas sin comillas ni escapes, separadas por NUL (tildes, espacios, tabuladores) */
+    const numstatZ = range ? git('diff', '--numstat', '-M', '-z', ...range) : '';
+    const nameStatusZ = range ? git('diff', '--name-status', '-M', '-z', ...range) : '';
+    spec = TREE.fromGit({ files, numstatZ, nameStatusZ, extra: files.map(f => Object.assign({ path: f }, statOf(f))) },
       Object.assign({ root: rootName, focus: base ? 'changes' : null, summary: base ? `${base}${head ? '…' + head : ''}` : undefined }, common));
-    if (base) console.error(`git: ${numstat.split('\n').filter(Boolean).length} ficheros cambiados respecto a ${base}`);
+    if (base) console.error(`git: ${spec.nodes.filter(n => n.kind === 'file' && n.delta !== 'unchanged').length} ficheros cambiados respecto a ${base}`);
   } else {
     const out = [];
     const walk = rel => fs.readdirSync(path.join(dir, rel), { withFileTypes: true }).forEach(d => {

@@ -34,12 +34,12 @@
     svg: '#d946ef', png: '#a855f7', jpg: '#a855f7', jpeg: '#a855f7', gif: '#a855f7', webp: '#a855f7', ico: '#a855f7', pdf: '#b91c1c',
     lock: '#94a3b8', env: '#94a3b8', ini: '#94a3b8', cfg: '#94a3b8', conf: '#94a3b8', mmd: '#ff3670', dockerfile: '#384d54', makefile: '#427819'
   };
-  const SPECIAL = { makefile: 'MK', dockerfile: 'DKR', license: 'LIC', readme: 'DOC', changelog: 'DOC', gemfile: 'RB', rakefile: 'RB', procfile: 'CFG' };
+  const SPECIAL = { makefile: 'MK', dockerfile: 'DKR', license: 'LIC', gemfile: 'RB', rakefile: 'RB', procfile: 'CFG' };
   const STR = {
     es: { root: 'repo', files: 'ficheros', file: 'fichero', dirs: 'carpetas', dir: 'carpeta', size: 'Tamaño', lines: 'Líneas', status: 'Estado', before: 'Antes',
-      changed: 'cambiados', folder: 'Carpeta', fileK: 'Fichero', st: { A: 'nuevo', M: 'modificado', D: 'eliminado', R: 'renombrado' }, changes: 'Cambios', tree: 'Árbol de ficheros' },
+      changed: 'cambiados', of: 'de', folder: 'Carpeta', fileK: 'Fichero', st: { A: 'nuevo', M: 'modificado', D: 'eliminado', R: 'renombrado' }, changes: 'Cambios', tree: 'Árbol de ficheros' },
     en: { root: 'repo', files: 'files', file: 'file', dirs: 'folders', dir: 'folder', size: 'Size', lines: 'Lines', status: 'Status', before: 'Before',
-      changed: 'changed', folder: 'Folder', fileK: 'File', st: { A: 'added', M: 'modified', D: 'deleted', R: 'renamed' }, changes: 'Changes', tree: 'File tree' }
+      changed: 'changed', of: 'of', folder: 'Folder', fileK: 'File', st: { A: 'added', M: 'modified', D: 'deleted', R: 'renamed' }, changes: 'Changes', tree: 'File tree' }
   };
   const DELTA = { A: 'added', M: 'modified', D: 'removed', R: 'modified', C: 'added', T: 'modified', U: 'modified' };
 
@@ -65,8 +65,14 @@
   };
   const fmtInt = (v, lang) => (v == null ? '' : Number(v).toLocaleString(lang === 'en' ? 'en-US' : 'es-ES'));
   /* ids válidos para GraphX: letras, números y . _ : / -; el resto se escapa */
-  const safeId = (prefix, path) => prefix + ':' + (String(path).replace(/[^A-Za-z0-9._/-]/g, c => '-' + c.charCodeAt(0).toString(16)) || '_');
-  const norm = p => String(p).trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+/g, '/').replace(/\/$/, '');
+  /* el «-» también se escapa: «a b.js» y «a-20b.js» no pueden dar el mismo id (los ids son estables entre builds) */
+  const safeId = (prefix, path) => prefix + ':' + (String(path).replace(/[^A-Za-z0-9._/]/g, c => '-' + c.charCodeAt(0).toString(16)) || '_');
+  /* ruta relativa limpia: sin ./, sin barras repetidas ni finales, con . y .. resueltos y sin la / inicial */
+  const norm = p => {
+    const out = [];
+    String(p).trim().replace(/\\/g, '/').split('/').forEach(seg => { if (!seg || seg === '.') return; if (seg === '..') out.pop(); else out.push(seg); });
+    return out.join('/');
+  };
 
   function fromPaths(entries, opts) {
     opts = opts || {};
@@ -126,16 +132,17 @@
         }
         files++;
         const ext = extOf(k.name), st = k.status ? String(k.status).charAt(0).toUpperCase() : null;
+        /* un fichero borrado ya no está en disco: sus líneas son las que se han quitado */
+        if (st === 'D' && k.lines == null && k.deletions) k.lines = k.deletions;
         const delta = k.delta || (st && DELTA[st]) || (k.additions || k.deletions ? 'modified' : 'unchanged');
         exts.set(ext, (exts.get(ext) || 0) + 1);
         if (k.size != null) { size += k.size; hasSize = true; } if (k.lines != null) { lines += k.lines; hasLines = true; }
+        /* tamaño y líneas van en el subtítulo; en el detalle, lo que no se ve en la tarjeta */
         const metrics = [];
-        if (k.size != null) metrics.push({ label: L.size, value: fmtSize(k.size, lang) });
-        if (k.lines != null) metrics.push({ label: L.lines, value: fmtInt(k.lines, lang) });
         if (st && L.st[st]) metrics.push({ label: L.status, value: L.st[st] });
         if (k.from) metrics.push({ label: L.before, value: k.from });
         (Array.isArray(k.metrics) ? k.metrics : Object.entries(k.meta || {}).map(([label, value]) => ({ label, value: String(value) }))).forEach(m => metrics.push(m));
-        const sub = [k.size != null ? fmtSize(k.size, lang) : '', k.lines != null ? `${fmtInt(k.lines, lang)} ${lang === 'en' ? 'lines' : 'líneas'}` : ''].filter(Boolean).join(' · ');
+        const sub = k.from && st === 'R' ? '← ' + k.from : [k.size != null ? fmtSize(k.size, lang) : '', k.lines != null ? `${fmtInt(k.lines, lang)} ${lang === 'en' ? 'lines' : 'líneas'}` : ''].filter(Boolean).join(' · ');
         const f = {
           id: uniq(safeId('f', k.path)), label: k.name, kind: 'file', shape: 'file', path: k.path, parent: id || undefined,
           ext, badge: badgeOf(k.name), extColor: EXT[ext] || EXT[k.name.toLowerCase()] || undefined, delta,
@@ -146,7 +153,7 @@
           f.files = [{ path: k.path, additions: k.additions || 0, deletions: k.deletions || 0 }];
           const u = blob(k.path); if (u && delta !== 'removed') f.files[0].url = u;
         }
-        if (delta !== 'unchanged') changed.push({ name: k.name, path: k.path, additions: k.additions || 0, deletions: k.deletions || 0, delta, id: f.id });
+        if (delta !== 'unchanged') changed.push({ name: k.name, path: k.path, additions: k.additions || 0, deletions: k.deletions || 0, delta, renamed: st === 'R' || undefined, id: f.id });
         nodes.push(f);
       });
       if (node) {
@@ -155,14 +162,13 @@
         const rest = ex.slice(5).reduce((s, [, n]) => s + n, 0);
         if (rest) head.push({ ext: '…', n: rest, color: '#8c959f' });
         const top5 = changed.slice().sort((a, b) => (b.additions + b.deletions) - (a.additions + a.deletions));
-        node.tree = { files, dirs, exts: head, changed: top5.slice(0, 5).map(c => ({ name: c.path.slice((d.path ? d.path.length + 1 : 0)), path: c.path, additions: c.additions, deletions: c.deletions, delta: c.delta })), more: Math.max(0, changed.length - 5) || undefined };
-        const metrics = [{ label: L.files.charAt(0).toUpperCase() + L.files.slice(1), value: fmtInt(files, lang) }];
-        if (dirs) metrics.push({ label: L.dirs.charAt(0).toUpperCase() + L.dirs.slice(1), value: fmtInt(dirs, lang) });
+        node.tree = { files, dirs, exts: head, changed: top5.slice(0, 5).map(c => ({ name: c.path.slice((d.path ? d.path.length + 1 : 0)), path: c.path, additions: c.additions, deletions: c.deletions, delta: c.delta, renamed: c.renamed })), more: Math.max(0, changed.length - 5) || undefined };
+        /* las cuentas ya van en la cabecera de la carpeta: el detalle lleva tamaño, líneas y qué parte ha cambiado */
+        const metrics = [];
         if (hasSize) metrics.push({ label: L.size, value: fmtSize(size, lang) });
         if (hasLines) metrics.push({ label: L.lines, value: fmtInt(lines, lang) });
-        if (changed.length) metrics.push({ label: L.changes, value: `${changed.length} ${L.changed}` });
-        node.metrics = metrics;
-        node.summary = `${fmtInt(files, lang)} ${files === 1 ? L.file : L.files}${dirs ? ` · ${fmtInt(dirs, lang)} ${dirs === 1 ? L.dir : L.dirs}` : ''}`;
+        if (changed.length) metrics.push({ label: L.changes, value: `${fmtInt(changed.length, lang)} ${L.of} ${fmtInt(files, lang)} (${Math.max(1, Math.round(changed.length / Math.max(files, 1) * 100))} %)` });
+        if (metrics.length) node.metrics = metrics;
       }
       if (d === top) changedAll.push(...changed);
       return { files, dirs, size: hasSize ? size : null, lines: hasLines ? lines : null, exts, changed };
@@ -172,7 +178,7 @@
     /* 4 · el spec: layout de árbol, una raíz abierta y, si hay cambios, el filtro de cambios listo */
     const spec = {
       title: opts.title || L.tree, lang, direction: opts.direction === 'right' ? 'right' : 'down',
-      layout: { mode: 'tree' }, initialDepth: opts.initialDepth != null ? opts.initialDepth : (rootName ? 1 : 0),
+      layout: { mode: 'tree', density: opts.density || 'auto' }, initialDepth: opts.initialDepth != null ? opts.initialDepth : (rootName ? 1 : 0),
       legend: { kinds: { folder: L.folder, file: L.fileK } }, nodes, edges: []
     };
     if (opts.summary) spec.summary = opts.summary;
@@ -187,66 +193,105 @@
 
   /* La salida de `tree` (también `tree -s`, `-h`, `-F`, `--charset ascii`): la profundidad sale de
      la columna en la que empieza el nombre; una línea seguida de otras más hondas es una carpeta. */
+  /* La salida de `tree` (también -s, -h, -D, -p, -u, -F, -f, -C y --charset ascii): la profundidad sale de
+     la columna en la que empieza el nombre; una línea seguida de otras más hondas es una carpeta. Con
+     varias raíces (`tree a b`), cada una es una carpeta de primer nivel. */
+  const UNITS = { '': 1, K: 1024, M: 1024 ** 2, G: 1024 ** 3, T: 1024 ** 4 };
   function parseTree(text) {
-    const rows = [];
-    String(text || '').split(/\r?\n/).forEach(line => {
+    const groups = [];
+    let cur = null;
+    String(text || '').replace(/\x1b\[[0-9;]*m/g, '').split(/\r?\n/).forEach(line => {
       if (!line.trim() || /^\s*\d+ director(y|ies)(, \d+ files?)?\s*$/i.test(line)) return;
       const m = /^((?:(?:│|\|)\s{2,3}|\s{4})*)(?:├──|└──|\|--|`--|\+--|\\--)\s?(.*)$/.exec(line);
-      let depth, name;
-      if (m) { depth = Math.round(m[1].replace(/│|\|/g, ' ').length / 4) + 1; name = m[2]; }
-      else if (!rows.length) { rows.push({ depth: 0, name: line.trim(), root: true }); return; }
-      else return;
-      let size = null;
-      const sm = /^\[\s*([\d.]+)\s*([KMGT]?)i?B?\s*\]\s+(.*)$/i.exec(name);
-      if (sm) { size = Math.round(parseFloat(sm[1]) * ({ '': 1, K: 1024, M: 1024 ** 2, G: 1024 ** 3, T: 1024 ** 4 })[sm[2].toUpperCase()]); name = sm[3]; }
+      if (!m) { cur = { root: line.trim(), rows: [] }; groups.push(cur); return; }
+      if (!cur) { cur = { root: '.', rows: [] }; groups.push(cur); }
+      const depth = Math.round(m[1].replace(/│|\|/g, ' ').length / 4) + 1;
+      let name = m[2], size = null;
+      /* los corchetes de delante: tamaño (-s, -h), permisos (-p), dueño (-u), fecha (-D)… */
+      for (let b; (b = /^\[([^\]]*)\]\s+/.exec(name));) {
+        const sm = /^\s*([\d.]+)\s*([KMGT]?)i?B?\s*$/i.exec(b[1]);
+        if (sm && size == null) size = Math.round(parseFloat(sm[1]) * UNITS[sm[2].toUpperCase()]);
+        name = name.slice(b[0].length);
+      }
       name = name.replace(/\s+->\s+.*$/, '');
-      const dirMark = /\/$/.test(name); name = name.replace(/[/*=@|]$/, '');
-      rows.push({ depth, name, size, dirMark });
+      const dirMark = /\/$/.test(name); name = name.replace(/\/$/, '');
+      /* -f: cada línea trae la ruta entera; se queda el último tramo */
+      if (name.includes('/')) name = name.split('/').filter(Boolean).pop() || name;
+      cur.rows.push({ depth, name, size, dirMark });
     });
-    const out = [], stack = [];
-    const root = rows[0] && rows[0].root ? rows.shift() : null;
-    rows.forEach((r, i) => {
-      stack.length = r.depth - 1; stack[r.depth - 1] = r.name;
-      const path = stack.slice(0, r.depth).join('/');
-      const next = rows[i + 1], isDir = r.dirMark || (next && next.depth > r.depth);
-      if (isDir) { if (!(next && next.depth > r.depth)) out.push({ path, dir: true }); }
-      else out.push(r.size != null ? { path, size: r.size } : { path });
+    const out = [], multi = groups.filter(g => g.rows.length).length > 1;
+    groups.forEach(g => {
+      const pre = multi ? norm(g.root) : '', stack = [];
+      g.rows.forEach((r, i) => {
+        stack.length = r.depth - 1; stack[r.depth - 1] = r.name;
+        const path = (pre ? pre + '/' : '') + stack.slice(0, r.depth).join('/');
+        const next = g.rows[i + 1], isDir = r.dirMark || (next && next.depth > r.depth);
+        if (isDir) { if (!(next && next.depth > r.depth)) out.push({ path, dir: true }); }
+        else out.push(r.size != null ? { path, size: r.size } : { path });
+      });
     });
-    return { entries: out, root: root && root.name !== '.' ? root.name.replace(/\/$/, '') : null };
+    const one = !multi && groups[0] ? groups[0].root.replace(/\/$/, '') : null;
+    return { entries: out, root: one && one !== '.' ? one.split('/').filter(Boolean).pop() : null };
   }
+  /* las opciones que valen undefined no pisan lo que trae el árbol (el nombre de su raíz) */
+  const defined = o => Object.keys(o || {}).reduce((a, k) => (o[k] !== undefined && (a[k] = o[k]), a), {});
   function fromTreeText(text, opts) {
     const r = parseTree(text);
-    return fromPaths(r.entries, Object.assign({ root: r.root || undefined }, opts || {}));
+    return fromPaths(r.entries, Object.assign(r.root ? { root: r.root } : {}, defined(opts)));
   }
 
+  /* git cita entre comillas las rutas con caracteres raros ("gu\303\255a.md", "con\ttab"): se deshace */
+  function unq(p) {
+    if (!/^".*"$/.test(p)) return p;
+    const bytes = p.slice(1, -1).replace(/\\([0-7]{3})|\\(.)/g, (_, o, c) => o ? '%' + parseInt(o, 8).toString(16).padStart(2, '0') : encodeURIComponent(({ t: '\t', n: '\n', r: '\r', b: '\b', f: '\f', a: '\x07', v: '\v' })[c] || c));
+    try { return decodeURIComponent(bytes.replace(/%(?![0-9a-f]{2})/gi, '%25')); } catch (_) { return p.slice(1, -1); }
+  }
+  /* «old => new» de un renombrado en numstat, también con llaves (src/{a => b}/x.js) y con comillas */
+  function renamed(p) {
+    let q = false, at = -1;
+    for (let i = 0; i < p.length; i++) { if (p[i] === '"' && p[i - 1] !== '\\') q = !q; else if (!q && p.startsWith(' => ', i)) { at = i; break; } }
+    if (/^".*"$/.test(p) && at < 0) { const u = unq(p); return u.includes(' => ') ? renamed(u) : null; }
+    const m = /^(.*)\{(.*) => (.*)\}(.*)$/.exec(p);
+    if (m && !/^"/.test(p)) return { from: norm(m[1] + m[2] + m[4]), to: norm(m[1] + m[3] + m[4]) };
+    return at < 0 ? null : { from: norm(unq(p.slice(0, at))), to: norm(unq(p.slice(at + 4))) };
+  }
   /* git: `ls-files` da el árbol; `diff --numstat` las líneas; `diff --name-status` el tipo de cambio
-     (los borrados no están en ls-files: se añaden desde el diff) */
+     (los borrados no están en ls-files: se añaden desde el diff). Con `-z`, en `numstatZ` y `nameStatusZ`. */
   function fromGit(src, opts) {
     src = src || {};
     const lines = v => (Array.isArray(v) ? v : String(v || '').split(/\r?\n/)).map(l => l.replace(/\r$/, '')).filter(Boolean);
     const byPath = new Map();
-    const get = p => { p = norm(p); if (!byPath.has(p)) byPath.set(p, { path: p }); return byPath.get(p); };
-    lines(src.files).forEach(p => get(p));
-    /* numstat de un renombrado: «a	d	src/{old => new}/x.js» o «a	d	old => new» */
-    const renamed = p => {
-      const m = /^(.*)\{(.*) => (.*)\}(.*)$/.exec(p);
-      if (m) return { from: norm(m[1] + m[2] + m[4]), to: norm(m[1] + m[3] + m[4]) };
-      const k = /^(.*) => (.*)$/.exec(p);
-      return k ? { from: norm(k[1]), to: norm(k[2]) } : null;
+    const get = p => { p = norm(unq(p)); if (!byPath.has(p)) byPath.set(p, { path: p }); return byPath.get(p); };
+    const stat = (e, a, d) => { e.additions = a === '-' ? 0 : +a || 0; e.deletions = d === '-' ? 0 : +d || 0; };
+    const status = (k, a, b) => {
+      if ((k === 'R' || k === 'C') && b != null) { const e = get(b); e.status = k; e.from = norm(unq(a)); if (k === 'R') byPath.delete(norm(unq(a))); }
+      else get(a).status = k;
     };
+    (Array.isArray(src.files) ? src.files : lines(src.files)).forEach(p => get(p));
     lines(src.numstat).forEach(l => {
       const [a, d, ...rest] = l.split('\t'); const p = rest.join('\t'); if (!p) return;
       const rn = renamed(p), e = get(rn ? rn.to : p);
-      e.additions = a === '-' ? 0 : +a || 0; e.deletions = d === '-' ? 0 : +d || 0;
+      stat(e, a, d);
       if (rn) { e.from = rn.from; e.status = e.status || 'R'; }
     });
-    lines(src.nameStatus).forEach(l => {
-      const [st, a, b] = l.split('\t'); if (!st || !a) return;
-      const k = st.charAt(0).toUpperCase();
-      if ((k === 'R' || k === 'C') && b) { const e = get(b); e.status = k; e.from = norm(a); byPath.delete(norm(a)); }
-      else get(a).status = k;
-    });
-    (src.extra || []).forEach(x => Object.assign(get(x.path), x));
+    lines(src.nameStatus).forEach(l => { const [st, a, b] = l.split('\t'); if (st && a) status(st.charAt(0).toUpperCase(), a, b); });
+    /* -z: campos separados por NUL y rutas sin comillas */
+    if (src.numstatZ) {
+      const t = String(src.numstatZ).split('\0');
+      for (let i = 0; i < t.length; i++) {
+        const m = /^(\d+|-)\t(\d+|-)\t(.*)$/s.exec(t[i]); if (!m) continue;
+        if (m[3]) stat(get(m[3]), m[1], m[2]);
+        else { const e = get(t[i + 2]); stat(e, m[1], m[2]); e.from = norm(t[i + 1]); e.status = e.status || 'R'; i += 2; }
+      }
+    }
+    if (src.nameStatusZ) {
+      const t = String(src.nameStatusZ).split('\0');
+      for (let i = 0; i < t.length; i++) {
+        const k = (t[i] || '').charAt(0).toUpperCase(); if (!/^[ACDMRTUX]$/.test(k)) continue;
+        if (k === 'R' || k === 'C') { status(k, t[i + 1], t[i + 2]); i += 2; } else { status(k, t[i + 1]); i += 1; }
+      }
+    }
+    (src.extra || []).forEach(x => Object.assign(get(x.path), x, { path: norm(unq(x.path)) }));
     return fromPaths([...byPath.values()], opts);
   }
 

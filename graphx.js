@@ -239,6 +239,7 @@
       n.laneId = p;
     }
     /* delta y stats de un contenedor: si no los declara, se derivan de lo que contiene */
+    const declared = new Set((spec.nodes || []).filter(x => x && x.delta).map(x => x.id));
     const post = id => {
       const n = M.get(id); let add = 0, del = 0, files = new Map(), rank = 0, count = 0;
       (n.files || []).forEach(f => files.set(f.path, f));
@@ -247,7 +248,7 @@
         r.files.forEach((f, k) => files.set(k, f));
       }
       files.forEach(f => { add += f.additions || 0; del += f.deletions || 0; });
-      if (!n.isLane && n.delta === 'unchanged' && !(spec.nodes || []).find(x => x.id === id && x.delta)) {
+      if (!n.isLane && n.delta === 'unchanged' && !declared.has(id)) {
         if (rank > 0) n.delta = 'modified';
       }
       n.stat = { additions: add, deletions: del, files: files.size };
@@ -304,6 +305,9 @@
     /* estados propios (`statuses`): cada pieza con `status` toma su etiqueta y, si no trae color, el suyo */
     const STATUSES = spec.statuses && typeof spec.statuses === 'object' ? spec.statuses : {};
     const HAS_DELTA = (spec.nodes || []).some(n => n.delta) || (spec.edges || []).some(e => e.delta);
+    /* algo cambiado de verdad (un árbol de ficheros marca todo con delta, aunque sea "unchanged") */
+    const HAS_CHANGES = (spec.nodes || []).some(n => n.delta && n.delta !== 'unchanged');
+    const ROOTS = ' gx-roots';
     const colorVar = v => {
       const c = colorPair(v); if (!c) return null;
       const key = c.light + '|' + c.dark;
@@ -486,11 +490,14 @@
         const all = !F || F.ids.has(id) || S.unpruned.has(id) || !F.keep.has(id);
         n.children.forEach(c => { if (all || F.keep.has(c)) walk(c); else hidden.set(id, (hidden.get(id) || 0) + 1); });
       };
-      G.roots.forEach(r => { if (!F || F.keep.has(r) || !F.keep.size) walk(r); });
-      const rep = id => { let x = id; while (!vis.has(x)) x = M.get(x).parent; return x; };
+      /* las raíces que no llevan a nada referenciado se cuentan en una pastilla propia (clave ROOTS) */
+      G.roots.forEach(r => { if (!F || F.keep.has(r) || !F.keep.size || S.unpruned.has(ROOTS)) walk(r); else hidden.set(ROOTS, (hidden.get(ROOTS) || 0) + 1); });
+      /* una arista sube al antepasado visible; si el filtro ha ocultado su raíz entera, no se dibuja */
+      const rep = id => { let x = id; while (x != null && !vis.has(x)) x = M.get(x).parent; return x; };
       const agg = new Map();
       for (const e of G.edges) {
         const a = rep(e.from), b = rep(e.to);
+        if (a == null || b == null) continue;
         if (a === b || isAncestor(M, a, b) || isAncestor(M, b, a)) continue;
         const k = a + '\u0000' + b;
         if (!agg.has(k)) agg.set(k, { id: 'v:' + a + '>' + b, from: a, to: b, list: [] });
@@ -557,7 +564,7 @@
        dibujo (forma, detalle abierto, coincidencias del filtro) va en la firma: si cambia, se rehace. */
     const effShape = n => (FLAT && SHP && n.openShape && n.children.length && S.expanded.has(n.id) && SHP.has(n.openShape) ? n.openShape : n.shape);
     const shapeNode = n => { const sh = effShape(n); return sh === n.shape ? n : Object.assign({}, n, { shape: sh }); };
-    const sigOf = n => `${S.dir}|${effShape(n)}|${n._open ? 1 : 0}|${n._hits || 0}|${n.labelSide || ''}`;
+    const sigOf = n => `${S.dir}|${effShape(n)}|${FLAT && n.children.length && S.expanded.has(n.id) ? 'o' : ''}|${n._open ? 1 : 0}|${n._hits || 0}|${n._dense ? 1 : 0}|${n.labelSide || ''}`;
     function shapeLayout(n) {
       shapeCtx.dir = S.dir;
       const key = sigOf(n);
@@ -609,10 +616,10 @@
          acción (Detener, un paso nuevo) puede haber cambiado lo que está abierto */
       const exp = new Set(S.expanded);
       if (MODE) {
-        const out = LAYOUTS[MODE]({ M, roots: G.roots, vis, exp, vedges, size: id => leafSize(M.get(id)), textW, spec, now: Date.now(), cvar: id => (M.get(id) || {}).cvar || null, lang, dir: S.dir, hidden: hidden || new Map() });
+        const out = LAYOUTS[MODE]({ M, roots: G.roots, vis, exp, vedges, size: id => leafSize(M.get(id)), textW, spec, now: Date.now(), cvar: id => (M.get(id) || {}).cvar || null, lang, dir: S.dir, hidden: hidden || new Map(), rootsKey: ROOTS });
         vedges.forEach(v => { v.back = false; });
         clipPaths(out.rects, out.paths, vedges, vis, exp);
-        return { rects: out.rects, paths: out.paths, bbox: out.bbox, deco: out.deco || [], wires: out.wires || [], heads: out.heads || null, order: out.order || null };
+        return { rects: out.rects, paths: out.paths, bbox: out.bbox, deco: out.deco || [], wires: out.wires || [], heads: out.heads || null, order: out.order || null, pos: out.pos || null };
       }
       const make = id => {
         const n = M.get(id);
@@ -767,7 +774,8 @@
         if (n.children.length) {
           /* en el árbol, una carpeta abierta cambia su +N por un − que la pliega */
           parts.exp = s('g', { class: 'gx-exp' + (open ? ' open' : ''), role: 'button', 'aria-label': open ? T.collapse : T.expand }, g);
-          const txt = open ? '−' : '+' + n.descendants, ew = Math.max(textW(txt, 10.5, 700) + 14, 24);
+          /* en el árbol, +N son los hijos que aparecen al abrirla (no todo lo que lleva dentro) */
+          const txt = open ? '−' : '+' + (FLAT ? n.children.length : n.descendants), ew = Math.max(textW(txt, 10.5, 700) + 14, 24);
           s('rect', { rx: 8, height: 17, width: ew }, parts.exp);
           const t = s('text', { y: 12.5, x: ew / 2 }, parts.exp); t.textContent = txt;
           parts.exp.setAttribute('transform', `translate(${x - ew},${ch.y - 8.5})`);
@@ -777,7 +785,9 @@
         if (ch.det) {
           parts.det = s('g', { class: 'gx-det' + (n._open ? ' on' : ''), role: 'button', 'aria-label': n._open ? T.hideDetail : T.showDetail, 'aria-pressed': String(!!n._open), transform: `translate(${ch.det.x - 9},${ch.det.y - 9})` }, g);
           s('rect', { width: 18, height: 18, rx: 5 }, parts.det);
-          s('path', { d: n._open ? 'M5,11 L9,7 L13,11' : 'M5,7.5 L9,11.5 L13,7.5' }, parts.det);
+          /* «i» de información: el detalle no es desplegar la carpeta (eso es el clic y el +N) */
+          s('path', { class: 'gx-det-ring', d: 'M9,2.8a6.2,6.2 0 1 1 0,12.4a6.2,6.2 0 1 1 0,-12.4z' }, parts.det);
+          s('path', { d: 'M9,8.3v4.2M9,5.7v.1' }, parts.det);
           parts.det.addEventListener('click', ev => { ev.stopPropagation(); toggleDetail(n.id); });
         }
       }
@@ -1128,12 +1138,21 @@
       o = o || {};
       /* solo secuencia: no hay grafo que colocar, asi que ni se carga ELK */
       if (!graphTab) { if (o.after) o.after(); return; }
+      if (S.dead) return;
       const my = ++S.layoutId;
       hoverSet = null; hideTip();
       clearTimeout(busyTimer); busyTimer = setTimeout(() => busy.classList.add('on'), 180);
       const prevRects = S.rects;
+      /* si el foco del teclado está en una tarjeta (o en una pastilla «más») que se va a rehacer, se le devuelve después */
+      const ae = document.activeElement, focusId = ae && host.contains(ae) && ae.closest ? ((ae.closest('.gx-node') || {}).dataset || {}).id || (ae.closest('[data-more]') && ae.closest('[data-more]').getAttribute('data-more')) : null;
       syncFlags();
       const { vis, vedges, hidden } = computeVisible();
+      /* `layout.density`: "compact" siempre; "auto", cuando hay muchos ficheros a la vista a la vez */
+      if (FLAT) {
+        const dm = spec.layout && spec.layout.density, nLeaves = [...vis].filter(id => !M.get(id).children.length).length;
+        const dense = dm === 'compact' || (dm === 'auto' && nLeaves > 140);
+        for (const n of M.values()) n._dense = dense && !n.children.length;
+      }
       let L;
       try { L = await layout(vis, vedges, hidden); } catch (err) { busy.classList.remove('on'); clearTimeout(busyTimer); if (global.console) console.error(err); return; }
       clearTimeout(busyTimer); busy.classList.remove('on');
@@ -1237,19 +1256,25 @@
       /* líneas del árbol: las que siguen se reutilizan, las nuevas aparecen y las que sobran se apagan */
       const wireNext = new Map();
       (L.wires || []).forEach(w => {
-        const key = w.from + '>' + (w.to != null ? w.to : '+');
+        const key = `${w.kind}:${w.from}>${w.to != null ? w.to : '+'}`;
         let o = S.wires.get(key);
         /* las de «··· N más» van debajo: su tramo de tronco no tapa el de las tarjetas */
         if (!o) { o = { el: s('path', { class: 'gx-wire' }), fresh: true }; o.el.style.opacity = 0; if (w.more) gWires.insertBefore(o.el, gWires.firstChild); else gWires.appendChild(o.el); } else o.fresh = false;
-        const tn = w.to != null ? M.get(w.to) : null;
-        o.w = w; o.el.setAttribute('class', `gx-wire${w.more ? ' more' : ''}${tn ? ' d-' + tn.delta : ''}`);
+        const tone = w.tone || (w.to != null ? M.get(w.to).delta : null);
+        o.w = w; o.el.setAttribute('class', `gx-wire k-${w.kind}${w.more ? ' more' : ''}${tone ? ' d-' + tone : ''}`);
         wireNext.set(key, o);
       });
       const wireOut = [...S.wires.entries()].filter(([k]) => !wireNext.has(k)).map(([, o]) => o);
-      S.wires = wireNext;
+      S.wires = wireNext; S.treePos = L.pos || null;
       const headNow = (id, el) => (L.heads && L.heads.get(id)) || (el && el._head) || null;
+      /* en el árbol, los hijos que aparecen al abrir una carpeta entran en cascada, uno tras otro */
+      if (FLAT && !reduce) {
+        const k = new Map();
+        items.filter(it => it.fresh).forEach(it => { const p = it.n.parent; const i = k.get(p) || 0; k.set(p, i + 1); it.delay = Math.min(i * .045, .4); });
+      }
       const camFrom = Object.assign({}, S.cam);
-      await tween(t => {
+      await tween(t0 => {
+        const t = t0;
         for (const it of bandItems) {
           const r = it.from ? lerpRect(it.from, it.to, t) : it.to;
           placeBand(it.el, Object.assign({}, it.to, r), it.n);
@@ -1261,6 +1286,7 @@
         }
         const cur = new Map();
         for (const it of items) {
+          const t = it.delay ? clamp((t0 - it.delay) / (1 - it.delay), 0, 1) : t0;
           const r = lerpRect(it.from || it.to, it.to, it.from ? t : 1);
           (it.kind === 'group' ? placeGroup : placeLeaf)(it.el, r, it.n);
           it.el._r = it.dying ? it.from : it.to;
@@ -1277,13 +1303,13 @@
           if (!it.dying || !cur.has(it.n.id)) cur.set(it.n.id, { r: vr, el: it.el });
         }
         const drawWire = (o, op) => {
-          const a = cur.get(o.w.from), b = o.w.toBox ? { r: o.w.toBox } : cur.get(o.w.to);
-          if (a && b) o.el.setAttribute('d', LAYOUTS.wire(o.w.kind, a.r, b.r, headNow(o.w.from, a.el) || a.r.h, o.w.toBox ? o.w.toBox.h : headNow(o.w.to, b.el) || b.r.h));
+          const w = o.w, a = cur.get(w.from), b = w.toBox ? { r: w.toBox } : w.to != null ? cur.get(w.to) : a, p = w.prev != null ? cur.get(w.prev) : null;
+          if (a && b && (w.prev == null || p)) o.el.setAttribute('d', LAYOUTS.wire(w.kind, a.r, b.r, headNow(w.from, a.el) || a.r.h, w.toBox ? w.toBox.h : headNow(w.to, b.el) || b.r.h, p && p.r, p && (headNow(w.prev, p.el) || p.r.h)));
           if (op != null) o.el.style.opacity = op;
         };
-        wireNext.forEach(o => drawWire(o, o.fresh ? t : null));
-        wireOut.forEach(o => drawWire(o, 1 - t));
-        if (camTo) setCam(lerpCam(camFrom, camTo, t));
+        wireNext.forEach(o => drawWire(o, o.fresh ? t0 : null));
+        wireOut.forEach(o => drawWire(o, 1 - t0));
+        if (camTo) setCam(lerpCam(camFrom, camTo, t0));
       }, (items.length ? dur : 0));
       items.forEach(it => { if (it.dying) it.el.remove(); else { it.el.style.opacity = ''; it.el._r = it.to; } it.el.style.clipPath = ''; });
       wireOut.forEach(o => o.el.remove());
@@ -1306,6 +1332,10 @@
       }
       applyHighlight();
       drawMini();
+      if (focusId && (!document.activeElement || !host.contains(document.activeElement) || document.activeElement === host)) {
+        const el = S.els.get(focusId) || (M.has(focusId) ? S.els.get(repOf(focusId)) : null);
+        if (el && el.focus) try { el.focus({ preventScroll: true }); } catch (_) { }
+      }
       if (o.after) o.after();
     }
     /* lo que una forma necesita saber del estado: si su detalle está abierto y cuántas coincidencias del filtro tiene dentro */
@@ -1543,18 +1573,30 @@
         el.classList.toggle('faded', S.onlyChanges && M.get(id).delta === 'unchanged' && !isGroup(id));
         /* filtro: lo que coincide se marca; lo que no está en ninguna ruta referenciada se apaga */
         el.classList.toggle('hit', !!(F && F.ids.has(id)));
-        el.classList.toggle('off', !!(F && !F.keep.has(id)));
+        el.classList.toggle('off', !!(F && !F.empty && !F.keep.has(id)));
       }
       /* líneas del árbol: el camino iluminado (al pasar), el de la pieza seleccionada y los del filtro */
       if (S.wires.size) {
-        const selChain = S.selected && M.has(S.selected) ? new Set([S.selected, ...ancestors(M, S.selected)]) : null;
-        const chain = set && set.chain;
+        /* Un tramo está en el camino hacia una pieza si sale de uno de sus antepasados y llega (el codo) o
+           pasa (el tronco, que sigue hacia los hermanos de más allá) hasta el hijo que lleva a ella. */
+        const P = S.treePos || new Map();
+        const childOf = list => { const m = new Map(); list.forEach(id => { const n = M.get(id); if (n && n.parent != null) m.set(n.parent, id); }); return m; };
+        const reach = (w, c) => {
+          if (c == null || w.more) return false;
+          if (w.kind === 'cstem') return true;
+          const q = P.get(c); if (!q) return false;
+          return /elbow/.test(w.kind) ? c === w.to : q.side === w.side && q.idx >= w.idx;
+        };
+        const selIds = S.selected && M.has(S.selected) ? [S.selected, ...ancestors(M, S.selected)] : [];
+        const viaSel = childOf(selIds), viaHover = childOf(set && set.chain ? [...set.chain] : []);
+        /* con el filtro, el tramo lleva a algo referenciado si alguno de los hijos a los que llega está en sus rutas */
+        const kept = new Map();
+        if (F) for (const [c, q] of P) { const n = M.get(c); if (n && F.keep.has(c)) { const k = n.parent + '|' + q.side; kept.set(k, Math.max(kept.has(k) ? kept.get(k) : -1, q.idx)); kept.set(n.parent + '|*', 1); } }
         const top = [];
         for (const o of S.wires.values()) {
-          const w = o.w, on = (c, a, b) => !!(c && c.has(a) && b != null && c.has(b));
-          const lit = on(chain, w.from, w.to), sel = on(selChain, w.from, w.to);
-          o.el.classList.toggle('lit', lit); o.el.classList.toggle('sel', sel);
-          o.el.classList.toggle('on', !!(F && w.to != null && F.keep.has(w.to)));
+          const w = o.w, lit = reach(w, viaHover.get(w.from)), sel = reach(w, viaSel.get(w.from));
+          const on = !!F && !w.more && (w.kind === 'cstem' ? kept.has(w.from + '|*') : /elbow/.test(w.kind) ? F.keep.has(w.to) : (kept.has(w.from + '|' + w.side) && kept.get(w.from + '|' + w.side) >= w.idx));
+          o.el.classList.toggle('lit', lit); o.el.classList.toggle('sel', sel); o.el.classList.toggle('on', on);
           if (lit || sel) top.push(o.el);
         }
         top.forEach(el => gWires.appendChild(el));
@@ -1807,31 +1849,45 @@
       const keep = new Set(), hits = new Map();
       list.forEach(id => { keep.add(id); ancestors(M, id).forEach(a => { keep.add(a); hits.set(a, (hits.get(a) || 0) + 1); }); });
       const prev = S.focus ? S.focus.prev : new Set(S.expanded);
-      S.focus = { ids: new Set(list), keep, hits, prune: o.prune !== false, label: o.label || '', key: o.key || 'custom', prev };
+      /* una búsqueda sobre otro filtro (los cambios de un diff) lo recuerda: al vaciarla, vuelve a él */
+      const base = o.key === 'search' && S.focus ? (S.focus.key === 'search' ? S.focus.base : { ids: [...S.focus.ids], o: { label: S.focus.label, key: S.focus.key, prune: S.focus.prune } }) : null;
+      /* sin coincidencias no se pliega nada: el árbol se queda como estaba y la barra lo avisa */
+      const empty = !list.length;
+      if (empty && S.focus) S.expanded = new Set(prev);
+      S.focus = { ids: new Set(list), keep, hits, prune: !empty && o.prune !== false, label: o.label || '', key: o.key || 'custom', prev, empty, base };
       S.unpruned = new Set();
-      S.expanded = new Set();
-      list.forEach(id => ancestors(M, id).forEach(a => S.expanded.add(a)));
+      if (!empty) { S.expanded = new Set(); list.forEach(id => ancestors(M, id).forEach(a => S.expanded.add(a))); }
       syncFilterUI();
     }
     function filter(sel, o) {
       const ids = typeof sel === 'function' ? [...M.values()].filter(n => !n.isLane && sel(n)).map(n => n.id) : [].concat(sel || []);
       setFocus(ids, o);
-      return relayout({ fit: !(o && o.fit === false) });
+      return relayout({ fit: !(o && o.fit === false), after: ping });
+    }
+    /* al filtrar, lo que coincide hace un pulso: se ve dónde ha caído cada resultado */
+    function ping() {
+      if (reduce || !S.focus) return;
+      const els = [...S.focus.ids].map(id => S.els.get(id)).filter(Boolean).slice(0, 60);
+      els.forEach(el => { el.classList.remove('gx-ping'); void el.getBBox; el.classList.add('gx-ping'); });
+      setTimeout(() => els.forEach(el => el.classList.remove('gx-ping')), 1300);
     }
     /* sin relayout: lo usan los botones de profundidad, que ya recolocan */
-    function dropFocus() { if (!S.focus) return false; S.focus = null; S.unpruned = new Set(); syncFilterUI(); return true; }
+    function dropFocus() { clearTimeout(S.qT); if (!S.focus) return false; S.focus = null; S.unpruned = new Set(); syncFilterUI(); return true; }
     function clearFilter() {
+      clearTimeout(S.qT);
       if (!S.focus) return;
-      const prev = S.focus.prev; dropFocus(); S.expanded = new Set(prev);
       if (searchIn.value) searchIn.value = '';
+      const F = S.focus;
+      if (F.base) { S.focus = null; setFocus(F.base.ids, Object.assign({}, F.base.o)); S.focus.prev = F.prev; return relayout({ fit: true }); }
+      dropFocus(); S.expanded = new Set(F.prev);
       return relayout({ fit: true });
     }
     function syncFilterUI() {
       const F = S.focus;
-      filterPill.classList.toggle('on', !!F);
+      filterPill.classList.toggle('on', !!F); filterPill.classList.toggle('warn', !!(F && F.empty));
       /* en una búsqueda, lo que coincide lleva anillo; en los cambios de un diff ya lo dice su color */
       host.classList.toggle('gx-filter-q', !!(F && F.key !== 'changes'));
-      filterPill.innerHTML = F ? `<span>${esc(T.filter)}${F.label ? ' · ' + esc(F.label) : ''}</span><b title="${esc(T.matches)}">${F.ids.size}</b><button type="button" class="gx-x2" aria-label="${esc(T.clearFilter)}" title="${esc(T.clearFilter)}">×</button>` : '';
+      filterPill.innerHTML = F ? `<span>${esc(F.empty ? T.noMatch : T.filter)}${F.label ? ' · ' + esc(F.label) : ''}</span><b title="${esc(T.matches)}">${F.ids.size}</b><button type="button" class="gx-x2" aria-label="${esc(T.clearFilter)}" title="${esc(T.clearFilter)}">×</button>` : '';
       if (F) filterPill.querySelector('button').onclick = () => clearFilter();
       bOnly.classList.toggle('on', FLAT ? !!(F && F.key === 'changes') : S.onlyChanges);
       filterSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', !!(F && F.key === b.dataset.key)));
@@ -1842,15 +1898,21 @@
       if (S.view !== 'graph') showView('graph');
       let changed = false;
       ancestors(M, id).forEach(a => { if (!S.expanded.has(a)) { S.expanded.add(a); changed = true; } });
-      if (S.focus && S.focus.prune && !S.focus.keep.has(id)) ancestors(M, id).forEach(a => { if (!S.unpruned.has(a)) { S.unpruned.add(a); changed = true; } });
+      if (S.focus && S.focus.prune && !S.focus.keep.has(id)) {
+        ancestors(M, id).forEach(a => { if (!S.unpruned.has(a)) { S.unpruned.add(a); changed = true; } });
+        const root = [id].concat(ancestors(M, id)).pop();
+        if (!S.focus.keep.has(root) && !S.unpruned.has(ROOTS)) { S.unpruned.add(ROOTS); changed = true; }
+      }
       if (changed) await relayout({});
       if (!noSelect) select(id);
       await animateCam(camFor(bboxOf([id]) || S.bbox, 80));
     }
 
     /* --- búsqueda --- */
-    const index = [...M.values()].map(n => ({ id: n.id, key: fold([n.label, n.id, n.subtitle, n.path, (n.tags || []).join(' ')].join(' ')), n }));
-    const matchQ = q => index.filter(x => !x.n.isLane && x.key.includes(q)).map(x => x.id);
+    const index = [...M.values()].map(n => ({ id: n.id, key: fold([n.label, n.id, n.subtitle, n.path, (n.tags || []).join(' ')].join(' ')), name: fold([n.label, n.subtitle, (n.tags || []).join(' ')].join(' ')), path: fold(n.path || ''), n }));
+    /* el filtro del árbol busca en el nombre; en la ruta, solo si la consulta lleva «/» (si no, «s» casaría con todo src/) */
+    const MAX_HITS = 400;
+    const matchQ = q => index.filter(x => !x.n.isLane && (q.includes('/') ? x.path.includes(q) || x.name.includes(q) : x.name.includes(q))).slice(0, MAX_HITS).map(x => x.id);
     let hits = [], hitI = 0;
     searchIn.addEventListener('input', () => {
       const q = fold(searchIn.value.trim());
@@ -1858,8 +1920,11 @@
       if (FLAT) {
         clearTimeout(S.qT);
         S.qT = setTimeout(() => {
-          if (!q) { if (S.focus && S.focus.key === 'search') clearFilter(); return; }
-          filter(matchQ(q), { label: '“' + searchIn.value.trim() + '”', key: 'search' });
+          /* se lee el campo al dispararse: Esc o elegir un resultado lo habrán vaciado */
+          const raw = searchIn.value.trim(), q2 = fold(raw);
+          if (!q2) { if (S.focus && S.focus.key === 'search') clearFilter(); return; }
+          if (q2.length < 2) return;
+          filter(matchQ(q2), { label: '“' + raw + '”', key: 'search' });
         }, 260);
       }
       if (!q) { searchList.classList.remove('on'); return; }
@@ -1874,11 +1939,11 @@
         hitI = (hitI + (ev.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length;
         searchList.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === hitI));
       } else if (ev.key === 'Enter' && hits[hitI]) { ev.preventDefault(); pickHit(hits[hitI].id); }
-      else if (ev.key === 'Escape') { searchIn.value = ''; searchList.classList.remove('on'); if (S.focus && S.focus.key === 'search') { clearTimeout(S.qT); clearFilter(); } }
+      else if (ev.key === 'Escape') { clearTimeout(S.qT); searchIn.value = ''; searchList.classList.remove('on'); if (S.focus && S.focus.key === 'search') clearFilter(); }
       ev.stopPropagation();
     });
     searchIn.addEventListener('blur', () => setTimeout(() => searchList.classList.remove('on'), 120));
-    function pickHit(id) { searchList.classList.remove('on'); searchIn.value = ''; searchIn.blur(); reveal(id); }
+    function pickHit(id) { clearTimeout(S.qT); searchList.classList.remove('on'); searchIn.value = ''; searchIn.blur(); reveal(id); }
 
     /* --- filtros, leyenda, ajustar --- */
     const syncDir = () => { bDir.innerHTML = S.dir === 'down' ? '↧' : '↦'; bDir.title = `${T.orient}: ${S.dir === 'down' ? '↓' : '→'}`; };
@@ -1897,7 +1962,7 @@
       if (FLAT) { if (S.focus && S.focus.key === 'changes') clearFilter(); else filter(changedIds(), { label: T.onlyChanges, key: 'changes' }); return; }
       S.onlyChanges = !S.onlyChanges; bOnly.classList.toggle('on', S.onlyChanges); applyHighlight();
     };
-    if (FLAT && !HAS_DELTA) bOnly.style.display = 'none';
+    if (FLAT && !HAS_CHANGES) bOnly.style.display = 'none';
     /* filtros con nombre del JSON (`filters`): ids, rutas, deltas, tipos o una búsqueda */
     const resolveFilter = f => {
       const out = new Set(f.nodes || []);
@@ -2283,6 +2348,8 @@
       (st.expand || []).forEach(id => { S.expanded.add(id); ancestors(M, id).forEach(a => S.expanded.add(a)); });
       (st.collapse || []).forEach(id => S.expanded.delete(id));
       (f.nodes || []).forEach(id => ancestors(M, id).forEach(a => S.expanded.add(a)));
+      /* con un filtro que poda, lo que señala el paso tiene que verse */
+      if (S.focus && S.focus.prune) (f.nodes || []).filter(id => M.has(id) && !S.focus.keep.has(id)).forEach(id => { ancestors(M, id).forEach(a => S.unpruned.add(a)); S.unpruned.add(ROOTS); });
       (f.edges || []).forEach(eid => { const e = G.edges.find(x => x.id === eid); if (e) [e.from, e.to].forEach(x => ancestors(M, x).forEach(a => S.expanded.add(a))); });
       if (st.select) { S.selected = st.select; S.selEdge = null; } else if (!S.present) { S.selected = null; panel.classList.remove('on'); }
       await relayout({ after: () => { if (tok !== S.tourTok) return; setFocusSet(f.nodes, f.edges); if (st.select) renderPanel(); } });
@@ -2359,13 +2426,14 @@
     return {
       ready, diffReady, model: G, state: S, setExplore, resetView, focusNode,
       setDirection: d => { S.dir = d === 'down' ? 'down' : 'right'; syncDir(); S.frameBox = null; return relayout({ fit: true }); },
-      expandTo: d => { setDepthSet(d); return relayout({ fit: true }); },
+      expandTo: d => { dropFocus(); setDepthSet(d); return relayout({ fit: true }); },
       toggle, reveal, select, goStep, showView, setPresent, trace,
       /* árbol y filtros: `filter(ids | n => bool, { label, prune })`, `clearFilter()`, `toggleDetail(id, on?)` */
       filter, clearFilter, toggleDetail,
       /* deja el host como estaba: sin contenido, sin las clases de estado (una vista solo de secuencia
          ocultaría el grafo del siguiente montaje) y sin el id y los atributos que puso el motor */
       destroy() {
+        S.dead = true; S.layoutId++; clearTimeout(S.qT);
         document.removeEventListener('pointerdown', onDocDown); document.removeEventListener('fullscreenchange', onFs); ro && ro.disconnect();
         host.innerHTML = '';
         [...host.classList].filter(c => c === 'gx' || c.startsWith('gx-') && c !== 'gx-host').forEach(c => host.classList.remove(c));

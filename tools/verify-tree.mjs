@@ -75,8 +75,8 @@ ok(host.classList.contains('gx-flat') && S.focus && S.focus.ids.size === 2, 'se 
 ok(S.visible.has(idOf('src/ui/Tabs.tsx')) && !S.visible.has(idOf('src/ui/Card.tsx')) && !S.visible.has(idOf('docs')), 'el filtro deja abiertas solo las ramas que llevan a los cambios');
 ok(host.querySelectorAll('.gx-deco .gx-more').length === 4 && /3 más/.test(host.querySelector(`.gx-more[data-more="${idOf('src/ui')}"]`).textContent), '«··· N más» en cada carpeta filtrada, con lo que oculta');
 ok(!!el(idOf('src')) && el(idOf('src')).classList.contains('sh-folder-open') && !host.querySelector('.gx-group'), 'una carpeta abierta es una tarjeta de carpeta abierta, no un contenedor');
-const nWires = () => host.querySelectorAll('.gx-wire:not(.more)').length;
-ok(nWires() === S.visible.size - 1 && host.querySelectorAll('.gx-wire.more').length === 4, `una línea por pieza visible (${nWires()}) y una discontinua por «más»`);
+const nWires = () => host.querySelectorAll('.gx-wire.k-elbow:not(.more)').length;
+ok(nWires() === S.visible.size - 1 && host.querySelectorAll('.gx-wire.more').length === 4, `un codo por pieza visible (${nWires()}) y una línea discontinua por «más»`);
 ok(!![...host.querySelectorAll('.gx-wire')].find(x => x.classList.contains('d-added')), 'la línea hacia un fichero nuevo lleva el color del cambio');
 ok(host.querySelector('.gx-filter.on') && /Cambios/.test(host.querySelector('.gx-filter').textContent), 'la barra enseña el filtro activo');
 host.querySelector(`.gx-more[data-more="${idOf('src/ui')}"]`).dispatchEvent(new w.MouseEvent('click', { bubbles: true })); await wait(700);
@@ -86,7 +86,7 @@ const fid = idOf('src/lib/http.ts'), r0 = S.rects.get(fid), below = S.order[S.or
 click(fid); await wait(700);
 const r1 = S.rects.get(fid);
 ok(S.detail.has(fid) && r1.h > r0.h + 30 && Math.abs(r1.y - r0.y) < .5 && S.rects.get(below).y > b0 + 30, 'clic en un fichero: abre su detalle; la tarjeta crece hacia abajo y empuja a las de debajo');
-ok(el(fid).classList.contains('det') && /Líneas/.test(el(fid).textContent) && !el(fid).style.clipPath, 'el detalle se dibuja (y sin recorte al acabar la animación)');
+ok(el(fid).classList.contains('det') && /Estado/.test(el(fid).textContent) && !!el(fid).querySelector('.gx-dbar-a') && !el(fid).style.clipPath, 'el detalle se dibuja (y sin recorte al acabar la animación)');
 click(fid); await wait(700);
 ok(!S.detail.has(fid) && Math.abs(S.rects.get(fid).h - r0.h) < .5, 'otro clic lo cierra');
 /* carpetas: el chevron abre su detalle; el clic la pliega y la despliega */
@@ -112,7 +112,7 @@ key('ArrowLeft'); ok(S.selected === second, 'teclado: ← en un hijo sube a su c
 await gx.reveal(fid, true); await wait(300);
 el(fid).dispatchEvent(new w.Event('pointerenter'));
 const lit = [...host.querySelectorAll('.gx-wire.lit')].length;
-ok(lit === gx.model.M.get(fid).depth && !host.querySelector('.gx-world').classList.contains('gx-dim'), `al pasar por un fichero se ilumina su camino desde la raíz (${lit} tramos) sin apagar el resto`);
+ok(lit >= gx.model.M.get(fid).depth * 2 && !host.querySelector('.gx-world').classList.contains('gx-dim'), `al pasar por un fichero se ilumina su camino desde la raíz (${lit} tramos) sin apagar el resto`);
 el(fid).dispatchEvent(new w.Event('pointerleave'));
 /* quitar el filtro devuelve lo que estaba abierto antes */
 await gx.clearFilter();
@@ -130,7 +130,7 @@ const kids = gx.model.M.get(idOf('src')).children.map(c => S.rects.get(c)), rs =
 const mid = (kids[0].y + 20 + kids[kids.length - 1].y + 20) / 2;
 if (Math.abs(rs.y + 20 - mid) >= 30) console.log('    ', JSON.stringify({ rs, kids }));
 ok(kids.every(k => k.x > rs.x + rs.w) && Math.abs(rs.y + 20 - mid) < 30, 'columnas: los hijos a la derecha y la carpeta centrada en ellos');
-ok([...host.querySelectorAll('.gx-wire:not(.more)')].every(p => /C/.test(p.getAttribute('d'))), 'columnas: líneas curvas');
+ok(host.querySelectorAll('.gx-wire.k-cstem').length >= 3 && [...host.querySelectorAll('.gx-wire.k-celbow:not(.more)')].every(p => /Q|H/.test(p.getAttribute('d'))), 'columnas: un tallo por carpeta y codos redondeados hacia cada hijo');
 ok(!m.errs.length, `sin errores en la consola${m.errs.length ? ': ' + m.errs[0] : ''}`);
 
 /* un spec escrito a mano: sin cuentas, con un filtro con nombre y `focus` por rutas */
@@ -149,6 +149,56 @@ ok(!m.errs.length, `sin errores en la consola${m.errs.length ? ': ' + m.errs[0] 
   ok(g2.state.focus.key === 'f0' && g2.state.visible.has('b') && !g2.state.visible.has('a2'), 'los filtros con nombre de la barra (`filters`)');
 }
 
+/* regresiones: lo que encontraron las revisiones */
+console.log('— regresiones —');
+{
+  /* sin raíz y con una referencia hacia una carpeta que el filtro oculta entera */
+  const sp = TR.fromPaths([{ path: 'a/n.js', status: 'A', additions: 3 }, 'a/m.js', 'b/z.js'], { root: false });
+  sp.edges = [{ id: 'e1', from: sp.nodes.find(n => n.path === 'a/n.js').id, to: sp.nodes.find(n => n.path === 'b/z.js').id }];
+  const { host: h, gx: g, errs } = await mount(sp);
+  ok(!errs.length && h.querySelector('.gx-more[data-more=" gx-roots"]'), 'una raíz que el filtro oculta entera: sin errores y con su «··· N más»');
+  await g.reveal(sp.edges[0].to); await wait(500);
+  ok(g.state.visible.has(sp.edges[0].to), 'reveal enseña una pieza de una raíz podada');
+  await g.expandTo(9); ok(!g.state.focus && g.state.visible.size === sp.nodes.length, 'expandTo quita el filtro y lo enseña todo');
+}
+{
+  const sp = TR.fromPaths(['src/a.js', 'src/b.js', 'README.md'], { root: 'r' });
+  const { host: h, gx: g } = await mount(sp);
+  ok(h.querySelector('.gx-tools .gx-btn[aria-label="Solo cambios"]').style.display === 'none', 'sin cambios, no hay botón «Solo cambios»');
+  const before = g.state.visible.size;
+  await g.filter([], { label: 'nada' });
+  ok(g.state.visible.size === before && /Sin resultados/.test(h.querySelector('.gx-filter').textContent) && h.querySelector('.gx-filter').classList.contains('warn'), 'un filtro sin coincidencias no pliega el árbol y lo avisa');
+  await g.clearFilter();
+  const inp = h.querySelector('.gx-search input'), w2 = h.ownerDocument.defaultView;
+  inp.value = 'a.js'; inp.dispatchEvent(new w2.Event('input')); inp.dispatchEvent(new w2.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(600);
+  ok(!g.state.focus, 'Esc antes de que salte la búsqueda: no se aplica después');
+  /* foco del teclado: abrir con → deja el foco en la carpeta, y ↓ sigue funcionando */
+  const src = sp.nodes.find(n => n.path === 'src').id;
+  await g.toggle(src); await wait(100);
+  const el2 = h.querySelector(`.gx-node[data-id="${src}"]`); el2.focus(); g.state.selected = src;
+  h.dispatchEvent(new w2.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })); await wait(800);
+  ok(h.ownerDocument.activeElement && h.ownerDocument.activeElement.dataset && h.ownerDocument.activeElement.dataset.id === src, 'plegar con ← rehace la tarjeta y el foco sigue en ella');
+}
+{
+  /* una búsqueda sobre el filtro de cambios: al vaciarla, vuelve a los cambios */
+  const { host: h, gx: g } = await mount(big);
+  const inp = h.querySelector('.gx-search input'), w2 = h.ownerDocument.defaultView;
+  inp.value = 'button'; inp.dispatchEvent(new w2.Event('input')); await wait(1000);
+  ok(g.state.focus.key === 'search', 'buscar sobre el filtro de cambios');
+  await g.clearFilter();
+  ok(g.state.focus && g.state.focus.key === 'changes', 'vaciar la búsqueda vuelve al filtro de cambios');
+  inp.value = 's'; inp.dispatchEvent(new w2.Event('input')); await wait(700);
+  ok(g.state.focus.key === 'changes', 'una sola letra no filtra (no despliega el repo entero)');
+}
+{
+  const g2 = TR.fromGit({ numstat: '1\t2\t"docs/gu\\303\\255a2.md" => "docs/gu\\303\\255a3.md"\n3\t1\t"caf\\303\\251.md"' }, { root: 'r' });
+  const z = TR.fromGit({ numstatZ: '2\t0\t\0old name.js\0new name.js\0', nameStatusZ: 'R090\0old name.js\0new name.js\0' }, { root: 'r' });
+  ok(g2.nodes.some(n => n.path === 'docs/guía3.md' && n.renamed) && g2.nodes.some(n => n.path === 'café.md') && z.nodes.some(n => n.path === 'new name.js' && n.renamed), 'rutas que git cita entre comillas (también en renombrados) y el formato -z');
+  const pt2 = TR.parseTree('\u001b[01;34mproj\u001b[0m\n├── [drwxr-xr-x ana  4.0K]  src\n│   └── [-rw-r--r-- ana   120]  ./src/a.js\n\nmas\n└── x.txt\n');
+  ok(pt2.entries.map(e => e.path).join(',') === 'proj/src/a.js,mas/x.txt', '`tree` con colores, -p/-u, -f y varias raíces');
+  ok(TR.fromPaths(['a b.js', 'a-20b.js', './x/../y.js', '/abs/z.js']).nodes.map(n => n.id).join(',') === 'd:.,d:abs,f:abs/z.js,f:a-20b.js,f:a-2d20b.js,f:y.js', 'ids estables (el «-» también se escapa) y rutas con . y .. resueltas');
+}
+
 /* 3 · React y ensamblador */
 console.log('— React y ensamblador —');
 const { renderToStaticMarkup } = await import('react-dom/server');
@@ -158,7 +208,8 @@ let diffs = [], n = 0;
 await gx.setDirection('down'); await wait(300);
 for (const node of gx.model.M.values()) {
   const e = el(node.id); if (!e || node.children.length && S.expanded.has(node.id)) continue;
-  const html = renderToStaticMarkup(React.createElement(RX.GraphXShape, { node, dir: S.dir, pad: 0 }));
+  /* el layout iguala el ancho de los ficheros hermanos: React recibe ese mismo ancho */
+  const html = renderToStaticMarkup(React.createElement(RX.GraphXShape, { node, dir: S.dir, pad: 0, width: S.rects.get(node.id).w, height: S.rects.get(node.id).h }));
   const d = new JSDOM(`<body>${html}</body>`).window.document;
   const pick = r => ({ d: [...r.querySelectorAll('.gx-card')].map(x => x.getAttribute('d')).join('|'), t: [...r.querySelectorAll('text')].map(x => x.textContent).join('|') });
   const a = pick(e), b = pick(d.querySelector('g')); n++;

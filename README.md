@@ -501,11 +501,14 @@ node tools/tree-spec.mjs <dir> --base origin/main --html arbol.html   # el árbo
   abiertas solo las ramas que llevan a lo referenciado; el resto de cada carpeta se recoge en
   «··· N más», que al pulsarlo lo enseña. Una carpeta plegada cuenta las coincidencias que lleva
   dentro. `filters` añade botones con nombre: `{ label, query | paths | delta | kinds | nodes }`.
-- **Líneas vivas.** Las del árbol se redibujan en cada fotograma: crecen con los hijos que nacen,
-  toman el color del cambio que llevan debajo y, al pasar por una tarjeta, se ilumina su camino
-  desde la raíz.
+- **Líneas vivas.** Las del árbol se redibujan en cada fotograma: crecen con los hijos que nacen
+  (que entran en cascada), cada tramo de tronco toma el color del cambio más fuerte que queda por
+  debajo y, al pasar por una tarjeta, se ilumina su camino desde la raíz.
 - **Teclado.** ↑ ↓ mueven el cursor, → abre (o entra), ← pliega (o sube), espacio abre el detalle.
 - **Dos orientaciones.** ↧ sangrado como `tree`; ↦ en columnas, cada carpeta centrada en sus hijos.
+- **Árboles grandes.** Con `layout.density: "auto"` (lo pone el constructor), por encima de 140 ficheros
+  a la vista cada fichero pasa a una línea; `"compact"` lo fuerza. Buscar pide dos letras y mira la
+  ruta solo si la consulta lleva `/`.
 
 `node tools/verify-tree.mjs` comprueba el constructor, las interacciones y que React dibuja lo mismo.
 
