@@ -330,9 +330,9 @@ Consejos generales:
 ### 6.1 · Ejemplo: radar de PRs generado desde datos
 
 `examples/warehouses-pr-radar.json` es el mapa de las PRs abiertas y mergeadas de un proyecto
-(Warehouses, en `acme/platform` y `acme/ui-kit`) tal como se publicó en un artifact el
-23-sep-2026. No está escrito a mano: sale de una lista de PRs con un generador, y ese es el patrón
-que merece la pena copiar cuando el diagrama describe un estado que cambia cada día.
+ficticio (Warehouses, en `acme/platform` y `acme/ui-kit`). No está escrito a mano: sale de una
+lista de PRs con un generador, y ese es el patrón que merece la pena copiar cuando el diagrama
+describe un estado que cambia cada día.
 
 ```
 examples/warehouses-pr-radar/data.js       los datos: bloques, PRs, catálogo de tickets, épicas, artefactos
