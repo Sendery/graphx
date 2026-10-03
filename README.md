@@ -475,6 +475,40 @@ igual. El conversor de Mermaid lo pone solo:
 
 `node tools/verify-shapes.mjs` comprueba las formas, los layouts, su uso en el motor y que React dibuja lo mismo.
 
+### 7.3 · Árboles de ficheros
+
+Un repo, una búsqueda o un diff dibujados como el comando `tree`, pero con tarjetas que se navegan
+como carpetas. `graphx-tree.js` construye el JSON y el layout `tree` lo coloca:
+
+```js
+GraphX.tree.fromPaths(['src/app.ts', 'src/ui/Boton.tsx', 'README.md'], { root: 'mi-app' });
+GraphX.tree.fromTreeText(salidaDeTree);                       // también `tree -h`
+GraphX.tree.fromGit({ files, numstat, nameStatus });          // ls-files + git diff
+```
+
+```bash
+node tools/tree-spec.mjs <dir> --base origin/main --html arbol.html   # el árbol de un repo con su diff
+```
+
+- **Dos tarjetas por carpeta.** Plegada, *agrupa*: pila detrás, cuántos ficheros y subcarpetas, + y −
+  de lo que lleva dentro y una barra con el reparto por extensión. Abierta, es una cabecera fina
+  (`openShape: "folder-open"`) de la que cuelgan sus hijos. El fichero lleva su extensión en color,
+  tamaño y líneas, + y −, y la letra de git (A, M, D, R).
+- **Detalle que se abre y se cierra.** Clic en un fichero, o ⌄ en una carpeta: la tarjeta se
+  despliega como una persiana con la ruta, las métricas, el reparto por extensión, los ficheros
+  cambiados y el resumen. Doble clic o Intro abren el panel lateral.
+- **Filtro por rutas.** `filter(ids | fn)` (o `focus` en el JSON, o buscar, o «Solo cambios») deja
+  abiertas solo las ramas que llevan a lo referenciado; el resto de cada carpeta se recoge en
+  «··· N más», que al pulsarlo lo enseña. Una carpeta plegada cuenta las coincidencias que lleva
+  dentro. `filters` añade botones con nombre: `{ label, query | paths | delta | kinds | nodes }`.
+- **Líneas vivas.** Las del árbol se redibujan en cada fotograma: crecen con los hijos que nacen,
+  toman el color del cambio que llevan debajo y, al pasar por una tarjeta, se ilumina su camino
+  desde la raíz.
+- **Teclado.** ↑ ↓ mueven el cursor, → abre (o entra), ← pliega (o sube), espacio abre el detalle.
+- **Dos orientaciones.** ↧ sangrado como `tree`; ↦ en columnas, cada carpeta centrada en sus hijos.
+
+`node tools/verify-tree.mjs` comprueba el constructor, las interacciones y que React dibuja lo mismo.
+
 ## 8 · Verificar sin navegador
 
 Chrome headless se cuelga con estas páginas. Para comprobarlas:
