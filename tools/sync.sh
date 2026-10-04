@@ -14,7 +14,7 @@ fi
 for DEST in "$HOME/Workspaces/pr-artifact-review-v5/graph-engine"; do
   [ -d "$DEST" ] || continue
   mkdir -p "$DEST/dist" "$DEST/vendor"
-  cp "$HERE/graphx.js" "$HERE/graphx.css" "$HERE/graphx-mermaid.js" "$HERE/graphx-build.mjs" "$DEST/"
+  cp "$HERE/graphx.js" "$HERE/graphx.css" "$HERE/graphx-mermaid.js" "$HERE/graphx-shapes.js" "$HERE/graphx-layouts.js" "$HERE/graphx-tree.js" "$HERE/graphx-build.mjs" "$DEST/"
   cp "$HERE"/dist/*.js "$HERE"/dist/*.css "$DEST/dist/"
   cp "$HERE/vendor/elk.bundled.js" "$DEST/vendor/"
   for t in verify.mjs snap-depth.mjs snapshot-svg.mjs build-dist.mjs; do
@@ -23,7 +23,7 @@ for DEST in "$HOME/Workspaces/pr-artifact-review-v5/graph-engine"; do
   done
   echo "  → $DEST"
 done
-for f in graphx.js graphx.css graphx-mermaid.js; do
+for f in graphx.js graphx.css graphx-mermaid.js graphx-shapes.js graphx-layouts.js graphx-tree.js; do
   diff -q "$HERE/$f" "$HOME/.claude/skills/pr-review-artifact-v5/assets/graphx/$f" >/dev/null && diff -q "$HERE/$f" "$HOME/Workspaces/pr-artifact-review-v5/graph-engine/$f" >/dev/null || { echo "✗ $f distinto"; exit 1; }
 done
 echo "✓ las tres copias del motor son idénticas (v$(grep -o "version: '[0-9.]*'" "$HERE/graphx.js" | grep -o "[0-9.]*[0-9]"))"

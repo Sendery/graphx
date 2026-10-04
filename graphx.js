@@ -14,6 +14,8 @@
   const DUR = 460;
   const DELTA_RANK = { added: 3, removed: 3, modified: 2, unchanged: 0 };
   const DASHED_KINDS = { event: 1, queue: 1, async: 1 };
+  /* filas de una secuencia que no son mensajes: marcos, notas, activaciones y fases */
+  const SEQ_META = { phase: 1, block: 1, else: 1, end: 1, note: 1, activate: 1, deactivate: 1, create: 1, destroy: 1 };
 
   const STR = {
     es: {
@@ -27,7 +29,7 @@
       viaChildren: 'a través de piezas plegadas', clickHint: 'Clic para el detalle', dblHint: 'doble clic para centrar', expHint: '+N para abrir',
       zoomHint: 'Pulsa en el diagrama o usa ⌘/Ctrl + rueda para hacer zoom', play: 'Reproducir', pause: 'Pausa',
       stop: 'Detener', upShort: 'Depende de', downShort: 'Dependientes', inTour: 'En el recorrido',
-      seeInGraph: 'Ver en el grafo', layouting: 'Recolocando…', noMatch: 'Sin resultados', items: 'piezas',
+      seeInGraph: 'Ver en el grafo', layouting: 'Recolocando…', noMatch: 'Sin resultados', items: 'piezas', item: 'pieza',
       delta: { added: 'nuevo', modified: 'modificado', removed: 'eliminado', unchanged: 'sin cambios' },
       deltaShort: { added: 'NUEVO', modified: 'MOD', removed: 'ELIM', unchanged: '' },
       edgeKinds: { sync: 'llamada', async: 'asíncrono / evento', hero: 'la conexión que importa', animated: 'flujo principal', agg: 'conexiones agrupadas' },
@@ -35,7 +37,10 @@
       bandAdd: 'nuevas', bandMod: 'modificadas', orient: 'Orientación', explore: 'Explorar', exitExplore: 'Cerrar',
       touchHint: 'Dos dedos para mover el diagrama · o pulsa ⤢ Explorar', changedFiles: 'Ficheros cambiados', allChanges: 'Todos los cambios en GitHub',
       links: 'Enlaces', related: 'Relacionado en este diagrama', linkKinds: { jira: 'Jira', pr: 'PR', notion: 'Notion', artifact: 'Artefacto', doc: 'Documento', url: 'Enlace', node: 'Pieza' },
-      filesBtn: 'Ficheros', inNodes: 'en', unchangedFiles: 'Ficheros de contexto (sin cambios)', filesOf: 'ficheros', openDiff: 'Abrir diff'
+      filesBtn: 'Ficheros', inNodes: 'en', unchangedFiles: 'Ficheros de contexto (sin cambios)', filesOf: 'ficheros', openDiff: 'Abrir diff',
+      treeHint: 'Clic para abrir o plegar · doble clic para el panel', leafHint: 'Clic para ver el detalle · doble clic para el panel',
+      showDetail: 'Ver el detalle', hideDetail: 'Ocultar el detalle', filter: 'Filtro', clearFilter: 'Quitar el filtro', matches: 'coincidencias',
+      treeOrient: 'Árbol: sangrado o columnas', treeKbd: '↑ ↓ moverse · → abrir · ← plegar · espacio detalle · intro panel'
     },
     en: {
       graph: 'Graph', depth: 'Depth', expandAll: 'Expand all', collapseAll: 'Collapse all',
@@ -48,7 +53,7 @@
       viaChildren: 'through collapsed parts', clickHint: 'Click for details', dblHint: 'double-click to center', expHint: '+N to open',
       zoomHint: 'Click the diagram or use ⌘/Ctrl + wheel to zoom', play: 'Play', pause: 'Pause',
       stop: 'Stop', upShort: 'Depends on', downShort: 'Dependents', inTour: 'In the tour',
-      seeInGraph: 'Show in graph', layouting: 'Laying out…', noMatch: 'No matches', items: 'parts',
+      seeInGraph: 'Show in graph', layouting: 'Laying out…', noMatch: 'No matches', items: 'parts', item: 'part',
       delta: { added: 'new', modified: 'modified', removed: 'removed', unchanged: 'unchanged' },
       deltaShort: { added: 'NEW', modified: 'MOD', removed: 'DEL', unchanged: '' },
       edgeKinds: { sync: 'call', async: 'async / event', hero: 'the connection that matters', animated: 'main flow', agg: 'grouped connections' },
@@ -56,7 +61,10 @@
       bandAdd: 'new', bandMod: 'modified', orient: 'Orientation', explore: 'Explore', exitExplore: 'Close',
       touchHint: 'Two fingers to move the diagram · or tap ⤢ Explore', changedFiles: 'Changed files', allChanges: 'All changes on GitHub',
       links: 'Links', related: 'Related in this diagram', linkKinds: { jira: 'Jira', pr: 'PR', notion: 'Notion', artifact: 'Artifact', doc: 'Doc', url: 'Link', node: 'Part' },
-      filesBtn: 'Files', inNodes: 'in', unchangedFiles: 'Context files (unchanged)', filesOf: 'files', openDiff: 'Open diff'
+      filesBtn: 'Files', inNodes: 'in', unchangedFiles: 'Context files (unchanged)', filesOf: 'files', openDiff: 'Open diff',
+      treeHint: 'Click to open or fold · double-click for the panel', leafHint: 'Click for details · double-click for the panel',
+      showDetail: 'Show details', hideDetail: 'Hide details', filter: 'Filter', clearFilter: 'Clear filter', matches: 'matches',
+      treeOrient: 'Tree: indented or columns', treeKbd: '↑ ↓ move · → open · ← fold · space details · enter panel'
     }
   };
 
@@ -80,6 +88,7 @@
     method: 'M5 4L2 8l3 4M11 4l3 4-3 4',
     class: 'M3 3h10v10H3zM3 6.5h10M6 3v10',
     file: 'M4 2h5l3 3v9H4zM9 2v3h3',
+    folder: 'M2 4.5a1 1 0 0 1 1-1h3.2l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1zM2 7h12',
     other: 'M8 3a5 5 0 1 0 0 10A5 5 0 0 0 8 3z',
     link: 'M6.5 9.5l3-3M7 4.5l1-1a2.5 2.5 0 0 1 3.5 3.5l-1 1M9 11.5l-1 1A2.5 2.5 0 0 1 4.5 9l1-1',
     jira: 'M8 2l6 6-6 6-6-6zM8 5.5L10.5 8 8 10.5 5.5 8z',
@@ -118,7 +127,7 @@
   };
   /* tokens del tema que se pueden sobreescribir desde el JSON (`theme.light` / `theme.dark`) */
   const THEME_KEYS = ['bg', 'canvas', 'ink', 'muted', 'faint', 'line', 'card', 'card-line', 'glyph-bg', 'lane', 'lane-line', 'group', 'group-line',
-    'accent', 'accent-soft', 'add', 'add-soft', 'mod', 'mod-soft', 'del', 'del-soft', 'neu', 'warn', 'band-a', 'band-b', 'band-head', 'frame', 'band-div'];
+    'accent', 'accent-soft', 'add', 'add-soft', 'mod', 'mod-soft', 'del', 'del-soft', 'neu', 'warn', 'band-a', 'band-b', 'band-head', 'frame', 'band-div', 'note', 'note-line'];
 
   /* Enlaces relacionados: se admiten solo http(s); cualquier otro esquema se descarta. */
   function resolveLink(l, spec) {
@@ -177,6 +186,15 @@
     while (lo < hi) { const m = (lo + hi + 1) >> 1; if (textW(text.slice(0, m) + '…', size, weight, mono) <= max) lo = m; else hi = m - 1; }
     return text.slice(0, lo) + '…';
   }
+  /* una curva suave del primer al último punto, saliendo y llegando en el sentido de la ruta (mindmap) */
+  function smoothPath(pts) {
+    if (pts.length < 2) return '';
+    const a = pts[0], b = pts[pts.length - 1], a1 = pts[1], b1 = pts[pts.length - 2];
+    const L = Math.hypot(b.x - a.x, b.y - a.y) * .45;
+    const u = (p, q) => { const d = Math.hypot(q.x - p.x, q.y - p.y) || 1; return { x: (q.x - p.x) / d, y: (q.y - p.y) / d }; };
+    const da = u(a, a1), db = u(b1, b);
+    return `M${a.x},${a.y} C${a.x + da.x * L},${a.y + da.y * L} ${b.x - db.x * L},${b.y - db.y * L} ${b.x},${b.y}`;
+  }
   function roundedPath(pts, r) {
     if (pts.length < 2) return '';
     let d = `M${pts[0].x},${pts[0].y}`;
@@ -221,6 +239,7 @@
       n.laneId = p;
     }
     /* delta y stats de un contenedor: si no los declara, se derivan de lo que contiene */
+    const declared = new Set((spec.nodes || []).filter(x => x && x.delta).map(x => x.id));
     const post = id => {
       const n = M.get(id); let add = 0, del = 0, files = new Map(), rank = 0, count = 0;
       (n.files || []).forEach(f => files.set(f.path, f));
@@ -229,7 +248,7 @@
         r.files.forEach((f, k) => files.set(k, f));
       }
       files.forEach(f => { add += f.additions || 0; del += f.deletions || 0; });
-      if (!n.isLane && n.delta === 'unchanged' && !(spec.nodes || []).find(x => x.id === id && x.delta)) {
+      if (!n.isLane && n.delta === 'unchanged' && !declared.has(id)) {
         if (rank > 0) n.delta = 'modified';
       }
       n.stat = { additions: add, deletions: del, files: files.size };
@@ -262,6 +281,7 @@
     const lang = STR[opts.lang || spec.lang] ? (opts.lang || spec.lang) : 'es';
     const T = STR[lang];
     const G = buildModel(spec);
+    const nItems = k => `${k} ${k === 1 ? T.item : T.items}`;
     /* nombre legible de un tipo: el de `legend.kinds` si lo trae, si no el propio `kind` */
     const kindName = k => (spec.legend && spec.legend.kinds && spec.legend.kinds[k]) || k;
     const M = G.M;
@@ -285,6 +305,9 @@
     /* estados propios (`statuses`): cada pieza con `status` toma su etiqueta y, si no trae color, el suyo */
     const STATUSES = spec.statuses && typeof spec.statuses === 'object' ? spec.statuses : {};
     const HAS_DELTA = (spec.nodes || []).some(n => n.delta) || (spec.edges || []).some(e => e.delta);
+    /* algo cambiado de verdad (un árbol de ficheros marca todo con delta, aunque sea "unchanged") */
+    const HAS_CHANGES = (spec.nodes || []).some(n => n.delta && n.delta !== 'unchanged');
+    const ROOTS = ' gx-roots';
     const colorVar = v => {
       const c = colorPair(v); if (!c) return null;
       const key = c.light + '|' + c.dark;
@@ -317,7 +340,9 @@
     const searchIn = h('input', null, null, searchWrap);
     searchIn.type = 'search'; searchIn.placeholder = T.search; searchIn.setAttribute('aria-label', T.search);
     const searchList = h('div', 'gx-search-list', null, searchWrap);
+    const filterPill = h('div', 'gx-filter gx-graphonly', null, tools);
     const bOnly = btn(tools, T.onlyChanges, T.onlyChanges, 'gx-toggle gx-graphonly');
+    const filterSeg = h('div', 'gx-seg gx-filters gx-graphonly', null, tools);
     const bFrames = btn(tools, T.frames, T.frames, 'gx-toggle gx-graphonly');
     const bLegend = btn(tools, T.legend, T.legend, 'gx-toggle');
     const bDir = btn(tools, '↦', T.orient, 'gx-graphonly');
@@ -339,6 +364,9 @@
     const gBands = s('g', { class: 'gx-bands', 'clip-path': `url(#${I}-clip)` }, world);
     const frameR = s('rect', { class: 'gx-frame', rx: 18 }, world);
     const gGroups = s('g', { class: 'gx-groups' }, world);
+    const gDeco = s('g', { class: 'gx-deco' }, world);
+    /* líneas del árbol (layouts planos): se redibujan en cada fotograma con las tarjetas */
+    const gWires = s('g', { class: 'gx-wires' }, world);
     const gEdges = s('g', { class: 'gx-edges' }, world);
     const gNodes = s('g', { class: 'gx-nodes' }, world);
     const gLabels = s('g', { class: 'gx-elabels' }, world);
@@ -364,6 +392,7 @@
       const src = (spec.nodes || []).find(x => x.id === n.id) || {};
       n.status = src.status && STATUSES[src.status] ? src.status : null;
       n.cvar = colorVar(n.color || (n.status ? STATUSES[n.status].color : null));
+      n.fvar = colorVar(n.fill); n.tvar = colorVar(n.textColor);
     }
     const statusCvar = k => colorVar(STATUSES[k] && STATUSES[k].color);
     G.edges.forEach(e => { e.cvar = colorVar(e.color); });
@@ -380,6 +409,11 @@
       return `url(#${id})`;
     };
     const paint = (el, cvar) => { if (cvar) { el.classList.add('has-c'); el.style.setProperty('--gx-c', cvar); } };
+    /* relleno y color de texto propios (fill / textColor, p. ej. de un classDef de Mermaid) */
+    const paintFill = (el, n) => {
+      if (n.fvar) { el.classList.add('has-f'); el.style.setProperty('--gx-f', n.fvar); }
+      if (n.tvar) { el.classList.add('has-t'); el.style.setProperty('--gx-tc', n.tvar); }
+    };
 
     function btn(parent, label, title, cls) {
       const b = h('button', 'gx-btn' + (cls ? ' ' + cls : ''), esc(label), parent);
@@ -390,10 +424,17 @@
     const S = {
       expanded: new Set(), visible: new Set(), rects: new Map(), vedges: [], els: new Map(), edgeEls: [],
       cam: { x: 0, y: 0, k: 1 }, seqCam: { x: 0, y: 0, k: 1 }, view: 'graph', selected: null, trace: null,
-      tourTok: 0, onlyChanges: false, dir: spec.direction === 'down' ? 'down' : 'right', expanded2: false, frames: !(spec.layout && spec.layout.frames === false), bands: [], bandEls: new Map(), tour: -1, present: false, engaged: false, seq: null, seqPlay: null, layoutId: 0, bbox: null
+      tourTok: 0, onlyChanges: false, dir: spec.direction === 'down' ? 'down' : 'right', expanded2: false, frames: !(spec.layout && spec.layout.frames === false), bands: [], bandEls: new Map(), tour: -1, present: false, engaged: false, seq: null, seqPlay: null, layoutId: 0, bbox: null,
+      /* árbol: tarjetas con el detalle abierto, filtro por rutas (`focus`), carpetas que el filtro deja ver enteras, líneas */
+      detail: new Set(), focus: null, unpruned: new Set(), wires: new Map(), order: null
     };
     const initial = spec.initialDepth != null ? spec.initialDepth : Math.min(1, G.maxDepth);
     setDepthSet(initial);
+    /* las cuentas de una carpeta (ficheros y subcarpetas), si el JSON no las trae */
+    for (const n of M.values()) if (n.children.length && !n.isLane && n.tree == null && n.shape && /^folder/.test(n.shape)) {
+      let files = 0, dirs = 0; const w = id => M.get(id).children.forEach(c => { if (M.get(c).children.length) { dirs++; w(c); } else files++; }); w(n.id);
+      n.tree = { files, dirs };
+    }
 
     /* --- pestañas de vista --- */
     const tabBtns = [];
@@ -413,7 +454,7 @@
     G.levels.forEach((lv, i) => {
       const b = btn(depthSeg, lv.label, `${T.depth}: ${lv.label}`, 'gx-seg-b');
       b.dataset.depth = lv.depth != null ? lv.depth : i;
-      b.onclick = () => { setDepthSet(+b.dataset.depth); relayout({ fit: true }); };
+      b.onclick = () => { dropFocus(); setDepthSet(+b.dataset.depth); relayout({ fit: true }); };
     });
     if (G.levels.length < 2) depthSeg.style.display = 'none';
     function setDepthSet(d) {
@@ -433,18 +474,30 @@
       const d = currentDepth();
       depthSeg.querySelectorAll('.gx-seg-b').forEach(b => b.classList.toggle('on', +b.dataset.depth === d));
     }
-    bExpand.onclick = () => { setDepthSet(G.maxDepth + 1); relayout({ fit: true }); };
-    bCollapse.onclick = () => { setDepthSet(0); relayout({ fit: true }); };
+    bExpand.onclick = () => { dropFocus(); setDepthSet(G.maxDepth + 1); relayout({ fit: true }); };
+    bCollapse.onclick = () => { dropFocus(); setDepthSet(0); relayout({ fit: true }); };
 
     /* --- grafo visible: arista elevada al contenedor visible más cercano --- */
     function computeVisible() {
-      const vis = new Set();
-      const walk = id => { vis.add(id); const n = M.get(id); if (n.children.length && S.expanded.has(id)) n.children.forEach(walk); };
-      G.roots.forEach(walk);
-      const rep = id => { let x = id; while (!vis.has(x)) x = M.get(x).parent; return x; };
+      const vis = new Set(), hidden = new Map();
+      /* Con un filtro que poda (`focus.prune`), de cada pieza abierta solo se ven los hijos que están
+         en una ruta referenciada; el resto se cuenta en `hidden` y el layout pone «··· N más» en su lugar.
+         Una pieza referenciada, una que el usuario ha pedido ver entera o una ajena al filtro se ve entera. */
+      const F = S.focus && S.focus.prune ? S.focus : null;
+      const walk = id => {
+        vis.add(id); const n = M.get(id);
+        if (!n.children.length || !S.expanded.has(id)) return;
+        const all = !F || F.ids.has(id) || S.unpruned.has(id) || !F.keep.has(id);
+        n.children.forEach(c => { if (all || F.keep.has(c)) walk(c); else hidden.set(id, (hidden.get(id) || 0) + 1); });
+      };
+      /* las raíces que no llevan a nada referenciado se cuentan en una pastilla propia (clave ROOTS) */
+      G.roots.forEach(r => { if (!F || F.keep.has(r) || !F.keep.size || S.unpruned.has(ROOTS)) walk(r); else hidden.set(ROOTS, (hidden.get(ROOTS) || 0) + 1); });
+      /* una arista sube al antepasado visible; si el filtro ha ocultado su raíz entera, no se dibuja */
+      const rep = id => { let x = id; while (x != null && !vis.has(x)) x = M.get(x).parent; return x; };
       const agg = new Map();
       for (const e of G.edges) {
         const a = rep(e.from), b = rep(e.to);
+        if (a == null || b == null) continue;
         if (a === b || isAncestor(M, a, b) || isAncestor(M, b, a)) continue;
         const k = a + '\u0000' + b;
         if (!agg.has(k)) agg.set(k, { id: 'v:' + a + '>' + b, from: a, to: b, list: [] });
@@ -461,11 +514,12 @@
           label: v.list.length > 1 ? (lead.label ? `${lead.label} +${v.list.length - 1}` : `×${v.list.length}`) : (lead.label || '')
         });
       });
-      return { vis, vedges, rep };
+      return { vis, vedges, rep, hidden };
     }
 
     /* --- tamaños --- */
-    const isGroup = id => { const n = M.get(id); return n.children.length > 0 && S.expanded.has(id) && S.visible.has(id); };
+    /* en un layout plano (el árbol) una pieza abierta sigue siendo una tarjeta: no envuelve a sus hijos */
+    const isGroup = id => { if (FLAT) return false; const n = M.get(id); return n.children.length > 0 && S.expanded.has(id) && S.visible.has(id); };
     /* Tarjetas más estrechas y más altas: el título parte en dos líneas antes que ensanchar
        la caja, así cuatro piezas enlazadas caben en pantalla sin bajar el zoom. */
     const CARD_MIN = 140, CARD_MAX = 212, PADX = 66;
@@ -478,6 +532,7 @@
       return rest ? [l1.trimEnd(), fitText(rest.trimStart(), w2, 13, 600)] : [l1.trimEnd()];
     }
     function cardLayout(n) {
+      if (hasShape(n)) return shapeLayout(n);
       if (n._card) return n._card;
       const chipW = n.delta && n.delta !== 'unchanged' ? textW(T.deltaShort[n.delta], 9.5, 700) + 16 : 0;
       const full = textW(n.label, 13, 600), sub = n.subtitle ? textW(n.subtitle, 11, 400, true) : 0;
@@ -488,7 +543,35 @@
       const lines = wrap2(n.label, CARD_MAX - PADX - chipW, CARD_MAX - PADX);
       return (n._card = { w: CARD_MAX, h: lines.length > 1 ? 80 : 64, lines });
     }
-    function leafSize(n) { const c = cardLayout(n); return { w: c.w, h: c.h }; }
+    /* `head`: el alto de la cabecera de la tarjeta, sin el detalle abierto (ahí se anclan las líneas del árbol) */
+    function leafSize(n) { const c = cardLayout(n); return { w: c.w, h: c.h, head: c.lay ? SHP.headOf(n, c.lay) : c.h }; }
+
+    /* --- formas (graphx-shapes.js): rombos, círculos, tablas, barras… --- */
+    /* El módulo es opcional: sin él, toda pieza es una tarjeta. El contexto lleva lo que una forma
+       necesita saber del diagrama entero (rango de fechas de un gantt, valor máximo de un sankey). */
+    const SHP = global.GraphX && global.GraphX.shapes ? global.GraphX.shapes : null;
+    const hasShape = n => !!(SHP && n.shape && SHP.has(n.shape) && !n.isLane);
+    const shapeCtx = (() => {
+      const toMs = v => { const t = typeof v === 'number' ? v : Date.parse(String(v).length === 10 ? v + 'T00:00:00Z' : String(v).replace(' ', 'T') + (/Z|[+-]\d\d:?\d\d$/.test(v) ? '' : 'Z')); return isNaN(t) ? null : t; };
+      let lo = Infinity, hi = -Infinity, maxV = 0;
+      for (const n of M.values()) {
+        if (n.span) [n.span.start, n.span.end].forEach(v => { const t = v == null ? null : toMs(v); if (t != null) { lo = Math.min(lo, t); hi = Math.max(hi, t); } });
+        if (typeof n.value === 'number') maxV = Math.max(maxV, n.value);
+      }
+      return { textW, dir: S.dir, span: lo < hi ? { min: lo, max: hi } : null, maxValue: maxV || 1, now: Date.now() };
+    })();
+    /* La forma que toca ahora: una carpeta abierta en el árbol cambia a su `openShape`. Lo que cambia el
+       dibujo (forma, detalle abierto, coincidencias del filtro) va en la firma: si cambia, se rehace. */
+    const effShape = n => (FLAT && SHP && n.openShape && n.children.length && S.expanded.has(n.id) && SHP.has(n.openShape) ? n.openShape : n.shape);
+    const shapeNode = n => { const sh = effShape(n); return sh === n.shape ? n : Object.assign({}, n, { shape: sh }); };
+    const sigOf = n => `${S.dir}|${effShape(n)}|${FLAT && n.children.length && S.expanded.has(n.id) ? 'o' : ''}|${n._open ? 1 : 0}|${n._hits || 0}|${n._dense ? 1 : 0}|${n.labelSide || ''}`;
+    function shapeLayout(n) {
+      shapeCtx.dir = S.dir;
+      const key = sigOf(n);
+      if (n._card && n._card.key === key) return n._card;
+      const lay = SHP.measure(shapeNode(n), shapeCtx);
+      return (n._card = { w: lay.w, h: lay.h, lines: [n.label], lay, dir: S.dir, key });
+    }
 
     /* --- layout con ELK --- */
     let elk = null;
@@ -502,16 +585,48 @@
     if (!strictLanes) bFrames.style.display = 'none';
     bFrames.classList.toggle('on', S.frames);
     host.classList.toggle('gx-framed', framed());
-    async function layout(vis, vedges) {
+    /* ELK (o un layout propio) lleva cada arista hasta la caja de la pieza, o de centro a centro;
+       aquí se recorta hasta su contorno (el rombo, el círculo, el punto del commit) o, sin forma,
+       hasta el borde de la caja, para que no se quede en el aire ni se meta dentro */
+    function clipPaths(rects, paths, vedges, vis, exp) {
+      if (!SHP) return;
+      const clipEnd = (pts, i, j, id) => {
+        const n = M.get(id), r = rects.get(id);
+        if (!r) return;
+        const open = exp.has(id) && n.children.some(c => vis.has(c));
+        const hl = (!open && hasShape(n) && SHP.hull(n, r.w, r.h)) || { poly: [[0, 0], [r.w, 0], [r.w, r.h], [0, r.h]] };
+        const q = SHP.hit(hl, { x: pts[j].x - r.x, y: pts[j].y - r.y }, { x: pts[i].x - r.x, y: pts[i].y - r.y });
+        if (q) pts[i] = { x: q.x + r.x, y: q.y + r.y };
+      };
+      for (const v of vedges) {
+        const p = paths.get(v.id); if (!p || !p.pts || p.pts.length < 2) continue;
+        /* de centro a centro, el punto de dentro no sirve de referencia: se recorta desde el otro extremo */
+        clipEnd(p.pts, 0, 1, v.from); clipEnd(p.pts, p.pts.length - 1, p.pts.length - 2, v.to);
+      }
+    }
+    /* layouts propios por tipo de diagrama (graphx-layouts.js), elegidos con `layout.mode` */
+    const LAYOUTS = global.GraphX && global.GraphX.layouts ? global.GraphX.layouts : null;
+    const MODE = spec.layout && spec.layout.mode && LAYOUTS && LAYOUTS.has && LAYOUTS.has(spec.layout.mode) ? spec.layout.mode : null;
+    const FLAT = !!(MODE && LAYOUTS.flat && LAYOUTS.flat(MODE));
+    /* en el árbol, el botón de orientación cambia entre sangrado (↓, como `tree`) y columnas (→) */
+    if (MODE) { host.classList.add('gx-mode-' + MODE); if (!FLAT) bDir.style.display = 'none'; }
+    if (FLAT) { host.classList.add('gx-flat'); if (spec.direction !== 'right') S.dir = 'down'; }
+    async function layout(vis, vedges, hidden) {
       /* foto del estado: la segunda pasada de ELK ocurre tras un await, y para entonces otra
          acción (Detener, un paso nuevo) puede haber cambiado lo que está abierto */
       const exp = new Set(S.expanded);
+      if (MODE) {
+        const out = LAYOUTS[MODE]({ M, roots: G.roots, vis, exp, vedges, size: id => leafSize(M.get(id)), textW, spec, now: Date.now(), cvar: id => (M.get(id) || {}).cvar || null, lang, dir: S.dir, hidden: hidden || new Map(), rootsKey: ROOTS });
+        vedges.forEach(v => { v.back = false; });
+        clipPaths(out.rects, out.paths, vedges, vis, exp);
+        return { rects: out.rects, paths: out.paths, bbox: out.bbox, deco: out.deco || [], wires: out.wires || [], heads: out.heads || null, order: out.order || null, pos: out.pos || null };
+      }
       const make = id => {
         const n = M.get(id);
         const kids = n.children.filter(c => vis.has(c));
         if (kids.length && exp.has(id)) {
           const top = n.isLane && framed() ? 18 : 46;
-          const hw = textW(n.label, n.isLane ? 11 : 12.5, 700) * (n.isLane ? 1.25 : 1) + textW(n.subtitle || '', 11, 400, !n.isLane) + 120;
+          const hw = textW(n.label, n.isLane ? 11 : 12.5, 700) * (n.isLane ? 1.25 : 1) + textW(n.subtitle || (n.isLane ? '' : nItems(kids.length)), 11, 400, !n.isLane) + 120;
           return {
             id, children: kids.map(make),
             layoutOptions: { 'elk.padding': `[top=${top},left=18,bottom=18,right=18]`, 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${Math.round(hw)},60)` }
@@ -538,10 +653,22 @@
           return el;
         }),
         edges: list.map(v => ({
-          id: v.id, sources: [v.from], targets: [v.to],
+          id: v.id, sources: [rev.has(v.id) ? v.to : v.from], targets: [rev.has(v.id) ? v.from : v.to],
           labels: v.label ? [{ text: v.label, width: Math.ceil(textW(v.label, 11, 500)) + 16, height: 20 }] : []
         }))
       });
+      /* Con `layout.cycles`, los ciclos se rompen aquí y no en ELK, como hace dagre: un recorrido en
+         profundidad que empieza por las piezas escritas primero marca las aristas que vuelven atrás;
+         a ELK le llegan invertidas (el grafo que ve no tiene ciclos) y después se giran otra vez. */
+      const rev = new Set();
+      if (cycleStrategy) {
+        const out = new Map(), indeg = new Map(), ord = id => M.get(id).order;
+        vedges.forEach(v => { if (!out.has(v.from)) out.set(v.from, []); out.get(v.from).push(v); indeg.set(v.to, (indeg.get(v.to) || 0) + 1); });
+        const ids = [...new Set(vedges.flatMap(v => [v.from, v.to]))].sort((a, b) => ord(a) - ord(b));
+        const st = new Map();
+        const dfs = id => { st.set(id, 1); (out.get(id) || []).forEach(v => { const k = st.get(v.to); if (k === 1) rev.add(v.id); else if (!k) dfs(v.to); }); st.set(id, 2); };
+        ids.filter(id => !indeg.get(id)).concat(ids).forEach(id => { if (!st.get(id)) dfs(id); });
+      }
       if (!elk) elk = new (await loadELK())();
       const rectsOf = res => { const r = new Map(); const walk = n => { if (n.id !== ' gx-root') r.set(n.id, { x: n.x, y: n.y, w: n.width, h: n.height }); (n.children || []).forEach(walk); }; walk(res); return r; };
       /* Una arista que acaba «antes» que su origen obliga a ELK a rodear contenedores enteros
@@ -551,7 +678,9 @@
       const down = S.dir === 'down';
       const c1 = rectsOf(res), ctr = (m, id) => { const r = m.get(id); return down ? r.y + r.h / 2 : r.x + r.w / 2; };
       const laneIx = id => { const l = M.get(id).laneId; return l != null ? M.get(l).order : -1; };
-      const back = new Set(vedges.filter(v => c1.has(v.from) && c1.has(v.to) && (
+      /* `layout.backEdges: "route"`: ELK traza también las que vuelven atrás, esquivando piezas y notas */
+      const routeBack = spec.layout && spec.layout.backEdges === 'route';
+      const back = new Set(routeBack ? [] : vedges.filter(v => c1.has(v.from) && c1.has(v.to) && (
         (strictLanes && laneIx(v.to) >= 0 && laneIx(v.from) >= 0 ? laneIx(v.to) < laneIx(v.from) : false) ||
         ((!strictLanes || laneIx(v.to) === laneIx(v.from)) && ctr(c1, v.to) < ctr(c1, v.from) - 12))).map(v => v.id));
       if (back.size) res = await elk.layout(buildGraph(vedges.filter(v => !back.has(v.id))));
@@ -573,8 +702,10 @@
         }
         secs.forEach(x => { if (!seen.has(x.id)) pts.push(x.startPoint, ...(x.bendPoints || []), x.endPoint); });
         const lab = (e.labels || [])[0];
+        if (rev.has(e.id)) pts.reverse();
         paths.set(e.id, { pts, label: lab ? { x: lab.x, y: lab.y, w: lab.width, h: lab.height } : null });
       });
+      clipPaths(rects, paths, vedges, vis, exp);
       let bb = { x: 0, y: 0, w: res.width, h: res.height };
       for (const v of vedges) {
         if (!v.back) continue;
@@ -604,9 +735,71 @@
       s('path', { d: IC[kind] || IC.other, transform: `translate(5,5) scale(${sc})`, class: 'gx-glyph-ic' + (ICFILL.has(kind) ? ' fill' : '') }, g);
       return g;
     }
-    function makeLeaf(n) {
+    /* árbol de graphx-shapes → nodos SVG */
+    function toSVG(node, parent) {
+      const a = node.attrs;
+      if (node.tag === 'glyph') {
+        if (a.bare) s('path', { d: IC[a.kind] || IC.other, transform: `translate(${a.x},${a.y}) scale(${a.size / 16})`, class: 'gx-glyph-ic gx-bigic' + (ICFILL.has(a.kind) ? ' fill' : '') }, parent);
+        else glyph(parent, a.kind, a.x, a.y, a.size);
+        return;
+      }
+      const e = s(node.tag, a, parent);
+      if (node.text != null) e.textContent = node.text;
+      node.children.forEach(c => toSVG(c, e));
+    }
+    /* Una pieza con forma se construye una vez, con su tamaño final; al animar (nacer de su
+       contenedor, plegarse) se escala el grupo entero en vez de rehacer el dibujo en cada fotograma. */
+    function makeShapeLeaf(n, size) {
+      const cl = shapeLayout(n), W = size ? size.w : cl.w, H = size ? size.h : cl.h, sh = effShape(n);
+      const open = FLAT && n.children.length > 0 && S.expanded.has(n.id);
+      const tree = SHP.render(shapeNode(n), W, H, shapeCtx, cl.lay);
+      const g = s('g', { class: `gx-node gx-leaf gx-shape fam-${tree.family} sh-${sh} d-${n.delta}${n._open ? ' det' : ''}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label}${n.delta !== 'unchanged' ? ' — ' + (T.delta[n.delta] || '') : ''}`, 'aria-expanded': n.children.length && FLAT ? String(open) : null });
+      paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
+      if (n.status) g.classList.add('st-' + String(n.status).replace(/[^\w-]/g, ''));
+      paintFill(g, n);
+      /* plegada con hijos: dos copias del contorno detrás, como la pila de una tarjeta */
+      const od = n.children.length && !open ? SHP.outlineOf(tree) : null;
+      if (od) [8, 4].forEach(k => s('path', { class: 'gx-stack', d: od, transform: `translate(${k},${k})` }, g));
+      tree.children.forEach(c => toSVG(c, g));
+      const parts = {}, ch = tree.chrome;
+      if (ch) {
+        let x = ch.x;
+        if (n.notes && n.notes.length) { s('circle', { class: 'gx-note-dot ' + (n.notes[0].tone || 'warn'), r: 4, cx: x - 4, cy: ch.y }, g); x -= 14; }
+        const kinds = [...new Set((n.links || []).map(l => resolveLink(l, spec)).filter(Boolean).map(l => LINK_ICON[l.kind] || 'url'))].slice(0, 3);
+        if (kinds.length) {
+          const lk = s('g', { class: 'gx-lk', transform: `translate(${x - kinds.length * 15},${ch.y - 6})` }, g);
+          kinds.forEach((k, i) => { const ig = s('g', { class: 'gx-lki k-' + k, transform: `translate(${i * 15},0)` }, lk); if (k === 'gh') s('path', { d: GH, transform: 'scale(.75)', class: 'fill' }, ig); else s('path', { d: IC[k] || IC.url, transform: 'scale(.75)' }, ig); });
+          x -= kinds.length * 15 + 6;
+        }
+        if (n.children.length) {
+          /* en el árbol, una carpeta abierta cambia su +N por un − que la pliega */
+          parts.exp = s('g', { class: 'gx-exp' + (open ? ' open' : ''), role: 'button', 'aria-label': open ? T.collapse : T.expand }, g);
+          /* en el árbol, +N son los hijos que aparecen al abrirla (no todo lo que lleva dentro) */
+          const txt = open ? '−' : '+' + (FLAT ? n.children.length : n.descendants), ew = Math.max(textW(txt, 10.5, 700) + 14, 24);
+          s('rect', { rx: 8, height: 17, width: ew }, parts.exp);
+          const t = s('text', { y: 12.5, x: ew / 2 }, parts.exp); t.textContent = txt;
+          parts.exp.setAttribute('transform', `translate(${x - ew},${ch.y - 8.5})`);
+          parts.exp.addEventListener('click', ev => { ev.stopPropagation(); toggle(n.id); });
+        }
+        /* el botón de la tarjeta de detalle (las formas que la tienen dicen dónde va) */
+        if (ch.det) {
+          parts.det = s('g', { class: 'gx-det' + (n._open ? ' on' : ''), role: 'button', 'aria-label': n._open ? T.hideDetail : T.showDetail, 'aria-pressed': String(!!n._open), transform: `translate(${ch.det.x - 9},${ch.det.y - 9})` }, g);
+          s('rect', { width: 18, height: 18, rx: 5 }, parts.det);
+          /* «i» de información: el detalle no es desplegar la carpeta (eso es el clic y el +N) */
+          s('path', { class: 'gx-det-ring', d: 'M9,2.8a6.2,6.2 0 1 1 0,12.4a6.2,6.2 0 1 1 0,-12.4z' }, parts.det);
+          s('path', { d: 'M9,8.3v4.2M9,5.7v.1' }, parts.det);
+          parts.det.addEventListener('click', ev => { ev.stopPropagation(); toggleDetail(n.id); });
+        }
+      }
+      g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: W, h: H }; g._side = n.labelSide;
+      g._sig = sigOf(n); g._sh = sh; g._head = cl.lay ? SHP.headOf(n, cl.lay) : H;
+      return g;
+    }
+    function makeLeaf(n, size) {
+      if (hasShape(n)) return makeShapeLeaf(n, size);
       const g = s('g', { class: `gx-node gx-leaf d-${n.delta}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label} — ${T.delta[n.delta] || ''}` });
       paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
+      paintFill(g, n);
       const hasKids = n.children.length > 0;
       const parts = {};
       if (hasKids) { parts.stack2 = s('rect', { class: 'gx-stack', rx: 10 }, g); parts.stack1 = s('rect', { class: 'gx-stack', rx: 10 }, g); }
@@ -668,6 +861,11 @@
       return g;
     }
     function placeLeaf(g, r, n) {
+      if (g._shape) {
+        const kx = r.w / g._sz.w, ky = r.h / g._sz.h;
+        g.setAttribute('transform', `translate(${r.x},${r.y})` + (Math.abs(kx - 1) > .002 || Math.abs(ky - 1) > .002 ? ` scale(${kx},${ky})` : ''));
+        return;
+      }
       const p = g._parts;
       g.setAttribute('transform', `translate(${r.x},${r.y})`);
       p.box.setAttribute('width', r.w); p.box.setAttribute('height', r.h);
@@ -683,7 +881,7 @@
         p.title.textContent = cl.lines.length > 1 ? cl.lines[0] : fitText(n.label, r.w - 66 - (chipW ? chipW + 6 : 0), 13, 600);
         p.title2.textContent = cl.lines[1] || '';
         const par = n.parent != null ? M.get(n.parent) : null;
-        const fallback = n.children.length ? `${n.children.length} ${T.items}` : (par && !par.isLane ? par.label : kindName(n.kind));
+        const fallback = n.children.length ? nItems(n.children.length) : (par && !par.isLane ? par.label : kindName(n.kind));
         p.sub.textContent = fitText(n.subtitle || fallback, r.w - 66, 11, 400, true);
       }
       if (p.chip) { p.chipR.setAttribute('x', r.w - chipW - 9); p.chipR.setAttribute('width', chipW); p.chipT.setAttribute('x', r.w - chipW / 2 - 9); }
@@ -698,7 +896,7 @@
       }
     }
     function makeGroup(n) {
-      const g = s('g', { class: `gx-group ${n.isLane ? 'gx-lane' : ''} d-${n.delta} depth-${Math.min(n.depth, 4)}`, 'data-id': n.id });
+      const g = s('g', { class: `gx-group ${n.isLane ? 'gx-lane' : ''} d-${n.delta} depth-${Math.min(n.depth, 4)}${n.frame ? ' fr-' + String(n.frame).replace(/[^\w-]/g, '') : ''}`, 'data-id': n.id });
       paint(g, n.cvar);
       const parts = {};
       parts.box = s('rect', { class: 'gx-gbox', rx: n.isLane ? 16 : 13 }, g);
@@ -733,7 +931,7 @@
         const room = r.w - tx - 42 - (chipW ? chipW + 8 : 0);
         p.title.textContent = fitText(label, room - (n.isLane ? label.length * 1.32 : 0), n.isLane ? 11 : 12.5, 700);
         const tw = textW(p.title.textContent, n.isLane ? 11 : 12.5, 700) + (n.isLane ? p.title.textContent.length * 11 * .12 : 0);
-        const sub = n.isLane ? (n.subtitle || '') : (n.subtitle || `${n.children.length} ${T.items}`);
+        const sub = n.isLane ? (n.subtitle || '') : (n.subtitle || nItems(n.children.length));
         const subRoom = room - tw - 12;
         p.sub.textContent = subRoom > 40 ? fitText(sub, subRoom, 11, 400, !n.isLane) : '';
         p.sub.setAttribute('x', tx + tw + 10);
@@ -743,16 +941,67 @@
     }
 
     /* --- aristas --- */
+    /* Puntas de arista (graphx-shapes.markers): una definición por tipo y color, creada al usarse.
+       La flecha por defecto sigue siendo la de siempre. */
+    const MK_COLOR = { unchanged: 'var(--gx-neu)', added: 'var(--gx-add)', modified: 'var(--gx-mod)', removed: 'var(--gx-del)', lit: 'var(--gx-accent)' };
+    function markerRef(type, key, prefix, fixed) {
+      prefix = prefix || I;
+      if (!type || type === 'none' || type === 'line') return null;
+      /* la flecha de siempre crece con el grosor de la línea; en una arista gruesa (weight) va la de tamaño fijo */
+      if ((type === 'arrow' && !fixed) || !SHP || !SHP.markers[type]) return MK_COLOR[key] ? `url(#${prefix}-mk-${key})` : colorMarker(key, prefix);
+      const root = prefix === I ? defs : seqSvg.querySelector('defs');
+      const def = SHP.markers[type], id = `${prefix}-m-${type}-${String(key).replace(/\W/g, '_')}`;
+      if (!root.querySelector('#' + id)) {
+        const m = s('marker', { id, viewBox: '0 0 20 20', refX: 19.5, refY: 10, markerWidth: 15, markerHeight: 15, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' }, root);
+        const col = key === 'unchanged' && def.fill !== 'solid' ? 'var(--gx-muted)' : (MK_COLOR[key] || key), pth = s('path', { d: def.d, class: 'gx-mkx' }, m);
+        pth.style.stroke = def.fill === 'solid' ? 'none' : col;
+        pth.style.fill = def.fill === 'solid' ? col : def.fill === 'line' ? 'none' : 'var(--gx-canvas)';
+        pth.style.strokeWidth = '1.8';
+      }
+      return `url(#${id})`;
+    }
+    /* una arista agrupada (×N) lleva las puntas de sus aristas si todas coinciden; si no, la flecha */
+    const edgeEnds = v => {
+      const same = k => { const vals = [...new Set(v.list.map(e => e[k] || null))]; return vals.length === 1 ? vals[0] : undefined; };
+      const head = same('head'), tail = same('tail');
+      return { head: head === undefined ? 'arrow' : (head || 'arrow'), tail: tail || null };
+    };
+    function markEdge(line, v, lit) {
+      const key = lit && !v.hero ? 'lit' : (v.cvar || (MK_COLOR[v.delta] ? v.delta : 'unchanged'));
+      const { head, tail } = edgeEnds(v);
+      const me = markerRef(head, key, I, v._weighted), ms = markerRef(tail, key, I, v._weighted);
+      if (me) line.setAttribute('marker-end', me); else line.removeAttribute('marker-end');
+      if (ms) line.setAttribute('marker-start', ms); else line.removeAttribute('marker-start');
+    }
+    const maxWeight = Math.max(0, ...(spec.edges || []).map(e => typeof e.weight === 'number' ? e.weight : 0));
     function makeEdge(v, path) {
       const g = s('g', { class: `gx-edge d-${v.delta} k-${v.kind}${v.back ? ' back' : ''}${v.hero ? ' hero' : ''}${v.muted ? ' muted' : ''}${v.lifted ? ' lifted' : ''}${DASHED_KINDS[v.kind] ? ' dashed' : ''}`, 'data-id': v.id });
-      const d = path.d || roundedPath(path.pts, 9);
+      const curve = v.list.every(e => e.curve);
+      const d = path.d || (curve ? smoothPath(path.pts) : roundedPath(path.pts, path.radius || 9));
+      if (curve) g.classList.add('curved');
       s('path', { class: 'gx-ehit', d }, g);
       /* halo en vez de filtro: un filtro sobre una línea recta tiene caja de altura 0 y no se pinta */
       if (v.hero) s('path', { class: 'gx-ehalo', d }, g);
       v.cvar = (v.list.find(e => e.cvar) || {}).cvar || null;
       paint(g, v.cvar);
-      const line = s('path', { class: 'gx-eline', d, 'marker-end': v.cvar ? colorMarker(v.cvar, I) : `url(#${I}-mk-${v.delta})` }, g);
+      const line = s('path', { class: 'gx-eline', d }, g);
+      /* grosor por valor (sankey): la arista se lee como un caudal */
+      const wsum = v.list.reduce((a, e) => a + (typeof e.weight === 'number' ? e.weight : 0), 0);
+      v._weighted = !!(maxWeight && wsum) || path.width != null;
+      if (v._weighted) { g.classList.add('weighted'); line.style.strokeWidth = (path.width != null ? path.width : 1.6 + 13 * Math.min(wsum / maxWeight, 1)).toFixed(1) + 'px'; }
+      markEdge(line, v, false);
       if (v.animated) s('path', { class: 'gx-eflow', d }, g);
+      /* cardinalidades en los extremos (1, 0..*, …) */
+      const one = v.list.length === 1 ? v.list[0] : null;
+      if (one && path.pts && path.pts.length > 1 && (one.headLabel || one.tailLabel)) {
+        const endLab = (a, b, text) => {
+          const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+          const t = s('text', { class: 'gx-eend gx-halo', x: a.x + ux * 20 - uy * 13, y: a.y + uy * 20 + ux * 13 + 4 }, g); t.textContent = text;
+        };
+        const P0 = path.pts;
+        if (one.tailLabel) endLab(P0[0], P0[1], one.tailLabel);
+        if (one.headLabel) endLab(P0[P0.length - 1], P0[P0.length - 2], one.headLabel);
+      }
       g._line = line; g._v = v;
       const lab = path.label && v.label ? s('g', { class: `gx-elabel d-${v.delta}`, 'data-id': v.id, transform: `translate(${path.label.x},${path.label.y})` }) : null;
       if (lab) {
@@ -860,7 +1109,7 @@
           p.stat.setAttribute('transform', `translate(16,${yS + 18})`);
           if (b.h > yS + 30) {
             const put = (txt, cls, k) => { const t = s('text', { class: 'gx-bandsx ' + (cls || ''), x: 0, y: k * 16 }, p.stat); t.textContent = txt; };
-            put(`${c.n} ${T.items}`, '', 0);
+            put(nItems(c.n), '', 0);
             if (c.a && b.h > yS + 46) put(`● ${c.a} ${T.bandAdd}`, 'a', 1);
             if (c.m && b.h > yS + 62) put(`● ${c.m} ${T.bandMod}`, 'm', 2);
           }
@@ -876,7 +1125,7 @@
         let x = 0;
         const put = (txt, cls) => { const t = s('text', { class: 'gx-bandsx ' + (cls || ''), x }, p.stat); t.textContent = txt; x += textW(txt, 10.5, 600) + 10; };
         if (room > 60) {
-          put(`${c.n} ${T.items}`);
+          put(nItems(c.n));
           if (c.a && x + 60 < b.w - 40) put(`● ${c.a} ${T.bandAdd}`, 'a');
           if (c.m && x + 60 < b.w - 40) put(`● ${c.m} ${T.bandMod}`, 'm');
         }
@@ -889,13 +1138,23 @@
       o = o || {};
       /* solo secuencia: no hay grafo que colocar, asi que ni se carga ELK */
       if (!graphTab) { if (o.after) o.after(); return; }
+      if (S.dead) return;
       const my = ++S.layoutId;
       hoverSet = null; hideTip();
       clearTimeout(busyTimer); busyTimer = setTimeout(() => busy.classList.add('on'), 180);
       const prevRects = S.rects;
-      const { vis, vedges } = computeVisible();
+      /* si el foco del teclado está en una tarjeta (o en una pastilla «más») que se va a rehacer, se le devuelve después */
+      const ae = document.activeElement, focusId = ae && host.contains(ae) && ae.closest ? ((ae.closest('.gx-node') || {}).dataset || {}).id || (ae.closest('[data-more]') && ae.closest('[data-more]').getAttribute('data-more')) : null;
+      syncFlags();
+      const { vis, vedges, hidden } = computeVisible();
+      /* `layout.density`: "compact" siempre; "auto", cuando hay muchos ficheros a la vista a la vez */
+      if (FLAT) {
+        const dm = spec.layout && spec.layout.density, nLeaves = [...vis].filter(id => !M.get(id).children.length).length;
+        const dense = dm === 'compact' || (dm === 'auto' && nLeaves > 140);
+        for (const n of M.values()) n._dense = dense && !n.children.length;
+      }
       let L;
-      try { L = await layout(vis, vedges); } catch (err) { busy.classList.remove('on'); clearTimeout(busyTimer); if (global.console) console.error(err); return; }
+      try { L = await layout(vis, vedges, hidden); } catch (err) { busy.classList.remove('on'); clearTimeout(busyTimer); if (global.console) console.error(err); return; }
       clearTimeout(busyTimer); busy.classList.remove('on');
       if (my !== S.layoutId) return;
       const prevVisible = S.visible;
@@ -907,7 +1166,11 @@
       }
       const prevBands = new Map(S.bands.map(b => [b.id, b]));
       S.bands = bands;
-      S.visible = vis; S.vedges = vedges; S.rects = L.rects; S.bbox = L.bbox;
+      S.visible = vis; S.vedges = vedges; S.rects = L.rects; S.bbox = L.bbox; S.order = L.order || null;
+      /* ejes, marcas y curvas de un layout propio: se rehacen con cada layout */
+      gDeco.innerHTML = '';
+      (L.deco || []).forEach(t => toSVG(t, gDeco));
+      if (L.deco && L.deco.length && !reduce) { gDeco.classList.remove('gx-in'); raf(() => gDeco.classList.add('gx-in')); }
       syncDepthUI();
 
       /* cámara: la pieza que se abre o se cierra se queda donde estaba en pantalla */
@@ -916,19 +1179,29 @@
         const a = prevRects.get(o.anchor), b = L.rects.get(o.anchor);
         camTo = { k: S.cam.k, x: S.cam.x - (b.x - a.x) * S.cam.k, y: S.cam.y - (b.y - a.y) * S.cam.k };
       } else if (o.focus) camTo = camFor(bboxOf(o.focus.nodes, o.focus.edges) || L.bbox, o.pad);
-      else if (o.fit || prevRects.size === 0) camTo = camFor(L.bbox);
+      else if (o.fit || prevRects.size === 0) camTo = fitCam(L.bbox);
 
       const items = [];
-      const next = new Map();
+      const next = new Map(), handled = new Set();
       const order = [...vis].sort((a, b) => M.get(a).depth - M.get(b).depth);
       for (const id of order) {
         const n = M.get(id), r = L.rects.get(id); if (!r) continue;
         const kind = isGroup(id) ? 'group' : 'leaf';
         let el = S.els.get(id);
         if (el && el._kind !== kind) { fadeOut(el); el = null; }
+        /* una forma se dibuja a su tamaño: si cambia (al girar el diagrama, la bifurcación se tumba),
+           se rehace y se anima desde el rectángulo que ocupaba */
+        let reshaped = null, morph = null;
+        if (el && el._shape && kind === 'leaf') {
+          const off = Math.abs(r.w - el._sz.w) > .5 || Math.abs(r.h - el._sz.h) > .5;
+          /* En el árbol no se escala: el detalle se despliega como una persiana y una carpeta que se abre
+             funde su tarjeta de grupo con la de carpeta abierta, cada una dibujada a su tamaño */
+          if (FLAT && (off || el._sig !== sigOf(n))) { morph = { old: el, from: el._r || r, same: el._sh === effShape(n) }; handled.add(el); el = null; }
+          else if (!FLAT && (off || el._side !== n.labelSide)) { reshaped = el._r; el.remove(); el = null; }
+        }
         const fresh = !el;
         if (fresh) {
-          el = kind === 'group' ? makeGroup(n) : makeLeaf(n);
+          el = kind === 'group' ? makeGroup(n) : makeLeaf(n, r);
           (kind === 'group' ? gGroups : gNodes).appendChild(el);
           bindNode(el, n.id);
         } else if (kind === 'group') gGroups.appendChild(el);
@@ -939,12 +1212,21 @@
           const anc = [n.parent].concat(ancestors(M, id)).find(a => a != null && prevRects.has(a));
           const pr = prevRects.get(id) || (anc ? prevRects.get(anc) : null);
           from = pr ? { x: pr.x + pr.w / 2 - r.w * .3, y: pr.y + pr.h / 2 - r.h * .3, w: r.w * .6, h: r.h * .6 } : { x: r.x + r.w * .2, y: r.y + r.h * .2, w: r.w * .6, h: r.h * .6 };
-          el.style.opacity = 0;
+          if (reshaped) from = reshaped; else if (!morph) el.style.opacity = 0;
         }
-        items.push({ el, n, from, to: r, fresh, kind });
+        if (morph) {
+          const o = morph.old, a = morph.from, oz = o._sz, at = { x: a.x, y: a.y }, clip = { w0: oz.w, h0: oz.h, w1: r.w, h1: r.h };
+          const nf = Object.assign({}, at, { w: r.w, h: r.h }), of = Object.assign({}, at, { w: oz.w, h: oz.h }), ot = { x: r.x, y: r.y, w: oz.w, h: oz.h };
+          if (morph.same && r.w >= oz.w - .5 && r.h >= oz.h - .5) { o.remove(); items.push({ el, n, from: nf, to: r, kind, clip }); }
+          else if (morph.same) { el.style.opacity = 0; items.push({ el, n, from: nf, to: r, kind }, { el: o, n, from: of, to: ot, kind, dying: true, clip }); }
+          else { el.style.opacity = 0; items.push({ el, n, from: nf, to: r, kind, fade: 1 }, { el: o, n, from: of, to: ot, kind, dying: true, fade: -1 }); }
+          continue;
+        }
+        items.push({ el, n, from, to: r, fresh: fresh && !reshaped, kind });
       }
       for (const [id, el] of S.els) {
         if (next.has(id) && next.get(id) === el) continue;
+        if (handled.has(el)) continue;
         if (!el.isConnected) continue;
         let p = M.get(id).parent; while (p != null && !L.rects.has(p)) p = M.get(p).parent;
         const target = p != null && isGroup(p) ? null : (p != null ? L.rects.get(p) : null);
@@ -971,8 +1253,28 @@
       const pf = S.frameBox || fb;
       S.frameBox = fb;
       frameR.style.display = fb ? '' : 'none';
+      /* líneas del árbol: las que siguen se reutilizan, las nuevas aparecen y las que sobran se apagan */
+      const wireNext = new Map();
+      (L.wires || []).forEach(w => {
+        const key = `${w.kind}:${w.from}>${w.to != null ? w.to : '+'}`;
+        let o = S.wires.get(key);
+        /* las de «··· N más» van debajo: su tramo de tronco no tapa el de las tarjetas */
+        if (!o) { o = { el: s('path', { class: 'gx-wire' }), fresh: true }; o.el.style.opacity = 0; if (w.more) gWires.insertBefore(o.el, gWires.firstChild); else gWires.appendChild(o.el); } else o.fresh = false;
+        const tone = w.tone || (w.to != null ? M.get(w.to).delta : null);
+        o.w = w; o.el.setAttribute('class', `gx-wire k-${w.kind}${w.more ? ' more' : ''}${tone ? ' d-' + tone : ''}`);
+        wireNext.set(key, o);
+      });
+      const wireOut = [...S.wires.entries()].filter(([k]) => !wireNext.has(k)).map(([, o]) => o);
+      S.wires = wireNext; S.treePos = L.pos || null;
+      const headNow = (id, el) => (L.heads && L.heads.get(id)) || (el && el._head) || null;
+      /* en el árbol, los hijos que aparecen al abrir una carpeta entran en cascada, uno tras otro */
+      if (FLAT && !reduce) {
+        const k = new Map();
+        items.filter(it => it.fresh).forEach(it => { const p = it.n.parent; const i = k.get(p) || 0; k.set(p, i + 1); it.delay = Math.min(i * .045, .4); });
+      }
       const camFrom = Object.assign({}, S.cam);
-      await tween(t => {
+      await tween(t0 => {
+        const t = t0;
         for (const it of bandItems) {
           const r = it.from ? lerpRect(it.from, it.to, t) : it.to;
           placeBand(it.el, Object.assign({}, it.to, r), it.n);
@@ -982,16 +1284,36 @@
           const f = pf ? lerpRect(pf, fb, t) : fb;
           [clipR, frameR].forEach(r => { r.setAttribute('x', f.x); r.setAttribute('y', f.y); r.setAttribute('width', f.w); r.setAttribute('height', f.h); });
         }
+        const cur = new Map();
         for (const it of items) {
+          const t = it.delay ? clamp((t0 - it.delay) / (1 - it.delay), 0, 1) : t0;
           const r = lerpRect(it.from || it.to, it.to, it.from ? t : 1);
           (it.kind === 'group' ? placeGroup : placeLeaf)(it.el, r, it.n);
           it.el._r = it.dying ? it.from : it.to;
           if (it.fresh) it.el.style.opacity = t;
-          if (it.dying) it.el.style.opacity = 1 - t;
+          if (it.dying && !it.clip) it.el.style.opacity = 1 - t;
+          if (it.fade > 0) it.el.style.opacity = t;
+          /* persiana: lo que se ve de la tarjeta va del tamaño de antes al de después */
+          if (it.clip) {
+            const c = it.clip, z = it.el._sz, cw = lerp(c.w0, c.w1, t), ch = lerp(c.h0, c.h1, t);
+            it.el.style.clipPath = t < 1 ? `inset(-12px ${Math.max(0, z.w - cw).toFixed(1)}px ${Math.max(0, z.h - ch).toFixed(1)}px -12px round 10px)` : '';
+          }
+          /* las líneas del árbol siguen a la tarjeta tal como se ve (con la persiana a medio abrir) */
+          const vr = it.clip ? { x: r.x, y: r.y, w: lerp(it.clip.w0, it.clip.w1, t), h: lerp(it.clip.h0, it.clip.h1, t) } : r;
+          if (!it.dying || !cur.has(it.n.id)) cur.set(it.n.id, { r: vr, el: it.el });
         }
-        if (camTo) setCam(lerpCam(camFrom, camTo, t));
+        const drawWire = (o, op) => {
+          const w = o.w, a = cur.get(w.from), b = w.toBox ? { r: w.toBox } : w.to != null ? cur.get(w.to) : a, p = w.prev != null ? cur.get(w.prev) : null;
+          if (a && b && (w.prev == null || p)) o.el.setAttribute('d', LAYOUTS.wire(w.kind, a.r, b.r, headNow(w.from, a.el) || a.r.h, w.toBox ? w.toBox.h : headNow(w.to, b.el) || b.r.h, p && p.r, p && (headNow(w.prev, p.el) || p.r.h)));
+          if (op != null) o.el.style.opacity = op;
+        };
+        wireNext.forEach(o => drawWire(o, o.fresh ? t0 : null));
+        wireOut.forEach(o => drawWire(o, 1 - t0));
+        if (camTo) setCam(lerpCam(camFrom, camTo, t0));
       }, (items.length ? dur : 0));
-      items.forEach(it => { if (it.dying) it.el.remove(); else { it.el.style.opacity = ''; it.el._r = it.to; } });
+      items.forEach(it => { if (it.dying) it.el.remove(); else { it.el.style.opacity = ''; it.el._r = it.to; } it.el.style.clipPath = ''; });
+      wireOut.forEach(o => o.el.remove());
+      wireNext.forEach(o => { o.el.style.opacity = ''; o.fresh = false; });
       bandItems.forEach(it => { it.el.style.opacity = ''; });
       if (my !== S.layoutId) return;
 
@@ -1010,7 +1332,15 @@
       }
       applyHighlight();
       drawMini();
+      if (focusId && (!document.activeElement || !host.contains(document.activeElement) || document.activeElement === host)) {
+        const el = S.els.get(focusId) || (M.has(focusId) ? S.els.get(repOf(focusId)) : null);
+        if (el && el.focus) try { el.focus({ preventScroll: true }); } catch (_) { }
+      }
       if (o.after) o.after();
+    }
+    /* lo que una forma necesita saber del estado: si su detalle está abierto y cuántas coincidencias del filtro tiene dentro */
+    function syncFlags() {
+      for (const n of M.values()) { n._open = S.detail.has(n.id); n._hits = S.focus ? (S.focus.hits.get(n.id) || 0) : 0; }
     }
     function fadeOut(el) { el.style.transition = 'opacity .18s'; el.style.opacity = 0; setTimeout(() => el.remove(), 200); }
     function tween(fn, ms) {
@@ -1063,6 +1393,15 @@
       const k = clamp(Math.min((W - pad * 2) / Math.max(b.w, 1), (H - pad * 2) / Math.max(b.h, 1)), .12, maxK || 1.6);
       return { k, x: (W - b.w * k) / 2 - b.x * k, y: (H - b.h * k) / 2 - b.y * k };
     }
+    /* Encuadre del diagrama entero. Un árbol largo, encajado entero, deja tarjetas ilegibles: si no cabe
+       a un tamaño que se lea, se encaja a lo ancho y se empieza por arriba (el resto, desplazando). */
+    function fitCam(b) {
+      if (!FLAT || !b) return camFor(b);
+      const all = camFor(b, null, null, 1.1);
+      if (all.k >= .72) return all;
+      const v = viewSize(), pad = 36, k = clamp((v.w - pad * 2) / Math.max(b.w, 1), .72, 1.05);
+      return { k, x: b.w * k < v.w - pad * 2 ? (v.w - b.w * k) / 2 - b.x * k : pad - b.x * k, y: pad - b.y * k };
+    }
     function bboxOf(nodes, edges) {
       const R = [];
       (nodes || []).forEach(id => { const r = S.rects.get(repOf(id)); if (r) R.push(r); });
@@ -1099,7 +1438,7 @@
         const [a, b] = [...ptrs.values()];
         pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; drag = null; return;
       }
-      if (ev.target.closest('.gx-node,.gx-ghead,.gx-bandhead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-fpill')) return;
+      if (ev.target.closest('.gx-node,.gx-ghead,.gx-bandhead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-fpill,.gx-more')) return;
       if (ev.pointerType === 'touch' && !ownsOneFinger()) { touchHint(); return; }
       const c = which() === 'seq' ? S.seqCam : S.cam;
       drag = { x: ev.clientX, y: ev.clientY, cx: c.x, cy: c.y, moved: 0 };
@@ -1123,7 +1462,7 @@
     });
     const endPtr = ev => {
       ptrs.delete(ev.pointerId); if (ptrs.size < 2) pinch = null;
-      if (drag) { if (drag.moved < 4 && !ev.target.closest('.gx-node,.gx-ghead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-panel')) clearSelection(); drag = null; stage.classList.remove('gx-grab'); }
+      if (drag) { if (drag.moved < 4 && !ev.target.closest('.gx-node,.gx-ghead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-panel,.gx-more')) clearSelection(); drag = null; stage.classList.remove('gx-grab'); }
     };
     stage.addEventListener('pointerup', endPtr); stage.addEventListener('pointercancel', endPtr);
     /* si la pieza bajo el puntero se sustituye al relayoutear, el navegador no emite su
@@ -1172,8 +1511,9 @@
         <div class="gx-tip-m">${nodePill(n)}<span>${esc(kindLabel(n.kind))}</span>${n.laneId && !n.isLane ? `<span>${esc(M.get(n.laneId).label)}</span>` : ''}</div>
         ${sum ? `<p>${sum}</p>` : ''}
         ${(n.links || []).length ? `<div class="gx-tip-f">${(n.links || []).map(l => resolveLink(l, spec)).filter(Boolean).slice(0, 4).map(l => `<span>${iconHTML(IC[l.kind] ? l.kind : 'url')} ${esc(l.kind === 'node' ? (M.get(l.target) || {}).label || l.label : l.label)}</span>`).join('')}</div>` : ''}
-        <div class="gx-tip-f">${statTxt(n.stat)}${deg ? `<span>${deg.out}↗ ${deg.in}↘</span>` : ''}${n.children.length ? `<span>${n.descendants} ${esc(T.items)}</span>` : ''}</div>
-        <div class="gx-tip-k">${esc(T.clickHint)} · ${esc(T.dblHint)}${n.children.length && !S.expanded.has(n.id) ? ' · ' + esc(T.expHint) : ''}${n.stat && n.stat.files ? ' · ± ' + esc(T.openDiff).toLowerCase() : ''}</div>`;
+        <div class="gx-tip-f">${statTxt(n.stat)}${deg ? `<span>${deg.out}↗ ${deg.in}↘</span>` : ''}${n.children.length ? `<span>${esc(nItems(n.descendants))}</span>` : ''}</div>
+        ${n.path && !n.isLane ? `<code class="gx-tip-p">${esc(n.path)}</code>` : ''}
+        <div class="gx-tip-k">${FLAT ? esc(n.children.length ? T.treeHint : T.leafHint) : `${esc(T.clickHint)} · ${esc(T.dblHint)}${n.children.length && !S.expanded.has(n.id) ? ' · ' + esc(T.expHint) : ''}${n.stat && n.stat.files ? ' · ± ' + esc(T.openDiff).toLowerCase() : ''}`}</div>`;
     }
     function edgeTip(v) {
       const lines = v.list.slice(0, 5).map(e => `<li><b>${esc(M.get(e.from).label)}</b> → <b>${esc(M.get(e.to).label)}</b>${e.label ? ` · ${esc(e.label)}` : ''}</li>`).join('');
@@ -1198,9 +1538,14 @@
       target.addEventListener('pointerenter', ev => { if (S.tour >= 0 && S.present) return; hoverLit(id); showTip(nodeTip(M.get(id)), ev); });
       target.addEventListener('pointermove', moveTip);
       target.addEventListener('pointerleave', () => { hideTip(); hoverLit(null); });
-      target.addEventListener('click', ev => { ev.stopPropagation(); if (ev.detail > 1) return; select(id); });
-      target.addEventListener('dblclick', ev => { ev.stopPropagation(); focusNode(id); });
-      target.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(id); } });
+      /* en el árbol, el clic navega como en un explorador: una carpeta se abre o se pliega, un fichero
+         abre su detalle; el panel queda en el doble clic (y en Intro) */
+      target.addEventListener('click', ev => { ev.stopPropagation(); if (ev.detail > 1) return; if (FLAT) treeClick(id); else select(id); });
+      target.addEventListener('dblclick', ev => { ev.stopPropagation(); if (FLAT) select(id); else focusNode(id); });
+      target.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' || (ev.key === ' ' && !FLAT)) { ev.preventDefault(); select(id); }
+        else if (ev.key === ' ' && FLAT) { ev.preventDefault(); ev.stopPropagation(); mark(id); toggleDetail(id); }
+      });
     }
     function bindEdge(el, v) {
       el.addEventListener('pointerenter', ev => { hoverLit(null, v); showTip(edgeTip(v), ev); });
@@ -1220,17 +1565,50 @@
         nodes.add(id);
         for (const e of S.vedges) if (e.from === id || e.to === id) { edges.add(e.id); nodes.add(e.from); nodes.add(e.to); }
       }
-      hoverSet = { nodes, edges }; applyHighlight();
+      /* en el árbol se ilumina el camino desde la raíz y no se apaga lo demás: se sigue leyendo el árbol entero */
+      if (FLAT && id) { const chain = new Set([id, ...ancestors(M, id)]); chain.forEach(x => nodes.add(x)); hoverSet = { nodes, edges, chain, soft: !edges.size }; }
+      else hoverSet = { nodes, edges };
+      applyHighlight();
     }
     let stepSet = null;
     function applyHighlight() {
       const set = hoverSet || S.trace || stepSet;
-      world.classList.toggle('gx-dim', !!set);
+      world.classList.toggle('gx-dim', !!set && !set.soft);
+      const F = S.focus;
       for (const [id, el] of S.els) {
         const lit = set ? (set.nodes.has(id) || (isGroup(id) && [...set.nodes].some(x => isAncestor(M, id, x)))) : false;
         el.classList.toggle('lit', lit);
         el.classList.toggle('sel', S.selected === id);
         el.classList.toggle('faded', S.onlyChanges && M.get(id).delta === 'unchanged' && !isGroup(id));
+        /* filtro: lo que coincide se marca; lo que no está en ninguna ruta referenciada se apaga */
+        el.classList.toggle('hit', !!(F && F.ids.has(id)));
+        el.classList.toggle('off', !!(F && !F.empty && !F.keep.has(id)));
+      }
+      /* líneas del árbol: el camino iluminado (al pasar), el de la pieza seleccionada y los del filtro */
+      if (S.wires.size) {
+        /* Un tramo está en el camino hacia una pieza si sale de uno de sus antepasados y llega (el codo) o
+           pasa (el tronco, que sigue hacia los hermanos de más allá) hasta el hijo que lleva a ella. */
+        const P = S.treePos || new Map();
+        const childOf = list => { const m = new Map(); list.forEach(id => { const n = M.get(id); if (n && n.parent != null) m.set(n.parent, id); }); return m; };
+        const reach = (w, c) => {
+          if (c == null || w.more) return false;
+          if (w.kind === 'cstem') return true;
+          const q = P.get(c); if (!q) return false;
+          return /elbow/.test(w.kind) ? c === w.to : q.side === w.side && q.idx >= w.idx;
+        };
+        const selIds = S.selected && M.has(S.selected) ? [S.selected, ...ancestors(M, S.selected)] : [];
+        const viaSel = childOf(selIds), viaHover = childOf(set && set.chain ? [...set.chain] : []);
+        /* con el filtro, el tramo lleva a algo referenciado si alguno de los hijos a los que llega está en sus rutas */
+        const kept = new Map();
+        if (F) for (const [c, q] of P) { const n = M.get(c); if (n && F.keep.has(c)) { const k = n.parent + '|' + q.side; kept.set(k, Math.max(kept.has(k) ? kept.get(k) : -1, q.idx)); kept.set(n.parent + '|*', 1); } }
+        const top = [];
+        for (const o of S.wires.values()) {
+          const w = o.w, lit = reach(w, viaHover.get(w.from)), sel = reach(w, viaSel.get(w.from));
+          const on = !!F && !w.more && (w.kind === 'cstem' ? kept.has(w.from + '|*') : /elbow/.test(w.kind) ? F.keep.has(w.to) : (kept.has(w.from + '|' + w.side) && kept.get(w.from + '|' + w.side) >= w.idx));
+          o.el.classList.toggle('lit', lit); o.el.classList.toggle('sel', sel); o.el.classList.toggle('on', on);
+          if (lit || sel) top.push(o.el);
+        }
+        top.forEach(el => gWires.appendChild(el));
       }
       for (const [id, el] of S.bandEls) {
         const lit = set ? [...set.nodes].some(x => x === id || isAncestor(M, id, x)) : false;
@@ -1240,7 +1618,7 @@
         const v = x.g._v;
         const lit = set ? set.edges.has(v.id) : false;
         x.g.classList.toggle('lit', lit); if (x.lab) x.lab.classList.toggle('lit', lit);
-        x.g._line.setAttribute('marker-end', lit && !v.hero ? `url(#${I}-mk-lit)` : (v.cvar ? colorMarker(v.cvar, I) : `url(#${I}-mk-${v.delta})`));
+        markEdge(x.g._line, v, lit);
         const faded = S.onlyChanges && v.delta === 'unchanged';
         x.g.classList.toggle('faded', faded); if (x.lab) x.lab.classList.toggle('faded', faded);
         x.g.classList.toggle('sel', S.selected === v.id);
@@ -1427,23 +1805,138 @@
       if (S.expanded.has(id)) { S.expanded.delete(id); descendantsOf(id).forEach(d => S.expanded.delete(d)); }
       else S.expanded.add(id);
       hideTip(); hoverSet = null;
-      return relayout({ anchor: id, after: () => { if (S.selected === id) renderPanel(); } });
+      /* el panel se actualiza si ya estaba abierto; plegar o desplegar no lo abre */
+      return relayout({ anchor: id, after: () => { if (S.selected === id && panel.classList.contains('on')) renderPanel(); } });
     }
+    /* --- árbol: navegar como en un explorador --- */
+    /* marca la pieza (cursor del teclado, selección) sin abrir el panel; si ya estaba abierto, lo sigue */
+    function mark(id) {
+      S.selected = id; S.selEdge = null; S.trace = null;
+      if (panel.classList.contains('on')) renderPanel();
+      applyHighlight();
+    }
+    function treeClick(id) {
+      const n = M.get(id); if (!n) return;
+      mark(id);
+      return n.children.length ? toggle(id) : toggleDetail(id);
+    }
+    /* abre o cierra la tarjeta de detalle de una pieza; la pieza se queda donde estaba en pantalla */
+    function toggleDetail(id, on) {
+      if (!M.has(id)) return;
+      const open = on != null ? !!on : !S.detail.has(id);
+      if (open === S.detail.has(id)) return;
+      if (open) S.detail.add(id); else S.detail.delete(id);
+      hideTip(); hoverSet = null;
+      return relayout({ anchor: id });
+    }
+    /* la pieza entra en pantalla si el cursor la saca de ella */
+    function inView(id) {
+      const r = S.rects.get(id); if (!r) return;
+      const v = viewSize(), c = S.cam, x0 = r.x * c.k + c.x, y0 = r.y * c.k + c.y, x1 = x0 + r.w * c.k, y1 = y0 + r.h * c.k;
+      if (x0 >= 16 && y0 >= 16 && x1 <= v.w - 16 && y1 <= v.h - 16) return;
+      animateCam({ k: c.k, x: x0 < 16 || x1 > v.w - 16 ? v.w / 2 - (r.x + r.w / 2) * c.k : c.x, y: v.h / 2 - (r.y + r.h / 2) * c.k });
+    }
+    function treeKey(k) {
+      const order = (S.order || []).filter(id => S.visible.has(id));
+      if (!order.length) return;
+      const cur = S.selected && order.includes(S.selected) ? S.selected : null;
+      const go = id => { if (id == null) return; mark(id); inView(id); const el = S.els.get(id); if (el && el.focus) try { el.focus({ preventScroll: true }); } catch (_) { } };
+      if (!cur) return go(order[0]);
+      const n = M.get(cur), i = order.indexOf(cur);
+      if (k === 'ArrowDown') go(order[Math.min(i + 1, order.length - 1)]);
+      else if (k === 'ArrowUp') go(order[Math.max(i - 1, 0)]);
+      else if (k === 'ArrowRight') { if (n.children.length && !S.expanded.has(cur)) toggle(cur); else go(n.children.find(c => S.visible.has(c))); }
+      else if (k === 'ArrowLeft') { if (n.children.length && S.expanded.has(cur)) toggle(cur); else if (n.parent != null && S.visible.has(n.parent)) go(n.parent); }
+    }
+
+    /* --- filtro por rutas: deja abiertas solo las ramas que llevan a lo referenciado --- */
+    /* `ids`: las piezas referenciadas (una búsqueda, los ficheros de un diff). Se abren sus antepasados y
+       se pliega todo lo demás; con `prune` (por defecto) lo que no lleva a nada referenciado ni se ve.
+       Al quitar el filtro vuelve lo que estaba abierto antes. */
+    function setFocus(ids, o) {
+      o = o || {};
+      const list = [...new Set([...ids].filter(id => M.has(id) && !M.get(id).isLane))];
+      const keep = new Set(), hits = new Map();
+      list.forEach(id => { keep.add(id); ancestors(M, id).forEach(a => { keep.add(a); hits.set(a, (hits.get(a) || 0) + 1); }); });
+      const prev = S.focus ? S.focus.prev : new Set(S.expanded);
+      /* una búsqueda sobre otro filtro (los cambios de un diff) lo recuerda: al vaciarla, vuelve a él */
+      const base = o.key === 'search' && S.focus ? (S.focus.key === 'search' ? S.focus.base : { ids: [...S.focus.ids], o: { label: S.focus.label, key: S.focus.key, prune: S.focus.prune } }) : null;
+      /* sin coincidencias no se pliega nada: el árbol se queda como estaba y la barra lo avisa */
+      const empty = !list.length;
+      if (empty && S.focus) S.expanded = new Set(prev);
+      S.focus = { ids: new Set(list), keep, hits, prune: !empty && o.prune !== false, label: o.label || '', key: o.key || 'custom', prev, empty, base };
+      S.unpruned = new Set();
+      if (!empty) { S.expanded = new Set(); list.forEach(id => ancestors(M, id).forEach(a => S.expanded.add(a))); }
+      syncFilterUI();
+    }
+    function filter(sel, o) {
+      const ids = typeof sel === 'function' ? [...M.values()].filter(n => !n.isLane && sel(n)).map(n => n.id) : [].concat(sel || []);
+      setFocus(ids, o);
+      return relayout({ fit: !(o && o.fit === false), after: ping });
+    }
+    /* al filtrar, lo que coincide hace un pulso: se ve dónde ha caído cada resultado */
+    function ping() {
+      if (reduce || !S.focus) return;
+      const els = [...S.focus.ids].map(id => S.els.get(id)).filter(Boolean).slice(0, 60);
+      els.forEach(el => { el.classList.remove('gx-ping'); void el.getBBox; el.classList.add('gx-ping'); });
+      setTimeout(() => els.forEach(el => el.classList.remove('gx-ping')), 1300);
+    }
+    /* sin relayout: lo usan los botones de profundidad, que ya recolocan */
+    function dropFocus() { clearTimeout(S.qT); if (!S.focus) return false; S.focus = null; S.unpruned = new Set(); syncFilterUI(); return true; }
+    function clearFilter() {
+      clearTimeout(S.qT);
+      if (!S.focus) return;
+      if (searchIn.value) searchIn.value = '';
+      const F = S.focus;
+      if (F.base) { S.focus = null; setFocus(F.base.ids, Object.assign({}, F.base.o)); S.focus.prev = F.prev; return relayout({ fit: true }); }
+      dropFocus(); S.expanded = new Set(F.prev);
+      return relayout({ fit: true });
+    }
+    function syncFilterUI() {
+      const F = S.focus;
+      filterPill.classList.toggle('on', !!F); filterPill.classList.toggle('warn', !!(F && F.empty));
+      /* en una búsqueda, lo que coincide lleva anillo; en los cambios de un diff ya lo dice su color */
+      host.classList.toggle('gx-filter-q', !!(F && F.key !== 'changes'));
+      filterPill.innerHTML = F ? `<span>${esc(F.empty ? T.noMatch : T.filter)}${F.label ? ' · ' + esc(F.label) : ''}</span><b title="${esc(T.matches)}">${F.ids.size}</b><button type="button" class="gx-x2" aria-label="${esc(T.clearFilter)}" title="${esc(T.clearFilter)}">×</button>` : '';
+      if (F) filterPill.querySelector('button').onclick = () => clearFilter();
+      bOnly.classList.toggle('on', FLAT ? !!(F && F.key === 'changes') : S.onlyChanges);
+      filterSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', !!(F && F.key === b.dataset.key)));
+    }
+
     async function reveal(id, noSelect) {
       if (!M.has(id)) return;
       if (S.view !== 'graph') showView('graph');
       let changed = false;
       ancestors(M, id).forEach(a => { if (!S.expanded.has(a)) { S.expanded.add(a); changed = true; } });
+      if (S.focus && S.focus.prune && !S.focus.keep.has(id)) {
+        ancestors(M, id).forEach(a => { if (!S.unpruned.has(a)) { S.unpruned.add(a); changed = true; } });
+        const root = [id].concat(ancestors(M, id)).pop();
+        if (!S.focus.keep.has(root) && !S.unpruned.has(ROOTS)) { S.unpruned.add(ROOTS); changed = true; }
+      }
       if (changed) await relayout({});
       if (!noSelect) select(id);
       await animateCam(camFor(bboxOf([id]) || S.bbox, 80));
     }
 
     /* --- búsqueda --- */
-    const index = [...M.values()].map(n => ({ id: n.id, key: fold([n.label, n.id, n.subtitle, (n.tags || []).join(' ')].join(' ')), n }));
+    const index = [...M.values()].map(n => ({ id: n.id, key: fold([n.label, n.id, n.subtitle, n.path, (n.tags || []).join(' ')].join(' ')), name: fold([n.label, n.subtitle, (n.tags || []).join(' ')].join(' ')), path: fold(n.path || ''), n }));
+    /* el filtro del árbol busca en el nombre; en la ruta, solo si la consulta lleva «/» (si no, «s» casaría con todo src/) */
+    const MAX_HITS = 400;
+    const matchQ = q => index.filter(x => !x.n.isLane && (q.includes('/') ? x.path.includes(q) || x.name.includes(q) : x.name.includes(q))).slice(0, MAX_HITS).map(x => x.id);
     let hits = [], hitI = 0;
     searchIn.addEventListener('input', () => {
       const q = fold(searchIn.value.trim());
+      /* en el árbol, buscar también filtra: quedan abiertas solo las ramas con coincidencias */
+      if (FLAT) {
+        clearTimeout(S.qT);
+        S.qT = setTimeout(() => {
+          /* se lee el campo al dispararse: Esc o elegir un resultado lo habrán vaciado */
+          const raw = searchIn.value.trim(), q2 = fold(raw);
+          if (!q2) { if (S.focus && S.focus.key === 'search') clearFilter(); return; }
+          if (q2.length < 2) return;
+          filter(matchQ(q2), { label: '“' + raw + '”', key: 'search' });
+        }, 260);
+      }
       if (!q) { searchList.classList.remove('on'); return; }
       hits = index.filter(x => x.key.includes(q)).slice(0, 8); hitI = 0;
       searchList.innerHTML = hits.length ? hits.map((x, i) => `<button type="button" class="${i === 0 ? 'on' : ''}" data-go="${esc(x.id)}">${iconHTML(x.n.kind)}<span><b>${esc(x.n.label)}</b><small>${esc(ancestors(M, x.id).reverse().map(a => M.get(a).label).join(' › '))}</small></span></button>`).join('') : `<div class="gx-nomatch">${esc(T.noMatch)}</div>`;
@@ -1456,11 +1949,11 @@
         hitI = (hitI + (ev.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length;
         searchList.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === hitI));
       } else if (ev.key === 'Enter' && hits[hitI]) { ev.preventDefault(); pickHit(hits[hitI].id); }
-      else if (ev.key === 'Escape') { searchIn.value = ''; searchList.classList.remove('on'); }
+      else if (ev.key === 'Escape') { clearTimeout(S.qT); searchIn.value = ''; searchList.classList.remove('on'); if (S.focus && S.focus.key === 'search') clearFilter(); }
       ev.stopPropagation();
     });
     searchIn.addEventListener('blur', () => setTimeout(() => searchList.classList.remove('on'), 120));
-    function pickHit(id) { searchList.classList.remove('on'); searchIn.value = ''; searchIn.blur(); reveal(id); }
+    function pickHit(id) { clearTimeout(S.qT); searchList.classList.remove('on'); searchIn.value = ''; searchIn.blur(); reveal(id); }
 
     /* --- filtros, leyenda, ajustar --- */
     const syncDir = () => { bDir.innerHTML = S.dir === 'down' ? '↧' : '↦'; bDir.title = `${T.orient}: ${S.dir === 'down' ? '↓' : '→'}`; };
@@ -1474,7 +1967,34 @@
       S.frames = !S.frames; bFrames.classList.toggle('on', S.frames); host.classList.toggle('gx-framed', framed());
       S.frameBox = null; relayout({ fit: true });
     };
-    bOnly.onclick = () => { S.onlyChanges = !S.onlyChanges; bOnly.classList.toggle('on', S.onlyChanges); applyHighlight(); };
+    const changedIds = () => [...M.values()].filter(n => !n.isLane && !n.children.length && n.delta !== 'unchanged').map(n => n.id);
+    bOnly.onclick = () => {
+      if (FLAT) { if (S.focus && S.focus.key === 'changes') clearFilter(); else filter(changedIds(), { label: T.onlyChanges, key: 'changes' }); return; }
+      S.onlyChanges = !S.onlyChanges; bOnly.classList.toggle('on', S.onlyChanges); applyHighlight();
+    };
+    if (FLAT && !HAS_CHANGES) bOnly.style.display = 'none';
+    /* filtros con nombre del JSON (`filters`): ids, rutas, deltas, tipos o una búsqueda */
+    const resolveFilter = f => {
+      const out = new Set(f.nodes || []);
+      const paths = new Set(f.paths || []), deltas = new Set(f.delta ? [].concat(f.delta) : []), kinds = new Set(f.kinds || []);
+      for (const n of M.values()) {
+        if (n.isLane) continue;
+        if (paths.has(n.path) || (deltas.size && deltas.has(n.delta) && !n.children.length) || kinds.has(n.kind)) out.add(n.id);
+      }
+      if (f.query) matchQ(fold(f.query)).forEach(id => out.add(id));
+      return [...out].filter(id => M.has(id));
+    };
+    (spec.filters || []).forEach((f, i) => {
+      if (!f || !f.label) return;
+      const b = btn(filterSeg, f.label, f.label, 'gx-seg-b'); b.dataset.key = 'f' + i;
+      b.onclick = () => (S.focus && S.focus.key === 'f' + i ? clearFilter() : filter(resolveFilter(f), { label: f.label, key: 'f' + i, prune: f.prune }));
+    });
+    if (!filterSeg.children.length) filterSeg.style.display = 'none';
+    /* la pastilla «··· N más» de una carpeta filtrada enseña lo que el filtro ocultaba */
+    const moreOf = ev => ev.target.closest && ev.target.closest('[data-more]');
+    const showMore = m => { const id = m.getAttribute('data-more'); S.unpruned.add(id); relayout({ anchor: id }); };
+    gDeco.addEventListener('click', ev => { const m = moreOf(ev); if (m) { ev.stopPropagation(); showMore(m); } });
+    gDeco.addEventListener('keydown', ev => { const m = moreOf(ev); if (m && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); ev.stopPropagation(); showMore(m); } });
     const kindsUsed = [...new Set([...M.values()].filter(n => !n.isLane).map(n => n.kind))];
     const LG = spec.legend || {};
     const swatches = Object.keys(STATUSES).length
@@ -1492,7 +2012,7 @@
       <li><span class="gx-lg-agg">+2</span>${esc(T.edgeKinds.agg)}</li></ul><ul class="gx-lg-k">
       ${kindsUsed.map(k => `<li>${iconHTML(k)}${esc(kindLabel(k))}</li>`).join('')}</ul>`;
     bLegend.onclick = () => { legend.classList.toggle('on'); bLegend.classList.toggle('on', legend.classList.contains('on')); };
-    bFit.onclick = () => S.view === 'graph' ? animateCam(camFor(S.bbox)) : animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
+    bFit.onclick = () => S.view === 'graph' ? animateCam(fitCam(S.bbox)) : animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
 
     /* --- minimapa --- */
     const miniWorld = s('g', null, miniSvg), miniView = s('rect', { class: 'gx-mini-v' }, miniSvg);
@@ -1529,18 +2049,84 @@
 
     /* --- vista de secuencia --- */
     function setSeqCam(c) { S.seqCam = c; seqWorld.setAttribute('transform', `translate(${c.x},${c.y}) scale(${c.k})`); }
+    /* los mensajes que dibujan algo en la secuencia (no marcos, notas ni activaciones) */
+    const isMsg = m => m.from != null && m.to != null && !SEQ_META[m.kind];
     function renderFlow(f) {
       seqWorld.innerHTML = '';
       const P = f.participants.filter(p => M.has(p.node));
       const lab = p => p.label || M.get(p.node).label;
-      const colW = Math.max(170, ...P.map(p => textW(lab(p), 13, 600) + 76));
+      const overOf = m => [].concat(m.over == null ? [] : m.over).filter(id => typeof id === 'string');
+      if (!P.length) { S.seq = { f, msgEls: [], frames: [], bbox: { x: 0, y: 0, w: 400, h: 200 }, X: new Map() }; seqCtl.innerHTML = ''; return; }
+      const colIx = new Map(f.participants.map((p, i) => [p.node, i]));
+      /* ancho de columna: lo que pida el nombre más largo y lo que pida cada mensaje entre sus dos columnas */
+      const msgNeed = f.messages.filter(m => m.from != null && m.to != null && m.from !== m.to && colIx.has(m.from) && colIx.has(m.to))
+        .map(m => { const k = Math.abs(colIx.get(m.to) - colIx.get(m.from)) || 1; return (Math.max(...String(m.label).split('\n').map(l => textW(l, 12, 550))) + 40) / k - 26; });
+      const colW = Math.min(Math.max(170, ...P.map(p => Math.min(textW(lab(p), 13, 600) + 76, 340)), ...msgNeed), 420);
       const X = new Map(); P.forEach((p, i) => X.set(p.node, 40 + colW / 2 + i * (colW + 26)));
-      const rowH = 54, top = 96;
+      /* cabecera: tarjeta o, si el participante tiene forma (actor, base de datos, cola), su forma */
+      /* con forma, la cabecera se mide con la etiqueta del participante (puede no ser la de la pieza) */
+      const heads = P.map(p => {
+        const n0 = M.get(p.node);
+        if (!hasShape(n0)) return { n: n0, h: 56 };
+        if (!p.label || p.label === n0.label) { const cl = shapeLayout(n0); return { n: n0, h: cl.h, cl }; }
+        const n = Object.assign({}, n0, { label: p.label }), lay = SHP.measure(n, shapeCtx);
+        return { n, h: lay.h, cl: { w: lay.w, h: lay.h, lay } };
+      });
+      const headH = Math.max(56, ...heads.map(x => x.h));
+      /* cajas de `box`: participantes seguidos del mismo carril, con su título encima */
+      const laneOf = p => { const l = M.get(p.node).laneId; return l != null && M.get(l).isLane ? l : null; };
+      const boxPad = P.some(laneOf) ? 28 : 0;
+      const rowH = 54, top = headH + 40 + boxPad;
       let y = top; const rows = [];
+      const spanOf = m => m.kind === 'self' || m.from === m.to ? 220 : Math.max(Math.abs((X.get(m.to) || 0) - (X.get(m.from) || 0)) - 28, 150);
+      const noteLines = m => { const ov = overOf(m).filter(id => X.has(id)); return wrapLines(m.label, m.side === 'over' && ov.length > 1 ? Math.max(Math.abs(X.get(ov[ov.length - 1]) - X.get(ov[0])) + 60, 180) : 190, 12); };
       f.messages.forEach(m => {
         if (m.kind === 'phase') { rows.push({ m, y: y + 6 }); y += 40; return; }
-        const hh = rowH + (m.note ? 22 : 0) + (m.kind === 'self' ? 14 : 0); rows.push({ m, y: y + 18 }); y += hh; });
+        if (m.kind === 'block') { rows.push({ m, y: y + 4 }); y += 34; return; }
+        if (m.kind === 'else') { rows.push({ m, y: y + 6 }); y += 30; return; }
+        if (m.kind === 'end') { rows.push({ m, y: y + 2 }); y += 16; return; }
+        if (m.kind === 'activate' || m.kind === 'deactivate' || m.kind === 'destroy') { rows.push({ m, y }); return; }
+        if (m.kind === 'create') { const hd = heads[P.findIndex(p => p.node === m.node)]; rows.push({ m, y: y + 6 }); y += (hd ? hd.h : 56) + 18; return; }
+        if (m.kind === 'note') { const L = noteLines(m); rows.push({ m, y: y + 6, lines: L }); y += L.length * 15 + 42; return; }
+        /* una etiqueta larga se parte en líneas en vez de salirse de su tramo */
+        let lines = isMsg(m) ? wrapLines(m.label + (m.repeat ? `  ×${m.repeat}` : ''), spanOf(m), 12) : [m.label];
+        if (lines.length > 3) lines = lines.slice(0, 2).concat(fitText(lines.slice(2).join(' ') + '…', spanOf(m), 12, 400).replace(/…?$/, '…'));
+        const hh = rowH + (m.note ? 22 : 0) + (m.kind === 'self' ? 14 : 0) + (lines.length - 1) * 15; rows.push({ m, y: y + 18 + (lines.length - 1) * 15, lines }); y += hh;
+      });
       const H = y + 30, W = 40 + P.length * (colW + 26) + 180;
+      const xs = ids => ids.filter(id => X.has(id)).map(id => X.get(id));
+      /* marcos: de su fila de inicio a su `end`, tan anchos como los participantes que tocan */
+      const frames = [], open = [];
+      rows.forEach((r, i) => {
+        const m = r.m;
+        if (m.kind === 'block') open.push({ m, y0: r.y, depth: open.length, elses: [], xs: [], ids: [] });
+        else if (m.kind === 'else' && open.length) open[open.length - 1].elses.push(r);
+        else if (m.kind === 'end' && open.length) { const fr = open.pop(); fr.y1 = r.y + 8; frames.push(fr); if (open.length) { open[open.length - 1].xs.push(...fr.xs); } }
+        else if (isMsg(m)) open.forEach(fr => { fr.xs.push(X.get(m.from), X.get(m.to)); fr.ids.push(m.id); if (m.kind === 'self' || m.from === m.to) fr.xs.push(X.get(m.from) + 70); });
+        else if (m.kind === 'note') open.forEach(fr => fr.xs.push(...xs(overOf(m))));
+      });
+      open.forEach(fr => { fr.y1 = H - 24; frames.push(fr); });
+      const gfr = s('g', { class: 'gx-seq-frames' }, seqWorld);
+      frames.sort((a, b) => a.depth - b.depth).forEach(fr => {
+        const vx = fr.xs.filter(v => v != null && !isNaN(v));
+        const x0 = (vx.length ? Math.min(...vx) : X.get(P[0].node)) - colW * .42 + fr.depth * 8;
+        const x1 = (vx.length ? Math.max(...vx) : X.get(P[P.length - 1].node)) + colW * .42 - fr.depth * 8;
+        const g = s('g', { class: 'gx-seq-fr b-' + fr.m.block }, gfr);
+        paint(g, fr.m.cvar);
+        g._ids = new Set(fr.ids);
+        s('rect', { class: fr.m.block === 'rect' ? 'gx-seq-rect' : 'gx-seq-frame', x: x0, y: fr.y0, width: x1 - x0, height: fr.y1 - fr.y0, rx: 6 }, g);
+        if (fr.m.block !== 'rect') {
+          const tab = String(fr.m.title || fr.m.block).toUpperCase(), tw0 = textW(tab, 10.5, 700) * 1.1 + tab.length * .9 + 24;
+          s('path', { class: 'gx-seq-ftab', d: `M${x0},${fr.y0 + 6}a6,6 0 0 1 6,-6H${x0 + tw0}V${fr.y0 + 13}l-7,7H${x0}Z` }, g);
+          const tt = s('text', { class: 'gx-seq-ftt', x: x0 + 9, y: fr.y0 + 14 }, g); tt.textContent = tab;
+          if (fr.m.label) { const tl = s('text', { class: 'gx-seq-fl', x: x0 + tw0 + 10, y: fr.y0 + 14 }, g); tl.textContent = '[' + fitText(fr.m.label, x1 - x0 - tw0 - 24, 11.5, 500) + ']'; }
+          fr.elses.forEach(r => {
+            s('path', { class: 'gx-seq-else', d: `M${x0},${r.y}H${x1}` }, g);
+            const et = s('text', { class: 'gx-seq-fl', x: x0 + 10, y: r.y + 16 }, g);
+            et.textContent = (r.m.title ? r.m.title.toUpperCase() + ' ' : '') + (r.m.label ? '[' + fitText(r.m.label, x1 - x0 - 90, 11.5, 500) + ']' : '');
+          });
+        }
+      });
       /* las fases van debajo de todo: una banda con su rotulo que agrupa los mensajes que siguen */
       const gph = s('g', { class: 'gx-seq-phases' }, seqWorld);
       /* versalitas con tracking: se mide con margen, y el rotulo se recorta al ancho del diagrama
@@ -1553,57 +2139,144 @@
         t.textContent = fitText(lab, (bw - 30) / 1.22, 11, 700);
         if (t.textContent !== lab) { const tt = s('title', null, g); tt.textContent = r.m.label; }
       });
+      /* `create`: la cabecera nace en su fila; `destroy`: la línea acaba en el siguiente mensaje, con un aspa */
+      const created = new Map(), destroyed = new Map(), born = new Set(), waiting = new Set();
+      rows.forEach((r, i) => {
+        if (r.m.kind === 'create') { created.set(r.m.node, r.y); waiting.add(r.m.node); }
+        if (isMsg(r.m) && waiting.has(r.m.to)) { born.add(r.m.id); waiting.delete(r.m.to); }
+        if (r.m.kind === 'destroy') { const nx = rows.slice(i + 1).find(q => isMsg(q.m) && (q.m.from === r.m.node || q.m.to === r.m.node)); destroyed.set(r.m.node, nx ? nx.y + 14 : H - 26); }
+      });
       const gl = s('g', { class: 'gx-seq-life' }, seqWorld);
-      P.forEach(p => s('path', { d: `M${X.get(p.node)},72 V${H - 20}` }, gl));
-      P.forEach(p => {
-        const n = M.get(p.node), x = X.get(p.node) - colW / 2;
-        const g = s('g', { class: `gx-seq-p gx-node gx-leaf d-${n.delta}`, transform: `translate(${x},10)`, 'data-id': n.id, tabindex: 0, role: 'button' }, seqWorld);
+      P.forEach((p, i) => {
+        const cx = X.get(p.node), y0 = created.has(p.node) ? created.get(p.node) + heads[i].h + 4 : headH + 16 + boxPad, y1 = destroyed.has(p.node) ? destroyed.get(p.node) : H - 20;
+        s('path', { d: `M${cx},${y0} V${y1}` }, gl);
+        if (destroyed.has(p.node)) s('path', { class: 'gx-seq-x', d: `M${cx - 11},${y1 - 11}L${cx + 11},${y1 + 11}M${cx + 11},${y1 - 11}L${cx - 11},${y1 + 11}` }, gl);
+      });
+      /* barras de activación: se abren con `+`/activate y se cierran con `-`/deactivate; anidables */
+      const gact = s('g', { class: 'gx-seq-acts' }, seqWorld);
+      const act = new Map(), bars = [];
+      const openAct = (id, yy) => { if (!X.has(id)) return; const st = act.get(id) || []; st.push(yy); act.set(id, st); };
+      const closeAct = (id, yy) => { const st = act.get(id); if (!st || !st.length) return; const y0 = st.pop(); bars.push({ id, y0, y1: yy, d: st.length }); };
+      rows.forEach(r => {
+        const m = r.m;
+        if (m.kind === 'activate') openAct(m.node, r.y);
+        else if (m.kind === 'deactivate') closeAct(m.node, r.y);
+        else if (isMsg(m)) { if (m.deactivate) closeAct(m.deactivate, r.y + 4); if (m.activate) openAct(m.activate, r.y - 4); }
+      });
+      act.forEach((st, id) => { while (st.length) closeAct(id, H - 26); });
+      bars.forEach(bb => {
+        const g = s('g', { class: 'gx-seq-act', 'data-id': bb.id }, gact); paint(g, M.get(bb.id).cvar);
+        s('rect', { x: X.get(bb.id) - 5 + bb.d * 5, y: bb.y0, width: 10, height: Math.max(bb.y1 - bb.y0, 10), rx: 2 }, g);
+      });
+      heads.forEach(({ n, h, cl }, i) => {
+        const p = P[i], cx = X.get(p.node);
+        const w = cl ? cl.w : colW, x = cx - w / 2, yy = created.has(n.id) ? created.get(n.id) : 10 + boxPad + headH - h;
+        const g = s('g', { class: `gx-seq-p gx-node gx-leaf${cl ? ` gx-shape fam-${SHP.families[n.shape]} sh-${n.shape}` : ''} d-${n.delta}`, transform: `translate(${x},${yy})`, 'data-id': n.id, tabindex: 0, role: 'button' }, seqWorld);
         paint(g, n.cvar);
-        s('rect', { class: 'gx-card', rx: 10, width: colW, height: 56 }, g);
-        s('rect', { class: 'gx-accent', x: 7, y: 12, width: 3, height: 32, rx: 1.5 }, g);
-        glyph(g, n.kind, 17, 14, 28);
-        const t = s('text', { class: 'gx-t', x: 55, y: 30 }, g); t.textContent = fitText(lab(p), colW - 66, 13, 600);
-        const st = s('text', { class: 'gx-st', x: 55, y: 45 }, g); st.textContent = fitText(n.subtitle || (n.kind !== 'other' ? kindName(n.kind) : ''), colW - 66, 11, 400, true);
+        if (cl) SHP.render(n, cl.w, cl.h, shapeCtx, cl.lay).children.forEach(c => toSVG(c, g));
+        else {
+          s('rect', { class: 'gx-card', rx: 10, width: colW, height: 56 }, g);
+          s('rect', { class: 'gx-accent', x: 7, y: 12, width: 3, height: 32, rx: 1.5 }, g);
+          glyph(g, n.kind, 17, 14, 28);
+          const t = s('text', { class: 'gx-t', x: 55, y: 30 }, g); t.textContent = fitText(lab(p), colW - 66, 13, 600);
+          const st = s('text', { class: 'gx-st', x: 55, y: 45 }, g); st.textContent = fitText(n.subtitle || (n.kind !== 'other' ? kindName(n.kind) : ''), colW - 66, 11, 400, true);
+        }
         g.addEventListener('pointerenter', ev => showTip(nodeTip(n), ev)); g.addEventListener('pointermove', moveTip); g.addEventListener('pointerleave', hideTip);
         /* sin vista de grafo no hay a donde saltar: el clic ilumina los mensajes de ese participante */
         g.addEventListener('click', ev => { ev.stopPropagation(); hideTip();
           if (graphTab) { reveal(n.id); return; }
-          litSeq(f.messages.filter(m => m.kind !== 'phase' && (m.from === n.id || m.to === n.id)).map(m => m.id)); });
+          litSeq(f.messages.filter(m => isMsg(m) && (m.from === n.id || m.to === n.id)).map(m => m.id)); });
+      });
+      /* notas: una hoja sobre uno o varios participantes, o a un lado */
+      const gnote = s('g', { class: 'gx-seq-notes' }, seqWorld);
+      let minX = 0, maxX = W;
+      rows.filter(r => r.m.kind === 'note').forEach(r => {
+        const m = r.m, ox = xs(overOf(m)); if (!ox.length) return;
+        const lw = Math.max(...r.lines.map(l => textW(l, 12, 400))) + 28;
+        let x0, w;
+        if (m.side === 'left') { w = Math.max(lw, 110); x0 = ox[0] - 16 - w; }
+        else if (m.side === 'right') { w = Math.max(lw, 110); x0 = ox[0] + 16; }
+        else { const a = Math.min(...ox), b = Math.max(...ox); w = Math.max(lw, b - a + 70, 120); x0 = (a + b) / 2 - w / 2; }
+        const hh = r.lines.length * 15 + 16;
+        minX = Math.min(minX, x0); maxX = Math.max(maxX, x0 + w);
+        const g = s('g', { class: 'gx-seq-note-b', transform: `translate(${x0},${r.y})` }, gnote);
+        s('path', { class: 'gx-seq-notebox', d: `M0,0H${w - 10}L${w},10V${hh}H0Z` }, g);
+        s('path', { class: 'gx-seq-notefold', d: `M${w - 10},0V10H${w}` }, g);
+        r.lines.forEach((l, k) => { const t = s('text', { class: 'gx-seq-nt', x: 12, y: 19 + k * 15 }, g); t.textContent = l; });
       });
       const msgEls = [];
       let num = 0;
       rows.forEach(row => {
-        const m = row.m; if (m.kind === 'phase' || !X.has(m.from) || !X.has(m.to)) return;
+        const m = row.m; if (!isMsg(m) || !X.has(m.from) || !X.has(m.to)) return;
         const i = num++;
-        const x1 = X.get(m.from), x2 = X.get(m.to), yy = row.y;
+        const x1 = X.get(m.from), yy = row.y;
+        /* el mensaje que crea a un participante acaba en su cabecera, no en su línea de vida */
+        const hIx = P.findIndex(p => p.node === m.to);
+        const x2 = born.has(m.id) && m.from !== m.to && heads[hIx] ? X.get(m.to) + (X.get(m.to) > x1 ? -1 : 1) * ((heads[hIx].cl ? heads[hIx].cl.w : colW) / 2 - 6) : X.get(m.to);
         const g = s('g', { class: `gx-seq-msg k-${m.kind} d-${m.delta || 'unchanged'}${m.animated ? ' anim' : ''}`, 'data-id': m.id, tabindex: 0, role: 'button' }, seqWorld);
         let d;
         if (m.kind === 'self' || m.from === m.to) d = `M${x1},${yy} h46 v20 h-44`;
         else d = `M${x1 + (x2 > x1 ? 6 : -6)},${yy} H${x2 + (x2 > x1 ? -8 : 8)}`;
         s('path', { class: 'gx-ehit', d }, g);
         paint(g, m.cvar);
-        const line = s('path', { class: 'gx-eline', d, 'marker-end': m.cvar ? colorMarker(m.cvar, I + 's') : `url(#${I}s-mk-${m.delta || 'unchanged'})` }, g);
+        const line = s('path', { class: 'gx-eline', d }, g);
+        g._line = line; g._m = m; markSeq(g, false);
         if (m.animated) s('path', { class: 'gx-eflow', d }, g);
-        const nb = s('g', { class: 'gx-seq-n', transform: `translate(${Math.min(x1, x2) - 30},${yy})` }, g);
+        /* el número va del lado de quien envía */
+        const nb = s('g', { class: 'gx-seq-n', transform: `translate(${m.kind === 'self' || x2 >= x1 ? x1 - 30 : x1 + 30},${yy})` }, g);
         s('circle', { r: 10 }, nb); const nt = s('text', { y: 4 }, nb); nt.textContent = i + 1;
         const lx = m.kind === 'self' ? x1 + 54 : (x1 + x2) / 2;
-        const lt = s('text', { class: 'gx-seq-l', x: lx, y: yy - 8, 'text-anchor': m.kind === 'self' ? 'start' : 'middle' }, g);
-        lt.textContent = m.label + (m.repeat ? `  ×${m.repeat}` : '');
+        const L = row.lines || [m.label];
+        L.forEach((ln, k) => { const lt = s('text', { class: 'gx-seq-l', x: lx, y: yy - 8 - (L.length - 1 - k) * 15, 'text-anchor': m.kind === 'self' ? 'start' : 'middle' }, g); lt.textContent = ln; });
         if (m.note) { const nn = s('text', { class: 'gx-seq-note', x: m.kind === 'self' ? x1 + 54 : (x1 + x2) / 2, y: yy + 20, 'text-anchor': m.kind === 'self' ? 'start' : 'middle' }, g); nn.textContent = fitText(m.note, Math.max(Math.abs(x2 - x1) + 60, 260), 11, 400); }
-        g._line = line; g._m = m; g._pts = { x1, x2, y: yy };
+        g._pts = { x1, x2, y: yy };
         g.addEventListener('pointerenter', ev => showTip(`<div class="gx-tip-h"><b>${i + 1}. ${esc(m.label)}</b></div><div class="gx-tip-m"><span>${esc(M.get(m.from).label)} → ${esc(M.get(m.to).label)}</span><span>${esc(m.kind)}</span></div>${m.note ? `<p>${esc(m.note)}</p>` : ''}${m.summary ? `<p>${esc(m.summary)}</p>` : ''}${m.data ? `<p><i>${esc(T.data)}:</i> ${esc(m.data)}</p>` : ''}`, ev));
         g.addEventListener('pointermove', moveTip); g.addEventListener('pointerleave', hideTip);
         g.addEventListener('click', ev => { ev.stopPropagation(); litSeq([m.id]); });
         msgEls.push(g);
       });
-      S.seq = { f, msgEls, bbox: { x: 0, y: 0, w: W, h: H }, X };
+      if (boxPad) {
+        const gb = s('g', { class: 'gx-seq-boxes' }); seqWorld.insertBefore(gb, seqWorld.firstChild);
+        let i = 0;
+        while (i < P.length) {
+          const l = laneOf(P[i]); let j = i; while (j + 1 < P.length && laneOf(P[j + 1]) === l && l) j++;
+          if (l) {
+            const x0 = X.get(P[i].node) - colW / 2 - 12, x1 = X.get(P[j].node) + colW / 2 + 12, lane = M.get(l);
+            const g = s('g', { class: 'gx-seq-box' }, gb); paint(g, lane.cvar);
+            s('rect', { x: x0, y: 2, width: x1 - x0, height: H - 10, rx: 12 }, g);
+            const t = s('text', { class: 'gx-seq-boxt', x: x0 + 14, y: 22 }, g); t.textContent = fitText(String(lane.label || '').toUpperCase(), x1 - x0 - 28, 11, 700);
+            minX = Math.min(minX, x0); maxX = Math.max(maxX, x1);
+          }
+          i = j + 1;
+        }
+      }
+      /* una nota a la izquierda del primer participante (o a la derecha del último) amplía el encuadre */
+      const bx = Math.min(0, minX - 20), bw = Math.max(W, maxX + 20) - bx;
+      S.seq = { f, msgEls, frames: [...gfr.children], bbox: { x: bx, y: 0, w: bw, h: H }, X };
       seqCtl.innerHTML = `<button type="button" class="gx-btn gx-primary" data-sq="play">▶ ${esc(T.play)}</button>${f.summary ? `<span>${esc(f.summary)}</span>` : ''}`;
       seqCtl.querySelector('[data-sq=play]').onclick = playSeq;
+    }
+    /* puntas de un mensaje: llena (->>), abierta (-)), aspa (-x), ninguna (->) y doble sentido (<<->>) */
+    function markSeq(g, lit) {
+      const m = g._m, key = lit ? 'lit' : (m.cvar || (MK_COLOR[m.delta] ? m.delta : 'unchanged'));
+      const me = markerRef(m.head || 'arrow', key, I + 's'), mst = m.tail ? markerRef(m.tail, key, I + 's') : null;
+      if (me) g._line.setAttribute('marker-end', me); else g._line.removeAttribute('marker-end');
+      if (mst) g._line.setAttribute('marker-start', mst); else g._line.removeAttribute('marker-start');
+    }
+    function wrapLines(text, max, size) {
+      const out = [];
+      String(text || '').split('\n').forEach(par => {
+        let cur = '';
+        par.split(/\s+/).filter(Boolean).forEach(w => { const t = cur ? cur + ' ' + w : w; if (!cur || textW(t, size, 400) <= max) cur = t; else { out.push(cur); cur = w; } });
+        if (cur) out.push(cur);
+      });
+      return (out.length ? out : ['']).slice(0, 8).map(l => fitText(l, max, size, 400));
     }
     function litSeq(ids) {
       if (!S.seq) return;
       seqWorld.classList.toggle('gx-dim', !!(ids && ids.length));
-      S.seq.msgEls.forEach(g => { const on = ids && ids.includes(g._m.id); g.classList.toggle('lit', on); g._line.setAttribute('marker-end', on ? `url(#${I}s-mk-lit)` : (g._m.cvar ? colorMarker(g._m.cvar, I + 's') : `url(#${I}s-mk-${g._m.delta || 'unchanged'})`)); });
+      S.seq.msgEls.forEach(g => { const on = !!(ids && ids.includes(g._m.id)); g.classList.toggle('lit', on); markSeq(g, on); });
+      (S.seq.frames || []).forEach(fr => fr.classList.toggle('lit', !!(ids && ids.some(id => fr._ids && fr._ids.has(id)))));
       const lit = new Set(); (ids || []).forEach(id => { const m = S.seq.f.messages.find(x => x.id === id); if (m) { lit.add(m.from); lit.add(m.to); } });
       seqWorld.querySelectorAll('.gx-seq-p').forEach(p => p.classList.toggle('lit', lit.has(p.dataset.id)));
     }
@@ -1685,6 +2358,8 @@
       (st.expand || []).forEach(id => { S.expanded.add(id); ancestors(M, id).forEach(a => S.expanded.add(a)); });
       (st.collapse || []).forEach(id => S.expanded.delete(id));
       (f.nodes || []).forEach(id => ancestors(M, id).forEach(a => S.expanded.add(a)));
+      /* con un filtro que poda, lo que señala el paso tiene que verse */
+      if (S.focus && S.focus.prune) (f.nodes || []).filter(id => M.has(id) && !S.focus.keep.has(id)).forEach(id => { ancestors(M, id).forEach(a => S.unpruned.add(a)); S.unpruned.add(ROOTS); });
       (f.edges || []).forEach(eid => { const e = G.edges.find(x => x.id === eid); if (e) [e.from, e.to].forEach(x => ancestors(M, x).forEach(a => S.expanded.add(a))); });
       if (st.select) { S.selected = st.select; S.selEdge = null; } else if (!S.present) { S.selected = null; panel.classList.remove('on'); }
       await relayout({ after: () => { if (tok !== S.tourTok) return; setFocusSet(f.nodes, f.edges); if (st.select) renderPanel(); } });
@@ -1700,7 +2375,7 @@
       S.trace = null; S.selected = null; S.selEdge = null; panel.classList.remove('on');
       if (S.view !== homeView) showView(homeView);
       else if (S.view !== 'graph' && S.seq) animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
-      setDepthSet(initial); S.frameBox = null;
+      dropFocus(); S.detail = new Set(); setDepthSet(initial); applyInitialFocus(); S.frameBox = null;
       return relayout({ fit: true });
     }
     function setPresent(on) {
@@ -1724,6 +2399,9 @@
     host.addEventListener('keydown', ev => {
       if (ev.target.tagName === 'INPUT') return;
       const k = ev.key;
+      /* árbol: las flechas mueven el cursor por las tarjetas, abren y pliegan (fuera del recorrido) */
+      if (FLAT && S.view === 'graph' && S.tour < 0 && !S.present && /^Arrow(Up|Down|Left|Right)$/.test(k)) { ev.preventDefault(); treeKey(k); return; }
+      if (FLAT && k === 'Escape' && S.focus && !S.selected && !S.present && !S.expanded2 && S.tour < 0) { clearFilter(); return; }
       if ((k === 'ArrowRight' || k === 'PageDown' || (k === ' ' && S.present)) && (S.tour >= 0 || S.present)) { ev.preventDefault(); goStep(S.tour + 1); }
       else if ((k === 'ArrowLeft' || k === 'PageUp') && S.tour >= 0) { ev.preventDefault(); goStep(Math.max(0, S.tour - 1)); }
       else if (k === 'Escape') { if (S.present) setPresent(false); else if (S.expanded2) setExplore(false); else if (S.tour >= 0) resetView(); else clearSelection(); }
@@ -1741,7 +2419,7 @@
         const w0 = stage.getBoundingClientRect().width;
         if (w0 && !lastW && !S.touched) {
           if (S.view !== 'graph' && S.seq) setSeqCam(camFor(S.seq.bbox, 30, seqSvg));
-          else if (S.bbox) setCam(camFor(S.bbox));
+          else if (S.bbox) setCam(fitCam(S.bbox));
         }
         lastW = w0; drawMiniView();
       }, 80);
@@ -1749,17 +2427,23 @@
     if (ro) ro.observe(stage);
 
     renderTour(); syncTabs();
+    /* `focus` del JSON: el diagrama se abre ya filtrado (los cambios de un diff, una búsqueda) */
+    const applyInitialFocus = () => { if (spec.focus && typeof spec.focus === 'object') setFocus(resolveFilter(spec.focus), { label: spec.focus.label, key: spec.focus.key || 'initial', prune: spec.focus.prune }); };
+    applyInitialFocus();
     const ready = relayout({ fit: true });
     if (homeView !== 'graph') showView(homeView);
 
     return {
       ready, diffReady, model: G, state: S, setExplore, resetView, focusNode,
       setDirection: d => { S.dir = d === 'down' ? 'down' : 'right'; syncDir(); S.frameBox = null; return relayout({ fit: true }); },
-      expandTo: d => { setDepthSet(d); return relayout({ fit: true }); },
+      expandTo: d => { dropFocus(); setDepthSet(d); return relayout({ fit: true }); },
       toggle, reveal, select, goStep, showView, setPresent, trace,
+      /* árbol y filtros: `filter(ids | n => bool, { label, prune })`, `clearFilter()`, `toggleDetail(id, on?)` */
+      filter, clearFilter, toggleDetail,
       /* deja el host como estaba: sin contenido, sin las clases de estado (una vista solo de secuencia
          ocultaría el grafo del siguiente montaje) y sin el id y los atributos que puso el motor */
       destroy() {
+        S.dead = true; S.layoutId++; clearTimeout(S.qT);
         document.removeEventListener('pointerdown', onDocDown); document.removeEventListener('fullscreenchange', onFs); ro && ro.disconnect();
         host.innerHTML = '';
         [...host.classList].filter(c => c === 'gx' || c.startsWith('gx-') && c !== 'gx-host').forEach(c => host.classList.remove(c));
@@ -1808,5 +2492,5 @@
     return out;
   }
 
-  global.GraphX = Object.assign(global.GraphX || {}, { mount, mountAll, buildModel, resolveLink, safeColor, THEME_KEYS, loadELK, ELK_URL, version: '1.6.0' });
+  global.GraphX = Object.assign(global.GraphX || {}, { mount, mountAll, buildModel, resolveLink, safeColor, THEME_KEYS, loadELK, ELK_URL, icons: ICON, version: '1.7.0' });
 })(typeof window !== 'undefined' ? window : globalThis);

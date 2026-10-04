@@ -24,6 +24,7 @@
   --gx-warn: #bc4c00;
   --gx-shadow: 0 1px 2px rgba(31, 35, 40, .06), 0 4px 14px rgba(31, 35, 40, .06);
   --gx-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --gx-note: #fff8c5; --gx-note-line: #e3c664;
   position: relative; display: flex; flex-direction: column; gap: 10px;
   color: var(--gx-ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
   outline: none;
@@ -41,6 +42,7 @@
     --gx-add: #3fb950; --gx-add-soft: rgba(63, 185, 80, .15); --gx-mod: #d29922; --gx-mod-soft: rgba(210, 153, 34, .17);
     --gx-del: #f85149; --gx-del-soft: rgba(248, 81, 73, .15); --gx-neu: #6e7681; --gx-warn: #db6d28;
     --gx-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 6px 18px rgba(0, 0, 0, .3);
+    --gx-note: #2a2617; --gx-note-line: #7a6624;
   }
 }
 :root[data-theme="dark"] .gx {
@@ -52,6 +54,7 @@
   --gx-add: #3fb950; --gx-add-soft: rgba(63, 185, 80, .15); --gx-mod: #d29922; --gx-mod-soft: rgba(210, 153, 34, .17);
   --gx-del: #f85149; --gx-del-soft: rgba(248, 81, 73, .15); --gx-neu: #6e7681; --gx-warn: #db6d28;
   --gx-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 6px 18px rgba(0, 0, 0, .3);
+  --gx-note: #2a2617; --gx-note-line: #7a6624;
 }
 
 /* ---------- barra ---------- */
@@ -91,7 +94,12 @@
   background: var(--gx-canvas); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
   background-image: radial-gradient(circle, color-mix(in srgb, var(--gx-faint) 32%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; }
 .gx-stage.gx-grab { cursor: grabbing; }
-.gx-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* el lienzo del diagrama ocupa todo el escenario; una forma suelta (React, GraphXShape) va a su tamaño */
+/* sin display: lo deciden .gx-seq y .gx-flowview (la vista que no toca, oculta, no tapa los clics de la otra) */
+.gx-stage > .gx-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gx-shape-svg { display: inline-block; overflow: visible; vertical-align: middle; }
+/* GraphXScope: solo los tokens del tema, sin la maqueta del diagrama (barra, escenario) */
+.gx.gx-scope { display: block; gap: 0; font: inherit; color: inherit; }
 .gx-seq { display: none; }
 .gx-flowview .gx-svg:not(.gx-seq) { display: none; }
 .gx-flowview .gx-seq { display: block; }
@@ -521,3 +529,317 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 /* iconos propios rellenos (`icons.<kind>.fill`) */
 .gx-glyph-ic.fill { fill: var(--gx-muted); stroke: none !important; }
 .gx-node.has-c .gx-glyph-ic.fill, .gx-group.has-c .gx-ghead .gx-glyph-ic.fill { fill: var(--gx-c); }
+
+/* ---------- formas (graphx-shapes.js) ---------- */
+/* El contorno de cada forma es un `.gx-card`: hereda hover, iluminado, selección y deltas.
+   Aquí va lo propio de cada familia. */
+
+/* al pasar por encima, cualquier pieza se levanta un poco */
+.gx-leaf { transition: filter .2s; }
+.gx-leaf:hover:not(.lit):not(.sel) { filter: drop-shadow(0 4px 10px rgba(31, 35, 40, .14)); }
+
+.gx-shape > .gx-card { stroke-width: 1.2; transition: stroke .15s, stroke-width .15s, fill .2s; }
+.gx-shape.has-c > .gx-card { fill: color-mix(in srgb, var(--gx-c) 10%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-c) 62%, var(--gx-card-line)); }
+.gx-shape > .gx-card.ghost { fill: transparent; stroke: transparent; }
+.gx-shape:hover > .gx-card.ghost { stroke: var(--gx-line); stroke-dasharray: 3 3; }
+.gx-shl { fill: none; stroke: var(--gx-card-line); stroke-width: 1.1; }
+.gx-shape.has-c .gx-shl { stroke: color-mix(in srgb, var(--gx-c) 45%, var(--gx-card-line)); }
+.gx-shhit { fill: transparent; }
+
+/* puntos: inicio, fin, uniones, elección, bifurcación y commits */
+.gx-shape > .gx-shfill { fill: var(--gx-ink); }
+.gx-shape > .gx-shring { fill: var(--gx-card); stroke: var(--gx-ink); stroke-width: 1.8; }
+.gx-shape > .gx-shthick { stroke-width: 3.4; }
+.gx-shfill2 { fill: var(--gx-ink); }
+.gx-shape.has-c > .gx-shfill, .gx-shape.has-c > .gx-shfill2 { fill: var(--gx-c); }
+.gx-shape.has-c > .gx-shring { stroke: var(--gx-c); }
+.gx-shx { fill: none; stroke: var(--gx-card); stroke-width: 2.2; stroke-linecap: round; }
+.gx-dl { font-size: 11px; font-weight: 500; fill: var(--gx-muted); }
+.gx-shape:hover .gx-dl { fill: var(--gx-ink); }
+.gx-pulse { fill: none; stroke: var(--gx-accent); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: gx-pulse 2.4s ease-out infinite; pointer-events: none; }
+@keyframes gx-pulse { 0% { opacity: .75; transform: scale(.62); } 75%, 100% { opacity: 0; transform: scale(1.4); } }
+.gx-tagbg { fill: var(--gx-accent-soft); stroke: color-mix(in srgb, var(--gx-accent) 45%, transparent); }
+.gx-tagt { font-size: 10px; font-weight: 700; fill: var(--gx-accent); }
+
+/* notas */
+.gx-shape.fam-note > .gx-card { fill: var(--gx-note); stroke: var(--gx-note-line); }
+.fam-note .gx-shl { stroke: var(--gx-note-line); fill: color-mix(in srgb, var(--gx-note-line) 35%, var(--gx-note)); }
+.gx-nt { font-size: 12px; fill: var(--gx-ink); }
+
+/* tablas: entidades, clases y requisitos */
+.gx-shhead { fill: var(--gx-glyph-bg); }
+.gx-shape.has-c .gx-shhead { fill: color-mix(in srgb, var(--gx-c) 16%, var(--gx-card)); }
+.gx-shape.fam-table.has-c > .gx-card { fill: var(--gx-card); }
+.gx-tht { font-weight: 700; }
+.gx-tha { font-size: 10.5px; font-style: italic; fill: var(--gx-muted); }
+.gx-row { fill: transparent; transition: fill .12s; }
+.gx-row.alt { fill: color-mix(in srgb, var(--gx-glyph-bg) 45%, transparent); }
+.gx-trow:hover .gx-row { fill: var(--gx-accent-soft); }
+.gx-rn { font-size: 12px; font-weight: 500; fill: var(--gx-ink); }
+.gx-rn.mono { font-family: var(--gx-mono); font-size: 11.5px; }
+.gx-rt { font: 11px var(--gx-mono); fill: var(--gx-muted); }
+.gx-static { text-decoration: underline; } .gx-abs { font-style: italic; }
+.gx-key { fill: var(--gx-glyph-bg); }
+.gx-key.k-pk { fill: color-mix(in srgb, var(--gx-mod) 24%, var(--gx-card)); }
+.gx-key.k-fk { fill: color-mix(in srgb, var(--gx-accent) 20%, var(--gx-card)); }
+.gx-key.k-uk { fill: color-mix(in srgb, var(--gx-add) 20%, var(--gx-card)); }
+.gx-keyt { font: 700 9px var(--gx-mono); fill: var(--gx-ink); }
+.gx-vis { font: 700 12px var(--gx-mono); }
+.gx-vis.v-pub { fill: var(--gx-add); } .gx-vis.v-priv { fill: var(--gx-del); } .gx-vis.v-prot { fill: var(--gx-mod); } .gx-vis.v-pkg { fill: var(--gx-muted); }
+
+/* baldosas de arquitectura y actores */
+.gx-bigic { fill: none; stroke: var(--gx-muted); stroke-width: .8; stroke-linecap: round; stroke-linejoin: round; transition: stroke .15s; }
+.gx-bigic.fill { fill: var(--gx-muted); stroke: none; }
+.gx-shape.has-c .gx-bigic { stroke: var(--gx-c); } .gx-shape.has-c .gx-bigic.fill { fill: var(--gx-c); }
+.gx-shape.fam-tile:hover .gx-bigic { stroke: var(--gx-ink); }
+.gx-tl { font-size: 12px; font-weight: 600; fill: var(--gx-ink); }
+.gx-shape > .gx-fig { fill: var(--gx-card); stroke: var(--gx-muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.gx-shape.has-c > .gx-fig { stroke: var(--gx-c); }
+
+/* C4: cajas rellenas del color de la pieza, texto claro */
+.gx-shape.fam-c4 > .gx-card { fill: var(--gx-accent); stroke: color-mix(in srgb, var(--gx-accent) 70%, #000); }
+.gx-shape.fam-c4.has-c > .gx-card { fill: var(--gx-c); stroke: color-mix(in srgb, var(--gx-c) 70%, #000); }
+.gx-node.fam-c4.lit > .gx-card, .gx-node.fam-c4.sel > .gx-card { stroke: var(--gx-accent); }
+.fam-c4 .gx-shl, .gx-shape.fam-c4.has-c .gx-shl { stroke: rgba(255, 255, 255, .4); }
+.gx-c4n { font-size: 13.5px; font-weight: 700; fill: #fff; }
+.gx-c4s { font-size: 10.5px; font-weight: 500; fill: rgba(255, 255, 255, .78); }
+.gx-c4d { font-size: 11.5px; fill: rgba(255, 255, 255, .94); }
+
+/* tarjetas con extras: gantt, journey, kanban, sankey, treemap */
+.gx-shape.fam-card.has-c > .gx-card { fill: var(--gx-card); stroke: color-mix(in srgb, var(--gx-c) 50%, var(--gx-card-line)); }
+.gx-bar-track { fill: var(--gx-glyph-bg); }
+.gx-bar-fill { fill: var(--gx-accent); }
+.gx-bar-live { fill: none; stroke: rgba(255, 255, 255, .5); stroke-width: 6; stroke-dasharray: 3 5; animation: gx-flow 1.1s linear infinite; }
+.gx-bar-ms { fill: var(--gx-ink); stroke: var(--gx-card); stroke-width: 1.2; }
+.gx-bar-today { fill: none; stroke: var(--gx-del); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.gx-pip { fill: var(--gx-glyph-bg); stroke: var(--gx-card-line); stroke-width: 1; }
+.gx-pip.on { fill: var(--gx-accent); stroke: none; }
+.gx-tk-stripe { fill: var(--gx-neu); }
+.gx-tk-badge { fill: var(--gx-glyph-bg); }
+.gx-tk-bt { font: 600 10px var(--gx-mono); fill: var(--gx-muted); }
+.gx-tk-av { fill: var(--gx-accent-soft); stroke: color-mix(in srgb, var(--gx-accent) 40%, transparent); }
+.gx-tk-avt { font-size: 9.5px; font-weight: 700; fill: var(--gx-accent); }
+.gx-lvl-track { fill: var(--gx-glyph-bg); }
+.gx-lvl { fill: var(--gx-accent); }
+.gx-blk { fill: var(--gx-accent); }
+.gx-bignum { font-weight: 700; fill: var(--gx-ink); opacity: .78; font-variant-numeric: tabular-nums; }
+
+/* el color de la pieza manda sobre el acento en los extras */
+.gx-shape.has-c .gx-pulse { stroke: var(--gx-c); }
+.gx-shape.has-c .gx-bar-fill, .gx-shape.has-c .gx-bar-ms, .gx-shape.has-c .gx-pip.on, .gx-shape.has-c .gx-tk-stripe, .gx-shape.has-c .gx-lvl, .gx-shape.has-c .gx-blk { fill: var(--gx-c); }
+
+/* contenedores con marco (fronteras de C4, grupos de arquitectura) */
+.gx-group.fr-dashed > .gx-gbox { stroke-dasharray: 7 5; stroke-width: 1.3; }
+.gx-group.fr-dotted > .gx-gbox { stroke-dasharray: 2 4; stroke-linecap: round; }
+
+/* aristas: cardinalidades y caudales */
+.gx-eend { font: 600 10.5px var(--gx-mono); fill: var(--gx-muted); text-anchor: middle; pointer-events: none; }
+.gx-dim .gx-edge.lit .gx-eend { fill: var(--gx-accent); }
+.gx-edge.weighted .gx-eline { stroke-linecap: butt; opacity: .42; }
+.gx-edge.weighted:hover .gx-eline, .gx-dim .gx-edge.weighted.lit .gx-eline { opacity: .72; }
+.gx-mkx { stroke-linejoin: round; stroke-linecap: round; }
+
+/* secuencia: marcos de bloque, notas y activaciones */
+.gx-seq-frame { fill: color-mix(in srgb, var(--gx-ink) 2%, transparent); stroke: color-mix(in srgb, var(--gx-ink) 26%, transparent); stroke-width: 1.1; transition: stroke .2s, fill .2s; }
+.gx-seq-rect { fill: color-mix(in srgb, var(--gx-accent) 7%, transparent); stroke: none; }
+.gx-seq-fr.has-c .gx-seq-rect { fill: color-mix(in srgb, var(--gx-c) 55%, transparent); }
+.gx-seq-ftab { fill: var(--gx-glyph-bg); stroke: color-mix(in srgb, var(--gx-ink) 26%, transparent); stroke-width: 1.1; }
+.gx-seq-ftt { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; fill: var(--gx-ink); }
+.gx-seq-fl { font-size: 11.5px; font-weight: 500; font-style: italic; fill: var(--gx-muted); }
+.gx-seq-else { fill: none; stroke: color-mix(in srgb, var(--gx-ink) 26%, transparent); stroke-dasharray: 5 4; }
+/* cada tipo de bloque, un tono en su pestaña: se distinguen sin leerla */
+.gx-seq-fr.b-loop .gx-seq-ftab { fill: color-mix(in srgb, var(--gx-accent) 16%, var(--gx-card)); }
+.gx-seq-fr.b-alt .gx-seq-ftab, .gx-seq-fr.b-opt .gx-seq-ftab { fill: color-mix(in srgb, var(--gx-mod) 18%, var(--gx-card)); }
+.gx-seq-fr.b-par .gx-seq-ftab { fill: color-mix(in srgb, var(--gx-add) 16%, var(--gx-card)); }
+.gx-seq-fr.b-critical .gx-seq-ftab, .gx-seq-fr.b-break .gx-seq-ftab { fill: color-mix(in srgb, var(--gx-del) 15%, var(--gx-card)); }
+.gx-seq-fr.lit .gx-seq-frame { stroke: var(--gx-accent); fill: color-mix(in srgb, var(--gx-accent) 5%, transparent); }
+.gx-seq-fr.lit .gx-seq-ftab { stroke: var(--gx-accent); }
+.gx-seq-fr.lit .gx-seq-ftt { fill: var(--gx-accent); }
+.gx-seq-notebox { fill: var(--gx-note); stroke: var(--gx-note-line); stroke-width: 1.1; }
+.gx-seq-notefold { fill: color-mix(in srgb, var(--gx-note-line) 35%, var(--gx-note)); stroke: var(--gx-note-line); stroke-width: 1.1; }
+.gx-seq-nt { font-size: 12px; fill: var(--gx-ink); }
+.gx-seq-act rect { fill: var(--gx-card); stroke: var(--gx-muted); stroke-width: 1.2; }
+.gx-seq-act.has-c rect { fill: color-mix(in srgb, var(--gx-c) 16%, var(--gx-card)); stroke: var(--gx-c); }
+
+.gx-rc { font-size: 11px; font-style: italic; fill: var(--gx-muted); }
+/* cajas de `box` en una secuencia y el aspa de `destroy` */
+.gx-seq-box rect { fill: color-mix(in srgb, var(--gx-glyph-bg) 55%, transparent); stroke: var(--gx-line); stroke-width: 1; }
+.gx-seq-box.has-c rect { fill: color-mix(in srgb, var(--gx-c) 11%, transparent); stroke: color-mix(in srgb, var(--gx-c) 38%, transparent); }
+.gx-seq-boxt { font-size: 11px; font-weight: 700; letter-spacing: .1em; fill: var(--gx-muted); }
+.gx-seq-box.has-c .gx-seq-boxt { fill: color-mix(in srgb, var(--gx-c) 70%, var(--gx-ink)); }
+.gx-seq-x { fill: none; stroke: var(--gx-ink); stroke-width: 2.2; stroke-linecap: round; }
+/* relleno y texto propios de una pieza (fill / textColor): mandan sobre los tonos derivados del color */
+.gx-node.gx-leaf.has-f > .gx-card, .gx-node.gx-leaf.has-f > .gx-shhead { fill: var(--gx-f); }
+.gx-node.has-t .gx-t, .gx-node.has-t .gx-st, .gx-node.has-t .gx-nt, .gx-node.has-t .gx-rn, .gx-node.has-t .gx-rt, .gx-node.has-t .gx-tl, .gx-node.has-t .gx-dl,
+.gx-node.has-t .gx-c4n, .gx-node.has-t .gx-c4s, .gx-node.has-t .gx-c4d, .gx-node.has-t .gx-tha { fill: var(--gx-tc); }
+/* aristas curvas (mindmap): más gruesas y redondeadas, del color de su rama */
+.gx-edge.curved .gx-eline { stroke-width: 2.3; stroke-linecap: round; opacity: .9; }
+
+/* ---------- layouts propios (graphx-layouts.js): ejes, marcas y curvas de fondo ---------- */
+.gx-deco { pointer-events: none; }
+.gx-deco.gx-in { animation: gx-fadein .5s ease-out both; }
+.gx-lg-axis { fill: none; stroke: var(--gx-line); stroke-width: 1.2; }
+.gx-lg-grid { fill: none; stroke: color-mix(in srgb, var(--gx-line) 70%, transparent); stroke-width: 1; stroke-dasharray: 2 4; }
+.gx-lg-tick { font: 10.5px var(--gx-mono); fill: var(--gx-muted); }
+.gx-lg-wknd { fill: color-mix(in srgb, var(--gx-glyph-bg) 60%, transparent); }
+.gx-lg-today { fill: none; stroke: var(--gx-del); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.gx-lg-todayt { font-size: 10.5px; font-weight: 700; fill: var(--gx-del); letter-spacing: .06em; text-transform: uppercase; }
+.gx-lg-tl { fill: none; stroke: var(--gx-muted); stroke-width: 2.4; stroke-linecap: round; }
+.gx-lg-tlhead { fill: none; stroke: var(--gx-muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.gx-lg-tlstem { fill: none; stroke: var(--gx-line); stroke-width: 1.4; stroke-dasharray: 3 3; }
+.gx-lg-tldot { fill: var(--gx-accent); stroke: var(--gx-canvas); stroke-width: 2.5; }
+.gx-lg-lv { fill: none; stroke: color-mix(in srgb, var(--gx-line) 70%, transparent); stroke-dasharray: 2 5; }
+.gx-lg-jcurve { fill: none; stroke: var(--gx-muted); stroke-width: 2.2; stroke-linecap: round; opacity: .65; }
+.gx-lg-jstem { fill: none; stroke: var(--gx-line); stroke-dasharray: 2 4; }
+.gx-lg-facebg { fill: var(--gx-accent); stroke: var(--gx-canvas); stroke-width: 2; }
+.gx-lg-eye { fill: var(--gx-canvas); }
+.gx-lg-mouth { fill: none; stroke: var(--gx-canvas); stroke-width: 1.8; stroke-linecap: round; }
+/* barras de gantt y de sankey */
+.gx-shape.sh-gbar > .gx-card { fill: color-mix(in srgb, var(--gx-accent) 24%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 55%, var(--gx-card-line)); }
+.gx-shape.sh-gbar.has-c > .gx-card { fill: color-mix(in srgb, var(--gx-c) 80%, var(--gx-card)); stroke: var(--gx-c); }
+.gx-shape.sh-gbar > .gx-gbms { fill: var(--gx-ink); stroke: var(--gx-card); }
+.gx-shape.sh-gbar.has-c > .gx-gbms { fill: var(--gx-c); }
+.gx-gbt { font-size: 12px; font-weight: 600; fill: var(--gx-ink); }
+.gx-bar-live.gx-gbar-live { stroke-width: 3; stroke: rgba(255, 255, 255, .7); stroke-dasharray: 4 4; }
+.gx-shape.has-c .gx-gbt:not(.out) { fill: #fff; }
+.gx-shape.sh-sbar > .gx-card, .gx-shape.sh-sbar.has-c > .gx-card { fill: var(--gx-accent); stroke: none; }
+.gx-shape.sh-sbar.has-c > .gx-card { fill: var(--gx-c); }
+.gx-node.sh-sbar.lit > .gx-card, .gx-node.sh-sbar.sel > .gx-card { stroke: var(--gx-accent); stroke-width: 2; }
+/* gitGraph: las líneas de las ramas, gruesas y del color de la rama */
+.gx-mode-git .gx-edge .gx-eline { stroke-width: 3.2; opacity: .95; stroke-linecap: round; }
+.gx-mode-git .gx-edge.dashed .gx-eline { stroke-dasharray: 6 5; }
+/* sankey: la cinta, translúcida; al pasar por encima, se aviva */
+.gx-mode-sankey .gx-edge.weighted .gx-eline { opacity: .38; }
+.gx-mode-sankey .gx-edge.weighted:hover .gx-eline, .gx-mode-sankey .gx-dim .gx-edge.weighted.lit .gx-eline { opacity: .7; }
+
+/* formas de flujo sin color: un contorno un punto más firme sobre el lienzo claro */
+.gx-shape.fam-flow:not(.has-c) > .gx-card:not(.ghost) { stroke: color-mix(in srgb, var(--gx-muted) 48%, var(--gx-card-line)); }
+.gx-node.gx-shape.lit > .gx-card:not(.ghost) { stroke: var(--gx-accent); stroke-width: 1.8; }
+.gx-node.gx-shape.sel > .gx-card:not(.ghost) { stroke: var(--gx-accent); stroke-width: 2.4; }
+/* un halo del color del lienzo: el texto se lee aunque pase una línea por debajo */
+/* el reloj de arena cruza su texto: con halo se lee */
+.gx-halo, .sh-sbar .gx-t, .sh-sbar .gx-st, .gx-gbt.out, .sh-hourglass .gx-t { paint-order: stroke; stroke: var(--gx-canvas); stroke-width: 3.5px; stroke-linejoin: round; }
+/* gantt: las dependencias, discretas; se avivan al pasar o al iluminar la cadena */
+.gx-mode-gantt .gx-edge .gx-eline { opacity: .32; }
+.gx-mode-gantt .gx-edge:hover .gx-eline, .gx-mode-gantt .gx-dim .gx-edge.lit .gx-eline { opacity: 1; }
+/* gitGraph: las ramas no se pliegan (una rama plegada no tiene sitio en su carril) */
+.gx-mode-git .gx-lane .gx-col, .gx-mode-git .gx-seg, .gx-mode-git .gx-tools .gx-btn[aria-label="Plegar todo"], .gx-mode-git .gx-tools .gx-btn[aria-label="Collapse all"] { display: none; }
+.gx-seq-box.has-c rect { fill: color-mix(in srgb, var(--gx-c) 55%, transparent); stroke: color-mix(in srgb, var(--gx-c) 70%, var(--gx-line)); }
+.gx-seq-x { stroke-width: 2.8; }
+.gx-seq-n circle { stroke: color-mix(in srgb, var(--gx-muted) 60%, var(--gx-line)); }
+
+/* ---------- árbol de ficheros (layout `tree`): ficheros, carpetas y líneas ---------- */
+/* fichero: insignia de la extensión, nombre, + y −, y la letra de git (A, M, D, R) */
+.gx-fbadge { fill: var(--gx-glyph-bg); }
+.gx-fbt { font: 700 9.5px var(--gx-mono); letter-spacing: .02em; fill: var(--gx-muted); }
+.gx-fbt.sm { font-size: 8.5px; }
+.gx-fsub { font-size: 10.5px; }
+.gx-fmini { fill: none; stroke: var(--gx-muted); stroke-width: 1.1; stroke-linejoin: round; }
+.gx-fmini.lg { stroke-width: 1.4; }
+.gx-fadd { font: 600 11px var(--gx-mono); fill: var(--gx-add); } .gx-fdel { font: 600 11px var(--gx-mono); fill: var(--gx-del); }
+.gx-fadd.sm, .gx-fdel.sm { font-size: 10.5px; }
+.gx-fsq { fill: var(--gx-glyph-bg); } .gx-fsq.a { fill: var(--gx-add); } .gx-fsq.d { fill: var(--gx-del); }
+.gx-gitl { fill: var(--gx-glyph-bg); }
+.gx-gitlt { font: 700 11px var(--gx-mono); fill: var(--gx-muted); }
+.d-added > .gx-gitl { fill: var(--gx-add-soft); } .d-added > .gx-gitlt { fill: var(--gx-add); }
+.d-modified > .gx-gitl { fill: var(--gx-mod-soft); } .d-modified > .gx-gitlt { fill: var(--gx-mod); }
+.d-removed > .gx-gitl { fill: var(--gx-del-soft); } .d-removed > .gx-gitlt { fill: var(--gx-del); }
+.gx-shape.fam-tree.d-removed .gx-t { text-decoration: line-through; fill: var(--gx-muted); }
+.gx-shape.fam-tree.d-added > .gx-card { stroke: color-mix(in srgb, var(--gx-add) 45%, var(--gx-card-line)); }
+.gx-shape.fam-tree.d-modified > .gx-card { stroke: color-mix(in srgb, var(--gx-mod) 45%, var(--gx-card-line)); }
+.gx-shape.fam-tree.d-removed > .gx-card { stroke: color-mix(in srgb, var(--gx-del) 45%, var(--gx-card-line)); }
+/* carpeta: plegada (agrupando, con su pila y la barra de extensiones) o abierta (una cabecera fina) */
+.gx-fold-b { fill: color-mix(in srgb, var(--gx-accent) 16%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 55%, var(--gx-card-line)); stroke-width: 1.2; stroke-linejoin: round; transition: fill .2s; }
+.gx-fold-l { fill: none; stroke: color-mix(in srgb, var(--gx-accent) 40%, var(--gx-card-line)); stroke-width: 1.1; }
+.gx-fold-f { fill: color-mix(in srgb, var(--gx-accent) 30%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 60%, var(--gx-card-line)); stroke-width: 1.2; stroke-linejoin: round; }
+.gx-shape.has-c .gx-fold-b { fill: color-mix(in srgb, var(--gx-c) 18%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-c) 60%, var(--gx-card-line)); }
+.gx-shape.has-c .gx-fold-f { fill: color-mix(in srgb, var(--gx-c) 32%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-c) 65%, var(--gx-card-line)); }
+.gx-shape.fam-tree.has-c > .gx-card { fill: var(--gx-card); stroke: color-mix(in srgb, var(--gx-c) 45%, var(--gx-card-line)); }
+.gx-node.fam-tree:hover .gx-fold-b { fill: color-mix(in srgb, var(--gx-accent) 26%, var(--gx-card)); }
+.gx-fcount { font: 500 11px var(--gx-mono); fill: var(--gx-muted); }
+.gx-fseg { fill: var(--gx-neu); }
+.gx-shape > .gx-card.gx-fopen { fill: color-mix(in srgb, var(--gx-accent) 5%, var(--gx-card)); stroke: color-mix(in srgb, var(--gx-accent) 32%, var(--gx-card-line)); }
+.gx-shape.has-c > .gx-card.gx-fopen { fill: color-mix(in srgb, var(--gx-c) 6%, var(--gx-card)); }
+.gx-fopen-l { fill: none; stroke: transparent; }
+.gx-ftitle { font-weight: 700; }
+.gx-exp.open rect { fill: var(--gx-card); stroke: color-mix(in srgb, var(--gx-accent) 58%, transparent); }
+/* coincidencias del filtro dentro de una carpeta */
+.gx-hits rect { fill: var(--gx-accent); }
+.gx-hitsd { fill: #fff; }
+.gx-hitst { font-size: 10.5px; font-weight: 700; fill: #fff; font-variant-numeric: tabular-nums; }
+/* en una carpeta abierta, la variante suave: no compite con el nombre */
+.gx-hits.soft rect { fill: var(--gx-accent-soft); stroke: color-mix(in srgb, var(--gx-accent) 35%, transparent); }
+.gx-hits.soft .gx-hitsd { fill: var(--gx-accent); } .gx-hits.soft .gx-hitst { fill: var(--gx-accent); }
+.gx-gitlt.sm { font-size: 9.5px; }
+.gx-shape.fam-tree.d-removed > .gx-accent { display: none; }
+/* la pila de una carpeta plegada se abre un poco al pasar por encima */
+.gx-node.fam-tree > .gx-stack { transition: transform .22s cubic-bezier(.2, .8, .2, 1); }
+.gx-node.fam-tree > .gx-stack:nth-of-type(1) { transform: translate(8px, 8px); }
+.gx-node.fam-tree > .gx-stack:nth-of-type(2) { transform: translate(4px, 4px); }
+.gx-node.fam-tree:hover > .gx-stack:nth-of-type(1) { transform: translate(12px, 11px); }
+.gx-node.fam-tree:hover > .gx-stack:nth-of-type(2) { transform: translate(6px, 5.5px); }
+/* al abrir el detalle, sus barras crecen desde la izquierda */
+.gx-node.det .gx-dfill, .gx-node.det .gx-dbar-a, .gx-node.det .gx-dbar-d { transform-box: fill-box; transform-origin: left center; animation: gx-grow .7s cubic-bezier(.2, .8, .2, 1) both .12s; }
+@keyframes gx-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* al filtrar, lo que coincide hace un pulso */
+.gx-node.gx-ping { animation: gx-ping 1.2s ease-out; }
+@keyframes gx-ping { 0% { filter: drop-shadow(0 0 0 transparent); } 30% { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--gx-accent) 75%, transparent)); } 100% { filter: drop-shadow(0 0 0 transparent); } }
+.gx-filter.warn { color: var(--gx-warn); background: color-mix(in srgb, var(--gx-warn) 12%, transparent); border-color: color-mix(in srgb, var(--gx-warn) 40%, transparent); }
+.gx-filter.warn .gx-x2:hover { background: var(--gx-warn); }
+/* el botón del detalle y la tarjeta de detalle */
+.gx-det { cursor: pointer; }
+.gx-det rect { fill: transparent; stroke: transparent; transition: fill .12s, stroke .12s; }
+.gx-det path { fill: none; stroke: var(--gx-muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.gx-det path.gx-det-ring { stroke-width: 1.2; }
+.gx-det.on rect { fill: var(--gx-accent-soft); } .gx-det.on path { stroke: var(--gx-accent); }
+.gx-det:hover rect { fill: var(--gx-accent); } .gx-det:hover path { stroke: #fff; }
+/* el botón del detalle de un fichero aparece al pasar por encima (el clic en la tarjeta ya lo abre) */
+.gx-node.sh-file .gx-det { opacity: 0; transition: opacity .15s; }
+.gx-node.sh-file:hover .gx-det, .gx-node.sh-file:focus-visible .gx-det, .gx-node.sh-file .gx-det.on { opacity: 1; }
+.gx-ddiv { fill: none; stroke: var(--gx-card-line); stroke-dasharray: 3 3; }
+.gx-dpath { font: 10.5px var(--gx-mono); fill: var(--gx-muted); }
+.gx-dk { font-size: 11px; fill: var(--gx-muted); }
+.gx-dv { font-size: 11.5px; font-weight: 600; fill: var(--gx-ink); font-variant-numeric: tabular-nums; }
+.gx-dn { font-size: 11.5px; font-weight: 500; fill: var(--gx-ink); }
+.gx-dsum { font-size: 12px; fill: var(--gx-ink); }
+.gx-dtrack { fill: var(--gx-glyph-bg); }
+.gx-dfill { fill: var(--gx-accent); }
+.gx-ddot { fill: var(--gx-neu); } .gx-ddot.d-added { fill: var(--gx-add); } .gx-ddot.d-modified { fill: var(--gx-mod); } .gx-ddot.d-removed { fill: var(--gx-del); }
+.gx-node.det { filter: drop-shadow(0 6px 16px rgba(31, 35, 40, .12)); }
+/* líneas del árbol: del color del cambio que llevan debajo; el camino iluminado, en acento y en marcha */
+.gx-wire { fill: none; stroke: color-mix(in srgb, var(--gx-muted) 38%, var(--gx-line)); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s, stroke-width .2s; }
+.gx-wire.d-added { stroke: color-mix(in srgb, var(--gx-add) 55%, var(--gx-line)); }
+.gx-wire.d-modified { stroke: color-mix(in srgb, var(--gx-mod) 55%, var(--gx-line)); }
+.gx-wire.d-removed { stroke: color-mix(in srgb, var(--gx-del) 55%, var(--gx-line)); }
+.gx-wire.more { stroke-dasharray: 3 4; stroke: var(--gx-line); }
+.gx-wire.on { stroke-width: 2.2; }
+.gx-wire.sel { stroke: var(--gx-accent); stroke-width: 2.2; }
+.gx-wire.lit { stroke: var(--gx-accent); stroke-width: 2.4; stroke-dasharray: 7 5; animation: gx-flow .9s linear infinite; }
+/* filtro: lo que coincide, con un anillo; lo que no lleva a nada referenciado, apagado */
+.gx-node.hit:not(.lit):not(.sel) { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gx-accent) 45%, transparent)); }
+.gx-filter-q .gx-node.hit > .gx-card { stroke: var(--gx-accent); stroke-width: 1.6; }
+.gx-node.off { opacity: .38; }
+.gx-node.off:hover { opacity: .8; }
+.gx-more { cursor: pointer; pointer-events: all; }
+.gx-more rect { fill: var(--gx-canvas); stroke: var(--gx-line); stroke-dasharray: 3 3; transition: fill .12s, stroke .12s; }
+.gx-more text { font-size: 11.5px; font-weight: 600; fill: var(--gx-muted); text-anchor: middle; }
+.gx-more:hover rect, .gx-more:focus-visible rect { fill: var(--gx-accent-soft); stroke: var(--gx-accent); stroke-dasharray: none; } .gx-more:hover text { fill: var(--gx-accent); }
+.gx-more:focus { outline: none; }
+/* la pastilla del filtro activo en la barra */
+.gx-filter { display: none; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; font-size: 12px; color: var(--gx-accent); background: var(--gx-accent-soft); border: 1px solid color-mix(in srgb, var(--gx-accent) 35%, transparent); max-width: 280px; }
+.gx-filter.on { display: inline-flex; }
+.gx-filter span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-filter b { font-variant-numeric: tabular-nums; }
+.gx-x2 { font: inherit; font-size: 15px; line-height: 1; width: 22px; height: 22px; border-radius: 50%; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.gx-x2:hover { background: var(--gx-accent); color: #fff; }
+.gx-tip-p { display: block; margin-top: 6px; font: 11px var(--gx-mono); color: var(--gx-muted); word-break: break-all; }
+.gx-flat .gx-node:focus-visible { outline: none; }
+.gx-flat .gx-node:focus-visible > .gx-card { stroke: var(--gx-accent); stroke-width: 2.4; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gx-pulse, .gx-bar-live { animation: none; }
+  .gx-leaf { transition: none; }
+  .gx-wire.lit { animation: none; stroke-dasharray: none; }
+  .gx-node.det .gx-dfill, .gx-node.det .gx-dbar-a, .gx-node.det .gx-dbar-d, .gx-node.gx-ping { animation: none; }
+  .gx-node.fam-tree > .gx-stack { transition: none; }
+}

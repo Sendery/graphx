@@ -7,8 +7,9 @@ tooltips, panel de detalle, búsqueda, trazado de dependencias, secuencias anima
 guiado con modo presentación. Funciona igual como artifact de claude.ai, fichero local o bloque
 dentro de otra página.
 
-Versión **1.6.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
-nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7).
+Versión **1.7.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
+nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7), y
+desde la 1.7 dibuja sus formas y tiene componentes de **React** (§7.1).
 
 ```
 graphx.js           el motor (≈1 500 líneas, sin dependencias salvo ELK)
@@ -16,12 +17,15 @@ graphx.css          estilos; todo sale de tokens CSS, tema claro y oscuro
 vendor/elk.bundled.js  el layout (ELK 0.12, ≈1,6 MB, se incrusta en la página)
 graphx-build.mjs    valida el JSON (o un .mmd/.md de Mermaid), lo enriquece (opcional, con git) y emite la página
 graphx-mermaid.js   conversor de Mermaid → JSON de GraphX, sin depender de Mermaid (§7)
+graphx-shapes.js    las formas (rombos, tablas, barras de gantt…) como funciones puras (§7.1)
+react/              componentes de React sobre las mismas formas (§7.1)
 dist/               versión compacta — ver §1.1 (se regenera con tools/build-dist.mjs)
 examples/           pr-review-stack-202.json (73 piezas, 4 niveles)
                     onboarding-proceso.json  (un proceso de RR. HH., vertical y con colores)
                     warehouses-pr-radar.json (seguimiento de PRs entre repos; se genera desde datos)
-                    mermaid/*.mmd            (un ejemplo por cada tipo de Mermaid admitido)
-tools/              verify.mjs (jsdom) · verify-mermaid.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
+                    mermaid/*.mmd            (un ejemplo por cada tipo de Mermaid admitido; shapes.mmd, todas las formas)
+                    gallery/                 (la galería: Mermaid frente a GraphX y el catálogo de formas en React)
+tools/              verify.mjs (jsdom) · verify-mermaid.mjs · verify-shapes.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
                     build-dist.mjs (compacta) · sync.sh (copia el motor a la skill y a desarrollo)
 ```
 
@@ -134,7 +138,7 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `initialDepth` | nivel al abrir; por defecto 1 |
 | | `initialView` | `"flow:<id>"` — abre en ese flujo en vez de en el grafo |
 | | `graphTab` | `false` — solo secuencia: sin vista de grafo; las piezas son solo participantes y pulsarlas ilumina sus mensajes |
-| | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs`: como Mermaid) |
+| | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order", "backEdges": "route" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs` u `order`: el motor recorre en profundidad desde lo escrito primero y solo vuelven atrás las aristas de retorno, como en dagre/Mermaid); `route`: ELK traza también las aristas que vuelven atrás (esquivan piezas) en vez de arcos |
 | | `collapsed` | ids que arrancan plegados aunque su nivel diga lo contrario |
 | | `statuses` | estados propios `{ "<clave>": { "label", "color" } }` — ver §4.1 |
 | | `legend` | `{ "edges": [{ "label", "style", "color" }], "kinds": { "<kind>": "etiqueta" }, "delta": false }` — ver §4.1 |
@@ -152,14 +156,27 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `metrics` | `[{ "label": "TTL", "value": "900 s" }]` — cifras en el panel |
 | | `files` | `[{ "path", "lines", "additions", "deletions", "url", "diff_url" }]` |
 | | `color` · `links` | §4 · §5 |
+| | `shape` | una forma de §7.1 en vez de la tarjeta (`decision`, `table`, `bar`…) |
+| | `rows` · `span` · `score` · `value` · `badge` · `avatar` · `head` | los datos que usa su forma (§7.1) |
+| | `frame` | en un contenedor: `dashed` · `dotted` — marco discontinuo (fronteras de C4, grupos de arquitectura) |
+| | `fill` · `textColor` | relleno y color de texto propios (como `color`, un color o `{ light, dark }`); el de un `classDef` de Mermaid |
 | arista | `id` `from` `to` | |
 | | `kind` | `call http rpc event queue data dependency render async other` (`event`/`queue`/`async` van discontinuas) |
 | | `label` `summary` `data` `trigger` | qué viaja y qué lo dispara aparecen en el tooltip y el panel |
 | | `animated` | flecha que fluye — solo las que cuentan la historia |
 | | `emphasis` | `hero` (una o dos, como mucho) · `normal` · `muted` |
 | | `delta` `color` `links` | |
+| | `head` · `tail` | la punta de cada extremo: `arrow` (defecto en `head`), `none`, `triangle`, `diamond`, `odiamond`, `circle`, `cross`, `open`, `lollipop`, `one`, `zero-one`, `one-many`, `zero-many` |
+| | `headLabel` · `tailLabel` | texto junto a cada extremo (cardinalidades: `1`, `0..*`) |
+| | `weight` | un número: el grosor de la arista crece con él (sankey) |
+| | `curve` | `true`: una curva suave en vez de la ruta ortogonal (las ramas de un mindmap) |
 | flujo | `id` `title` `summary` `participants[]` `messages[]` | una secuencia, en su propia pestaña con «Reproducir» |
 | mensaje | `id` `from` `to` `label` `kind` | `sync async return self` (`self` exige `from === to`) · `phase`: una banda con `label` que agrupa lo que sigue, sin `from`/`to` ni número |
+| | `head` · `tail` · `activate` · `deactivate` | punta (`line` sin punta, `open`, `cross`), doble sentido, y el participante que se activa o se desactiva |
+| fila de secuencia | `kind`: `block` `else` `end` | un marco (`block`: `block` = `loop`/`alt`/`par`…, `title`, `label`) partido por `else` y cerrado por `end` |
+| | `kind`: `note` | `over: [ids]`, `side`: `over` · `left` · `right`, `label` — una nota como caja |
+| | `kind`: `activate` · `deactivate` | `node` — abre o cierra una barra de activación |
+| | `kind`: `create` · `destroy` | `node` — la cabecera nace en esa fila; la línea de vida acaba, con un aspa, en el siguiente mensaje |
 | | `summary` `data` | salen en el tooltip del mensaje |
 | | `note` `repeat` `animated` `color` | |
 | recorrido | `tour.title` `tour.steps[]` | |
@@ -313,9 +330,9 @@ Consejos generales:
 ### 6.1 · Ejemplo: radar de PRs generado desde datos
 
 `examples/warehouses-pr-radar.json` es el mapa de las PRs abiertas y mergeadas de un proyecto
-(Warehouses, en `acme/platform` y `acme/ui-kit`) tal como se publicó en un artifact el
-23-sep-2026. No está escrito a mano: sale de una lista de PRs con un generador, y ese es el patrón
-que merece la pena copiar cuando el diagrama describe un estado que cambia cada día.
+ficticio (Warehouses, en `acme/platform` y `acme/ui-kit`). No está escrito a mano: sale de una
+lista de PRs con un generador, y ese es el patrón que merece la pena copiar cuando el diagrama
+describe un estado que cambia cada día.
 
 ```
 examples/warehouses-pr-radar/data.js       los datos: bloques, PRs, catálogo de tickets, épicas, artefactos
@@ -400,6 +417,100 @@ número de línea, nunca en silencio. Los gráficos de datos (`pie`, `xychart`, 
 como en Mermaid (`layout.cycles: "dfs"`), así que un diagrama se lee en el orden en que se escribió.
 
 `node tools/verify-mermaid.mjs [--mount]` comprueba la conversión de cada ejemplo de `examples/mermaid/`.
+
+### 7.1 · Formas y componentes de React
+
+Una pieza con `shape` se dibuja con esa forma en vez de con la tarjeta. Las formas viven en
+`graphx-shapes.js`: cada una es una función pura que, dado el nodo y su tamaño, devuelve un árbol
+SVG (`{ tag, attrs, children, text }`). El motor lo convierte en nodos SVG y `react/` en elementos
+de React, así que se escriben una vez y se ven igual en los dos sitios. El contorno de todas lleva
+la clase `gx-card`: hover, iluminado, selección, color de pieza y deltas funcionan como en una tarjeta.
+
+| Familia | Formas | Datos |
+|---|---|---|
+| flujo (texto dentro) | `rect rounded terminal subroutine datastore cylinder-h circle dcircle hexagon decision io io-l trapezoid trapezoid-t flag document cloud bang triangle triangle-down hourglass delay card text arrow-right arrow-left arrow-up arrow-down` | `label`, `subtitle` |
+| marcas | `start end junction choice fork commit commit-merge commit-highlight commit-reverse` | `badge` (tag de un commit), `head: true` (late) |
+| notas | `note` | `label` (hasta 6 líneas) |
+| tablas | `table` (entidad de ER), `class` (UML), `requirement` | `rows: [{ name, type, keys, vis, section, static, abstract }]`, `subtitle` («estereotipo») |
+| iconos | `tile` (servicio de arquitectura), `actor` | el icono sale de `kind` |
+| C4 | `person c4 c4-db c4-queue` | `subtitle` ([tipo]), `summary` (descripción dentro), `color` (relleno) |
+| tarjetas con datos | `bar` (gantt), `score` (journey), `ticket` (kanban), `flowbar` (sankey), `block` (treemap) | `span: { start, end, milestone, live }`, `score` 1–5, `badge` + `avatar`, `value` |
+
+Las aristas acaban en el contorno de la forma (el vértice del rombo, el borde del círculo, el punto
+del commit), no en su caja. Las barras de gantt comparten una pista de fechas (el rango del diagrama entero), con la tarea en
+curso rayada en movimiento y el día de hoy marcado; el HEAD de cada rama de git late; las filas de
+una tabla se iluminan al pasar. Todo respeta `prefers-reduced-motion`.
+
+En React (`react/index.mjs` con un bundler, o `react/graphx-react.js` tras cargar React con un `<script>`):
+
+```js
+import { GraphX, GraphXShape, GraphXScope, Shapes } from 'graphx/react';
+<GraphX mermaid={texto} height={640} onError={e => …} />          // monta el motor
+<GraphXScope>                                                      // tokens de color, claro y oscuro
+  <Shapes.Decision node={{ label: '¿Stock?' }} state="lit" color="#cf222e" />
+  <GraphXShape node={{ label: 'CLIENTE', shape: 'table', rows: [{ name: 'id', keys: 'PK' }] }} />
+</GraphXScope>
+```
+
+`GraphX` necesita además `graphx.js` (y `graphx-mermaid.js` para `mermaid`); las formas sueltas, solo
+`graphx-shapes.js`. Los tipos están en `react/index.d.ts`. La galería (`node examples/gallery/build.mjs
+<salida.html>`) enseña cada tipo de Mermaid lado a lado con GraphX y el catálogo de formas en React.
+
+### 7.2 · Layouts propios por tipo
+
+Un gantt no es un grafo de flechas: es una fila por tarea sobre un eje de fechas. Con `layout.mode`,
+el motor coloca las piezas con un layout propio (`graphx-layouts.js`, funciones puras) en vez de con
+ELK, y dibuja detrás una capa con ejes y marcas; tooltip, panel, selección, plegar y animación siguen
+igual. El conversor de Mermaid lo pone solo:
+
+| `layout.mode` | Qué hace | Lo usa |
+|---|---|---|
+| `gantt` | una fila por tarea sobre un eje de fechas común (marcas, fines de semana con `layout.weekends`, hoy); secciones como bandas que al plegarse son una barra resumen; dependencias en escuadra | gantt |
+| `git` | un carril por rama y una columna por commit, en orden cronológico; ramas y merges en curva, sin flechas | gitGraph |
+| `sankey` | columnas por profundidad, barras con altura según el valor y cintas apiladas del color de su origen | sankey-beta |
+| `treemap` | teselado *squarified*: el área de cada hoja es proporcional a su `value` | treemap-beta |
+| `timeline` | periodos sobre un eje con sus eventos debajo; `section: true` marca las secciones | timeline |
+| `journey` | las tareas en fila y, debajo, la curva de emoción con una cara según su `score` | journey |
+| `grid` | la rejilla de block-beta: `grid: { r, c, span }` en cada pieza, `gridCols` en un contenedor y `layout.columns` en la raíz; aristas rectas o en L/U si chocan | block-beta |
+
+`node tools/verify-shapes.mjs` comprueba las formas, los layouts, su uso en el motor y que React dibuja lo mismo.
+
+### 7.3 · Árboles de ficheros
+
+Un repo, una búsqueda o un diff dibujados como el comando `tree`, pero con tarjetas que se navegan
+como carpetas. `graphx-tree.js` construye el JSON y el layout `tree` lo coloca:
+
+```js
+GraphX.tree.fromPaths(['src/app.ts', 'src/ui/Boton.tsx', 'README.md'], { root: 'mi-app' });
+GraphX.tree.fromTreeText(salidaDeTree);                       // también `tree -h`
+GraphX.tree.fromGit({ files, numstat, nameStatus });          // ls-files + git diff
+```
+
+```bash
+node tools/tree-spec.mjs <dir> --base origin/main --html arbol.html   # el árbol de un repo con su diff
+```
+
+- **Dos tarjetas por carpeta.** Plegada, *agrupa*: pila detrás, cuántos ficheros y subcarpetas, + y −
+  de lo que lleva dentro y una barra con el reparto por extensión. Abierta, es una cabecera fina
+  (`openShape: "folder-open"`) de la que cuelgan sus hijos. El fichero lleva su extensión en color,
+  tamaño y líneas, + y −, y la letra de git (A, M, D, R).
+- **Detalle que se abre y se cierra.** Clic en un fichero, o ⌄ en una carpeta: la tarjeta se
+  despliega como una persiana con la ruta, las métricas, el reparto por extensión, los ficheros
+  cambiados y el resumen. Doble clic o Intro abren el panel lateral.
+- **Filtro por rutas.** `filter(ids | fn)` (o `focus` en el JSON, o buscar, o «Solo cambios») deja
+  abiertas solo las ramas que llevan a lo referenciado; el resto de cada carpeta se recoge en
+  «··· N más», que al pulsarlo lo enseña. Una carpeta plegada cuenta las coincidencias que lleva
+  dentro. `filters` añade botones con nombre: `{ label, query | paths | delta | kinds | nodes }`.
+- **Líneas vivas.** Las del árbol se redibujan en cada fotograma: crecen con los hijos que nacen
+  (que entran en cascada), cada tramo de tronco toma el color del cambio más fuerte que queda por
+  debajo y, al pasar por una tarjeta, se ilumina su camino desde la raíz.
+- **Teclado.** ↑ ↓ mueven el cursor, → abre (o entra), ← pliega (o sube), espacio abre el detalle.
+- **Dos orientaciones.** ↧ sangrado como `tree`; ↦ en columnas, cada carpeta centrada en sus hijos.
+- **Árboles grandes.** Con `layout.density: "auto"` (lo pone el constructor), por encima de 140 ficheros
+  a la vista cada fichero pasa a una línea; `"compact"` lo fuerza. Buscar pide dos letras y mira la
+  ruta solo si la consulta lleva `/`.
+
+`node tools/verify-tree.mjs` comprueba el constructor, las interacciones y que React dibuja lo mismo.
 
 ## 8 · Verificar sin navegador
 

@@ -1,0 +1,503 @@
+<title>Galería de GraphX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root { --bg: #f6f7f9; --surface: #ffffff; --surface-2: #eef1f5; --ink: #1c2330; --muted: #5b6576; --hairline: #d9dee6; --accent-ink: #2f5bd3; --accent-soft: #e3eafc; --warn: #8a5a00; --warn-soft: #fbf1dc; --err: #b42318; --err-soft: #fdecea; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0f1319; --surface: #161b23; --surface-2: #1c222c; --ink: #e4e8ef; --muted: #97a1b2; --hairline: #2a313c; --accent-ink: #7d9cff; --accent-soft: #1f2a45; --warn: #e3b341; --warn-soft: #2d2512; --err: #ff8a80; --err-soft: #3a1b1b; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #0f1319; --surface: #161b23; --surface-2: #1c222c; --ink: #e4e8ef; --muted: #97a1b2; --hairline: #2a313c; --accent-ink: #7d9cff; --accent-soft: #1f2a45; --warn: #e3b341; --warn-soft: #2d2512; --err: #ff8a80; --err-soft: #3a1b1b; color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1560px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 40px; display: flex; flex-direction: column; gap: 14px; }
+header h1 { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 76ch; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; }
+.types { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12.5px "IBM Plex Mono", ui-monospace, Menlo, monospace; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip:hover { border-color: var(--accent-ink); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-ink); color: var(--accent-ink); }
+.chip.off { color: var(--muted); border-style: dashed; }
+button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: 9px; background: var(--surface); padding: 2px; }
+.seg button { font: 500 13px "IBM Plex Sans", system-ui, sans-serif; border: 0; background: none; color: var(--muted); padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.tbtn { font: 500 13px "IBM Plex Sans", system-ui, sans-serif; border: 1px solid var(--hairline); background: var(--surface); color: var(--ink); padding: 7px 12px; border-radius: 9px; cursor: pointer; }
+.tbtn[aria-expanded="true"] { border-color: var(--accent-ink); color: var(--accent-ink); }
+.bar .stat { margin-left: auto; }
+.stat { font: 12px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); font-variant-numeric: tabular-nums; }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.colors { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px; }
+.cgroup { display: flex; flex-direction: column; gap: 8px; }
+.cgroup-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cgroup p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.sw { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 5px 8px 5px 5px; border-radius: 8px; background: var(--surface-2); font-size: 12.5px; }
+.sw input[type="color"] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--hairline); border-radius: 6px; background: none; cursor: pointer; }
+.sw .hex { font: 11px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); }
+.sw.set .hex { color: var(--accent-ink); }
+.linkbtn { font: 500 12.5px "IBM Plex Sans", system-ui, sans-serif; border: 0; background: none; color: var(--accent-ink); cursor: pointer; padding: 0; }
+.work { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.work.nocode { grid-template-columns: minmax(0, 1fr); }
+.src { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 12px; }
+.src-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+textarea { width: 100%; box-sizing: border-box; min-height: 420px; resize: vertical; font: 12.5px/1.6 "IBM Plex Mono", ui-monospace, Menlo, monospace; color: var(--ink); background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 8px; padding: 10px; tab-size: 4; }
+.run { font: 600 13px "IBM Plex Sans", system-ui, sans-serif; padding: 7px 14px; border-radius: 8px; border: 0; background: var(--accent-ink); color: var(--bg); cursor: pointer; }
+.msgs { display: flex; flex-direction: column; gap: 6px; }
+.msg { font-size: 12.5px; padding: 7px 10px; border-radius: 7px; background: var(--warn-soft); color: var(--warn); overflow-wrap: anywhere; }
+.msg.err { background: var(--err-soft); color: var(--err); }
+.stage { container-type: inline-size; min-width: 0; }
+.panes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@container (min-width: 900px) { .stage[data-view="both"] .panes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.stage[data-view="graphx"] .pane-mmd, .stage[data-view="mermaid"] .pane-gx { display: none; }
+.pane { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pane-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pane .gx-host { --gx-h: min(74vh, 760px); }
+.mmd-body { height: min(74vh, 760px); box-sizing: border-box; overflow: auto; background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; padding: 16px; display: grid; place-items: center; }
+.mmd-note { margin: 0; max-width: 46ch; text-align: center; font-size: 13.5px; color: var(--muted); }
+.mmd-note.err { color: var(--err); text-align: left; font: 12px/1.5 "IBM Plex Mono", ui-monospace, monospace; white-space: pre-wrap; }
+.mmd-body svg { max-width: 100%; height: auto; }
+.gx-empty { height: min(74vh, 760px); box-sizing: border-box; display: grid; place-items: center; text-align: center; padding: 24px; border: 1px dashed var(--hairline); border-radius: 14px; color: var(--muted); font-size: 13.5px; }
+footer { color: var(--muted); font-size: 12.5px; }
+footer code { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.ptabs { display: inline-flex; gap: 4px; border-bottom: 1px solid var(--hairline); width: 100%; }
+.ptabs button { font: 600 14px "IBM Plex Sans", system-ui, sans-serif; border: 0; background: none; color: var(--muted); padding: 8px 14px 10px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent-ink); }
+.page { display: flex; flex-direction: column; gap: 14px; }
+/* el atributo hidden manda sobre el display de cada bloque (.page, .src…) */
+[hidden] { display: none !important; }
+.cat-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.cat-bar .label { margin-right: -6px; }
+.sw-row { display: inline-flex; gap: 6px; align-items: center; }
+.cdot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--hairline); cursor: pointer; padding: 0; }
+.cdot[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent-ink); }
+.cdot.none { background: repeating-linear-gradient(45deg, var(--surface-2) 0 4px, var(--surface) 4px 8px); }
+.cat-group { display: flex; flex-direction: column; gap: 10px; }
+.cat-group h2 { margin: 8px 0 0; font-size: 15px; font-weight: 600; }
+.cat-group > p { margin: 0; color: var(--muted); font-size: 13px; max-width: 80ch; }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.cat-item { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cat-fig { min-height: 118px; display: grid; place-items: center; overflow-x: auto; }
+.cat-fig svg { max-width: 100%; height: auto; overflow: visible; }
+.cat-name { font: 600 12.5px "IBM Plex Mono", ui-monospace, monospace; }
+.cat-hint { font: 11.5px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; }
+.gx.gx-scope { display: block; gap: 0; font: inherit; color: inherit; }
+.cat-status { color: var(--muted); font-size: 13.5px; }
+#p-tree .gx-host { --gx-h: min(78vh, 840px); min-width: 0; }
+.tree-hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+.tree-hint code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+.tree-keys { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.tree-keys kbd { font: 500 11.5px "IBM Plex Mono", ui-monospace, monospace; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--hairline); background: var(--surface); color: var(--ink); }
+@media (max-width: 860px) { .work { grid-template-columns: minmax(0, 1fr); } textarea { min-height: 220px; } .bar .stat { margin-left: 0; width: 100%; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<div class="wrap">
+<header>
+  <h1>Galería de GraphX</h1>
+  <p>El mismo código de Mermaid, dibujado por GraphX y por Mermaid: elige un tipo de diagrama, compara las dos vistas, cambia los colores en vivo o pega tu propio diagrama. En «Árbol de ficheros», un repo dibujado con tarjetas que se navegan como carpetas.</p>
+</header>
+<div class="ptabs" role="tablist" aria-label="Secciones">
+  <button type="button" role="tab" id="tab-diagrams" aria-selected="true" aria-controls="p-diagrams">Diagramas</button>
+  <button type="button" role="tab" id="tab-shapes" aria-selected="false" aria-controls="p-shapes">Formas (React)</button>
+  <button type="button" role="tab" id="tab-tree" aria-selected="false" aria-controls="p-tree">Árbol de ficheros</button>
+</div>
+<section class="page" id="p-diagrams" role="tabpanel" aria-labelledby="tab-diagrams">
+<nav class="types" id="types" aria-label="Ejemplos por tipo de diagrama"></nav>
+<div class="bar">
+  <div class="seg" role="group" aria-label="Qué motor ver en este tipo de diagrama">
+    <button type="button" id="v-graphx" data-view="graphx">Solo GraphX</button>
+    <button type="button" id="v-mermaid" data-view="mermaid">Solo Mermaid</button>
+    <button type="button" id="v-both" data-view="both">Lado a lado</button>
+  </div>
+  <button type="button" class="tbtn" id="tCode" aria-expanded="true" aria-controls="src">Código</button>
+  <button type="button" class="tbtn" id="tColors" aria-expanded="false" aria-controls="colors">Colores de GraphX</button>
+  <span class="stat" id="stat"></span>
+</div>
+<section class="colors" id="colors" hidden aria-label="Colores de GraphX">
+  <div class="cgroup">
+    <div class="cgroup-h"><span class="label">Tema</span><button type="button" class="linkbtn" id="resetTheme">Restablecer</button></div>
+    <p>Se aplican al instante y valen para todos los diagramas de la galería.</p>
+    <div class="swatches" id="themeSw"></div>
+  </div>
+  <div class="cgroup">
+    <div class="cgroup-h"><span class="label">Tipos de pieza de este diagrama</span><button type="button" class="linkbtn" id="resetKinds">Restablecer</button></div>
+    <p id="kindsHelp">Tiñen la barra, el icono y el borde de cada pieza de ese tipo. Solo afectan a este tipo de diagrama.</p>
+    <div class="swatches" id="kindSw"></div>
+  </div>
+</section>
+<div class="work" id="work">
+  <section class="src" id="src" aria-label="Código Mermaid">
+    <div class="src-h"><span class="label" id="srcLabel">Código Mermaid</span><button class="run" id="run" type="button">Convertir</button></div>
+    <textarea id="code" spellcheck="false" aria-labelledby="srcLabel"></textarea>
+    <div class="msgs" id="msgs"></div>
+  </section>
+  <section class="stage" id="stage" data-view="both" aria-label="Diagramas">
+    <div class="panes">
+      <div class="pane pane-gx"><div class="pane-h"><span class="label">GraphX</span><span class="stat" id="gxStat"></span></div><div id="host" class="gx-host"></div></div>
+      <div class="pane pane-mmd"><div class="pane-h"><span class="label">Mermaid</span><span class="stat" id="mmdStat">Mermaid 11.17.0</span></div><div class="mmd-body" id="mmdBody"></div></div>
+    </div>
+  </section>
+</div>
+</section>
+<section class="page" id="p-shapes" role="tabpanel" aria-labelledby="tab-shapes" hidden>
+  <p class="cat-status" id="catIntro">Cada forma de GraphX dibujada con el componente <code>GraphXShape</code> de React, a partir del mismo árbol SVG que usa el motor. Pasa el ratón por encima para ver el efecto de hover.</p>
+  <div class="cat-bar">
+    <span class="label">Estado</span>
+    <div class="seg" role="group" aria-label="Estado de las formas" id="catState">
+      <button type="button" data-v="" aria-pressed="true">Normal</button><button type="button" data-v="lit" aria-pressed="false">Iluminada</button><button type="button" data-v="sel" aria-pressed="false">Seleccionada</button>
+    </div>
+    <span class="label">Delta</span>
+    <div class="seg" role="group" aria-label="Cambio de las formas" id="catDelta">
+      <button type="button" data-v="unchanged" aria-pressed="true">Sin cambios</button><button type="button" data-v="added" aria-pressed="false">Nueva</button><button type="button" data-v="removed" aria-pressed="false">Eliminada</button>
+    </div>
+    <span class="label">Color</span>
+    <div class="sw-row" role="group" aria-label="Color de las formas" id="catColor"></div>
+    <span class="label">Sentido</span>
+    <div class="seg" role="group" aria-label="Sentido del diagrama" id="catDir">
+      <button type="button" data-v="right" aria-pressed="true">→</button><button type="button" data-v="down" aria-pressed="false">↓</button>
+    </div>
+  </div>
+  <div id="catalog"><p class="cat-status">Cargando React…</p></div>
+</section>
+<section class="page" id="p-tree" role="tabpanel" aria-labelledby="tab-tree" hidden>
+  <p class="cat-status">Un árbol de ficheros dibujado con tarjetas. Una carpeta plegada agrupa (cuántos ficheros, de qué tipo, cuánto ha cambiado); abierta, es una cabecera de la que cuelgan sus hijos. Cada tarjeta abre su detalle con ⓘ o con un clic en el fichero. Buscar o pulsar «Solo cambios» filtra el árbol: quedan abiertas solo las ramas que llevan a lo que coincide, y el resto se recoge en «··· N más».</p>
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Qué árbol ver" id="treeSrc">
+      <button type="button" data-v="repo" aria-pressed="true">Este repo · cambios de la rama</button><button type="button" data-v="paste" aria-pressed="false">Pegar un árbol</button>
+    </div>
+    <div class="tree-keys" aria-label="Atajos"><span><kbd>↑</kbd> <kbd>↓</kbd> moverse</span><span><kbd>→</kbd> abrir</span><span><kbd>←</kbd> plegar</span><span><kbd>espacio</kbd> detalle</span><span><kbd>/</kbd> buscar</span><span>doble clic: panel</span></div>
+    <span class="stat" id="treeStat"></span>
+  </div>
+  <div class="work" id="treeWork">
+    <section class="src" id="treeBox" aria-label="Árbol de entrada">
+      <div class="src-h"><span class="label" id="treeLabel">Árbol de entrada</span><button class="run" id="treeRun" type="button">Dibujar</button></div>
+      <textarea id="treeCode" spellcheck="false" aria-labelledby="treeLabel"></textarea>
+      <p class="tree-hint">Acepta la salida de <code>tree</code> (también <code>tree -h</code>), una ruta por línea, o <code>git diff --name-status</code> / <code>--numstat</code>.</p>
+      <div class="msgs" id="treeMsgs"></div>
+    </section>
+    <section class="stage" aria-label="Árbol"><div id="treeHost" class="gx-host"></div></section>
+  </div>
+</section>
+<footer>GraphX <span id="ver"></span> · conversor <code>graphx-mermaid.js</code>, sin depender de Mermaid · ELK y Mermaid 11.17.0 se cargan de jsDelivr la primera vez que hacen falta.</footer>
+</div>
+<script>__ENGINE__</script>
+<script>__REACT_BRIDGE__</script>
+<script>
+const SAMPLES = __SAMPLES__;
+const TREE_REPO = __TREE_REPO__;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (_) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
+};
+if (GraphX.injectCSS) GraphX.injectCSS();
+
+/* estado */
+let inst = null, current = null, spec = null, convError = null, dirty = true;
+const views = store.get('gx-mmd-views', {});
+const themeOver = store.get('gx-mmd-theme', {});
+const kindOver = store.get('gx-mmd-kinds', {});
+const viewFor = name => views[name] || (name === 'pie' ? 'mermaid' : 'both');
+
+/* colores: tokens del tema de GraphX que se pueden cambiar en vivo */
+const TOKENS = [
+  ['accent', 'Acento y selección'], ['canvas', 'Fondo del lienzo'], ['card', 'Relleno de tarjeta'], ['card-line', 'Borde de tarjeta'],
+  ['glyph-bg', 'Fondo del icono'], ['neu', 'Conexiones'], ['group', 'Relleno de contenedor'], ['group-line', 'Borde de contenedor'],
+  ['band-a', 'Franja de carril'], ['ink', 'Texto']
+];
+const cx = document.createElement('canvas').getContext('2d');
+function toHex(v) {
+  if (!v || !cx) return '#8c959f';
+  cx.fillStyle = '#000'; cx.fillStyle = v.trim(); const c = cx.fillStyle;
+  if (c[0] === '#') return c;
+  const m = /rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(c);
+  return m ? '#' + [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('') : '#8c959f';
+}
+function applyTheme() { const h = $('host'); if (!h) return; TOKENS.forEach(([k]) => { if (themeOver[k]) h.style.setProperty('--gx-' + k, themeOver[k]); else h.style.removeProperty('--gx-' + k); }); }
+function swatch(id, label, value, set, onInput) {
+  const row = document.createElement('label'); row.className = 'sw' + (set ? ' set' : ''); row.htmlFor = id;
+  const inp = document.createElement('input'); inp.type = 'color'; inp.id = id; inp.value = value;
+  const t = document.createElement('span'); t.textContent = label;
+  const hx = document.createElement('span'); hx.className = 'hex'; hx.textContent = value;
+  inp.addEventListener('input', () => { hx.textContent = inp.value; row.classList.add('set'); onInput(inp.value); });
+  row.append(inp, t, hx); return row;
+}
+function buildThemeSwatches() {
+  const box = $('themeSw'); box.innerHTML = '';
+  const h = $('host'), cs = h && h.classList.contains('gx') ? getComputedStyle(h) : null;
+  TOKENS.forEach(([k, label]) => {
+    const now = themeOver[k] || (cs ? toHex(cs.getPropertyValue('--gx-' + k)) : '#8c959f');
+    box.appendChild(swatch('tok-' + k, label, now, !!themeOver[k], v => { themeOver[k] = v; store.set('gx-mmd-theme', themeOver); applyTheme(); }));
+  });
+}
+let kindT = 0;
+function buildKindSwatches() {
+  const box = $('kindSw'); box.innerHTML = '';
+  if (!spec) { $('kindsHelp').textContent = 'Este diagrama no se puede dibujar con GraphX.'; return; }
+  $('kindsHelp').textContent = 'Tiñen la barra, el icono y el borde de cada pieza de ese tipo. Solo afectan a este tipo de diagrama.';
+  const over = kindOver[current] || {};
+  const names = (spec.legend && spec.legend.kinds) || {};
+  const kinds = [...new Set(spec.nodes.map(n => n.kind || 'other'))];
+  kinds.forEach(k => {
+    const own = spec.nodes.find(n => (n.kind || 'other') === k && n.color);
+    const base = own ? (typeof own.color === 'string' ? own.color : own.color.light) : '#8c959f';
+    box.appendChild(swatch('kind-' + k.replace(/[^\w-]/g, ''), names[k] || k, over[k] || toHex(base), !!over[k], v => {
+      (kindOver[current] = kindOver[current] || {})[k] = v; store.set('gx-mmd-kinds', kindOver);
+      clearTimeout(kindT); kindT = setTimeout(mountGraph, 220);
+    }));
+  });
+}
+
+/* GraphX */
+function msg(text, err) { const d = document.createElement('div'); d.className = 'msg' + (err ? ' err' : ''); d.textContent = text; $('msgs').appendChild(d); }
+function convert() {
+  $('msgs').innerHTML = ''; spec = null; convError = null;
+  try {
+    const r = GraphX.fromMermaid($('code').value, { lang: 'es' });
+    r.warnings.forEach(w => msg(w)); spec = r.spec;
+    $('stat').textContent = `${r.type} → ${spec.nodes.length} piezas · ${spec.edges.length} conexiones${(spec.flows || []).length ? ' · ' + spec.flows.length + ' flujo' : ''}`;
+  } catch (e) { convError = e.message; msg(e.message, true); $('stat').textContent = ''; }
+  dirty = true;
+}
+function freshHost() {
+  if (inst) { try { inst.destroy(); } catch (_) {} inst = null; }
+  const old = $('host'), host = document.createElement('div'); host.id = 'host'; host.className = 'gx-host'; old.replaceWith(host); return host;
+}
+function mountGraph() {
+  const host = freshHost();
+  if (!spec) { host.className = 'gx-empty'; host.textContent = convError ? 'GraphX no dibuja este diagrama: ' + convError : ''; $('gxStat').textContent = ''; dirty = false; return; }
+  const over = kindOver[current] || {};
+  const s = JSON.parse(JSON.stringify(spec));
+  s.nodes.forEach(n => { const c = over[n.kind || 'other']; if (c) n.color = c; });
+  inst = GraphX.mount(host, s, { lang: 'es' });
+  applyTheme(); dirty = false;
+  $('gxStat').textContent = s.graphTab === false ? 'vista de secuencia' : '';
+  if (!$('colors').hidden) inst.ready.then(buildThemeSwatches);
+}
+
+/* Mermaid: se carga bajo demanda y dibuja con mermaid.render en cada cambio. Un render que llega
+   tarde (se ha pulsado otro tipo mientras tanto) se descarta. */
+const MERMAID_URL = 'https://cdn.jsdelivr.net/npm/mermaid@11.17.0/dist/mermaid.min.js';
+let mermaidP = null, mmdSeq = 0;
+const mmdCache = new Map();
+const isDark = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+function loadMermaid() {
+  if (mermaidP) return mermaidP;
+  if (window.mermaid && typeof window.mermaid.render === 'function') return (mermaidP = Promise.resolve(window.mermaid));
+  mermaidP = new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = MERMAID_URL; sc.async = true;
+    sc.onload = () => window.mermaid ? res(window.mermaid) : rej(new Error('Mermaid no se registró'));
+    sc.onerror = () => { mermaidP = null; rej(new Error('No se pudo cargar Mermaid desde jsDelivr')); };
+    document.head.appendChild(sc);
+  });
+  return mermaidP;
+}
+function mmdNote(text, err) { const body = $('mmdBody'); body.innerHTML = ''; const p = document.createElement('p'); p.className = 'mmd-note' + (err ? ' err' : ''); p.textContent = text; body.appendChild(p); }
+async function showMermaid() {
+  const code = $('code').value, theme = isDark() ? 'dark' : 'default', key = theme + '|' + code, my = ++mmdSeq;
+  const body = $('mmdBody');
+  if (mmdCache.has(key)) { body.innerHTML = mmdCache.get(key); return; }
+  mmdNote('Dibujando con Mermaid…');
+  try {
+    const m = await loadMermaid();
+    m.initialize({ startOnLoad: false, securityLevel: 'strict', theme });
+    const { svg } = await m.render('mmd-r' + my, code);
+    mmdCache.set(key, svg);
+    if (my === mmdSeq) body.innerHTML = svg;
+  } catch (e) {
+    document.getElementById('dmmd-r' + my)?.remove();
+    if (my === mmdSeq) mmdNote('Mermaid no puede dibujar este código: ' + String((e && e.message) || e).split(/\n/).slice(0, 4).join(' · '), true);
+  }
+}
+/* el tema claro/oscuro cambia la paleta de Mermaid: se vuelve a dibujar */
+const redrawMermaid = () => { if (current && viewFor(current) !== 'graphx') showMermaid(); };
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawMermaid); } catch (_) {}
+new MutationObserver(redrawMermaid).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* vista */
+function applyView() {
+  const v = viewFor(current);
+  $('stage').dataset.view = v;
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+  if (v !== 'mermaid' && dirty) mountGraph();
+  if (v !== 'graphx') showMermaid();
+}
+function refresh() { convert(); if (viewFor(current) !== 'mermaid') mountGraph(); applyView(); buildKindSwatches(); }
+function pick(name) {
+  current = name; $('code').value = SAMPLES[name];
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.name === name)));
+  store.set('gx-mmd-sample', name);
+  refresh();
+}
+
+Object.keys(SAMPLES).forEach(name => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (name === 'pie' ? ' off' : ''); b.dataset.name = name;
+  b.textContent = name === 'pie' ? 'pie (solo Mermaid)' : name; b.setAttribute('aria-pressed', 'false');
+  b.onclick = () => pick(name); $('types').appendChild(b);
+});
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { views[current] = b.dataset.view; store.set('gx-mmd-views', views); applyView(); });
+$('run').onclick = refresh;
+$('code').addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); refresh(); } });
+$('tCode').onclick = () => { const open = $('tCode').getAttribute('aria-expanded') !== 'true'; $('tCode').setAttribute('aria-expanded', String(open)); $('src').hidden = !open; $('work').classList.toggle('nocode', !open); };
+$('tColors').onclick = () => { const open = $('colors').hidden; $('colors').hidden = !open; $('tColors').setAttribute('aria-expanded', String(open)); if (open) { buildThemeSwatches(); buildKindSwatches(); } };
+$('resetTheme').onclick = () => { Object.keys(themeOver).forEach(k => delete themeOver[k]); store.set('gx-mmd-theme', themeOver); applyTheme(); buildThemeSwatches(); };
+$('resetKinds').onclick = () => { delete kindOver[current]; store.set('gx-mmd-kinds', kindOver); mountGraph(); buildKindSwatches(); };
+$('ver').textContent = GraphX.version;
+const saved = store.get('gx-mmd-sample', 'flowchart');
+pick(SAMPLES[saved] ? saved : 'flowchart');
+
+/* ---------- catálogo de formas con React ---------- */
+const REACT_URLS = ['https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js'];
+const loadScript = src => new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('No se pudo cargar ' + src)); document.head.appendChild(sc); });
+let reactP = null;
+const loadReact = () => reactP || (reactP = (window.React && window.ReactDOM ? Promise.resolve() : REACT_URLS.reduce((p, u) => p.then(() => loadScript(u)), Promise.resolve())).then(() => window.GraphXReactFactory(window.React, () => window.GraphX)));
+const GROUPS = [
+  ['flow', 'Flowchart, mindmap y bloques', 'El texto va dentro de la forma. Con color, el contorno y un relleno suave toman el de la pieza.'],
+  ['dot', 'Marcas: estados, uniones y commits', 'Piezas pequeñas: inicio y fin de un estado, elección, bifurcación, uniones de arquitectura y commits de git (el HEAD late).'],
+  ['note', 'Notas', 'Las notas de clases, estados y flowcharts son piezas propias, unidas por una línea sin flecha.'],
+  ['table', 'Tablas: ER, clases y requisitos', 'Filas con claves (PK, FK, UK), visibilidad UML y compartimentos. Pasa el ratón por una fila.'],
+  ['tile', 'Iconos: arquitectura y actores', 'Una baldosa con el icono grande y la etiqueta debajo.'],
+  ['c4', 'C4', 'Cajas rellenas del color de la notación, con tipo y descripción.'],
+  ['card', 'Tarjetas con datos: gantt, journey, kanban, sankey y treemap', 'La tarjeta de GraphX con algo más: la barra de fechas, la puntuación, el ticket, el nivel o un área que crece con el valor.'],
+  ['bar', 'Barras de los layouts propios', 'En un gantt, la barra mide lo que dura la tarea; en un sankey, lo alta que es su valor. Aquí, a su tamaño por defecto.'],
+  ['tree', 'Árbol de ficheros', 'El fichero con su extensión, sus líneas cambiadas y la letra de git; la carpeta plegada, que agrupa (cuántos ficheros, de qué tipo); y la abierta, una cabecera fina de la que cuelgan sus hijos.']
+];
+const HINTS = {
+  rect: 'A[texto]', rounded: 'A(texto)', terminal: 'A([texto])', subroutine: 'A[[texto]]', datastore: 'A[(texto)]', 'cylinder-h': '@{ shape: h-cyl }', circle: 'A((texto))', dcircle: 'A(((texto)))',
+  hexagon: 'A{{texto}}', decision: 'A{texto}', io: 'A[/texto/]', 'io-l': 'A[\\texto\\]', trapezoid: 'A[/texto\\]', 'trapezoid-t': 'A[\\texto/]', flag: 'A>texto]', document: '@{ shape: doc }',
+  cloud: 'mindmap: A)texto(', bang: 'mindmap: A))texto((', triangle: '@{ shape: tri }', 'triangle-down': '@{ shape: flip-tri }', hourglass: '@{ shape: hourglass }', delay: '@{ shape: delay }',
+  card: '@{ shape: notch-rect }', text: '@{ shape: text }', 'arrow-right': 'block: A<["texto"]>(right)', 'arrow-left': 'block: A<["texto"]>(left)', 'arrow-up': 'block: A<["texto"]>(up)', 'arrow-down': 'block: A<["texto"]>(down)',
+  note: 'note for A "texto" · @{ shape: comment }', start: 'state: [*] --> A', end: 'state: A --> [*]', junction: 'architecture: junction j', choice: 'state c <<choice>>', fork: 'state f <<fork>>',
+  commit: 'gitGraph: commit', 'commit-merge': 'gitGraph: merge rama', 'commit-highlight': 'commit type: HIGHLIGHT', 'commit-reverse': 'commit type: REVERSE',
+  table: 'erDiagram: CLIENTE { … }', class: 'classDiagram: class A { … }', requirement: 'requirementDiagram', tile: 'architecture: service a(server)[…]', actor: 'sequence: actor U',
+  person: 'C4: Person(…)', c4: 'C4: System(…) · Container(…)', 'c4-db': 'C4: SystemDb(…)', 'c4-queue': 'C4: SystemQueue(…)',
+  file: 'GraphX.tree.fromPaths([…])', folder: 'carpeta plegada', 'folder-open': 'carpeta abierta (openShape)',
+  bar: 'gantt: tarea :a1, 2026-09-08, 6d (en tarjeta)', gbar: 'gantt: tarea :a1, 2026-09-08, 6d', sbar: 'sankey-beta: A,B,10', score: 'journey: Tarea: 4: Yo', ticket: 'kanban: t1[…]@{ ticket, assigned }', flowbar: 'sankey-beta', block: 'treemap-beta: "Hoja": 7'
+};
+const LABELS = { flow: 'Revisar pedido', dot: 'v1.0', note: 'Se guarda 30 días y luego se borra', table: 'CLIENTE', tile: 'Base de datos', c4: 'Banca online', card: 'Preparar envío' };
+const sampleNode = (name, fam) => {
+  const n = { id: name, shape: name, label: name === 'decision' ? '¿Stock?' : name.startsWith('commit') ? 'feat-login' : LABELS[fam] || name, kind: 'other' };
+  if (fam === 'table') {
+    if (name === 'class') { n.label = 'Pedido'; n.subtitle = '«entity»'; n.rows = [{ name: 'String id', vis: '+', section: 'attr' }, { name: 'List<Linea> lineas', vis: '-', section: 'attr' }, { name: 'total()', type: 'Money', vis: '+', section: 'method' }, { name: 'validar()', type: 'bool', vis: '#', section: 'method', abstract: true }]; }
+    else if (name === 'requirement') { n.label = 'tiempo_respuesta'; n.subtitle = '«performanceRequirement»'; n.rows = [{ name: 'Id', type: '1.2' }, { name: 'Responde en menos de 200 ms' }, { name: 'Riesgo', type: 'high' }]; }
+    else { n.kind = 'table'; n.rows = [{ name: 'id', type: 'uuid', keys: 'PK' }, { name: 'empresa_id', type: 'uuid', keys: 'FK' }, { name: 'email', type: 'string', keys: 'UK' }, { name: 'alta', type: 'date' }]; }
+  }
+  if (name.startsWith('commit')) n.badge = name === 'commit' ? 'v1.0' : '';
+  if (name === 'commit') n.head = true;
+  if (fam === 'tile') { n.kind = name === 'actor' ? 'actor' : 'datastore'; if (name === 'actor') n.label = 'Usuaria'; }
+  if (fam === 'c4') { n.label = name === 'person' ? 'Cliente' : name === 'c4-db' ? 'Mainframe' : name === 'c4-queue' ? 'Eventos' : 'Banca online'; n.subtitle = name === 'person' ? '[Persona]' : '[Sistema]'; n.summary = 'Consulta cuentas y hace pagos desde la web.'; }
+  if (name === 'bar') { n.kind = 'job'; n.subtitle = '2026-09-08 → 2026-09-14'; n.span = { start: '2026-09-08', end: '2026-09-14', live: true }; }
+  if (name === 'score') { n.kind = 'job'; n.subtitle = 'Yo, Equipo'; n.score = 4; }
+  if (name === 'ticket') { n.kind = 'card'; n.subtitle = 'ana'; n.badge = 'PRJ-7'; n.avatar = 'A'; }
+  if (name === 'flowbar') { n.kind = 'flowpoint'; n.label = 'Red'; n.subtitle = '105'; n.value = 7; }
+  if (name === 'block') { n.label = 'Salarios'; n.subtitle = '700'; n.value = 7; }
+  if (name === 'gbar') { n.label = 'Backend'; n.kind = 'job'; n.span = { start: '2026-09-08', end: '2026-09-14', live: true }; }
+  if (name === 'sbar') { n.label = 'Red'; n.subtitle = '105'; }
+  if (fam === 'tree') {
+    const exts = [{ ext: 'ts', n: 9, color: '#3178c6' }, { ext: 'css', n: 3, color: '#7c4dff' }, { ext: 'json', n: 2, color: '#0f9d8a' }];
+    if (name === 'file') Object.assign(n, { label: 'Carrito.tsx', ext: 'tsx', badge: 'TSX', extColor: '#3178c6', subtitle: '4,2 KB · 128 líneas', additions: 42, deletions: 7, delta: 'modified', path: 'src/components/Carrito.tsx' });
+    else Object.assign(n, { label: 'components', path: 'src/components', tree: { files: 14, dirs: 2, exts }, additions: 120, deletions: 31, _hits: name === 'folder' ? 3 : 0 });
+  }
+  if (name === 'start' || name === 'end' || name === 'junction' || name === 'choice' || name === 'fork') n.label = name;
+  return n;
+};
+const cat = { state: '', delta: 'unchanged', color: '', dir: 'right' };
+const COLORS = [['', 'Sin color'], ['#0969da', 'Azul'], ['#1a7f37', 'Verde'], ['#9a6700', 'Ámbar'], ['#cf222e', 'Rojo'], ['#8250df', 'Violeta']];
+COLORS.forEach(([c, name]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'cdot' + (c ? '' : ' none'); if (c) b.style.background = c; b.title = name; b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', String(c === cat.color)); b.onclick = () => { cat.color = c; drawCatalog(); }; $('catColor').appendChild(b); });
+['catState', 'catDelta', 'catDir'].forEach(id => $(id).querySelectorAll('button').forEach(b => b.onclick = () => { cat[{ catState: 'state', catDelta: 'delta', catDir: 'dir' }[id]] = b.dataset.v; drawCatalog(); }));
+let catRoot = null, RX = null;
+function markerDemo(R) {
+  const h = R.createElement, M = GraphX.shapes.markers;
+  return h('div', { className: 'cat-grid' }, Object.keys(M).map(k => h('div', { className: 'cat-item', key: k },
+    h('div', { className: 'cat-fig', style: { minHeight: 48 } }, h('svg', { width: 200, height: 34, viewBox: '0 0 200 34', className: 'gx-svg' },
+      h('defs', null, h('marker', { id: 'cm-' + k, viewBox: '0 0 20 20', refX: 19.5, refY: 10, markerWidth: 15, markerHeight: 15, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' },
+        h('path', { d: M[k].d, className: 'gx-mkx', style: { stroke: M[k].fill === 'solid' ? 'none' : 'var(--gx-neu)', fill: M[k].fill === 'solid' ? 'var(--gx-neu)' : M[k].fill === 'line' ? 'none' : 'var(--gx-canvas)', strokeWidth: 1.8 } }))),
+      h('path', { d: 'M12,17 H186', className: 'gx-eline', markerEnd: `url(#cm-${k})`, style: { opacity: 1 } }))),
+    h('span', { className: 'cat-name' }, k))));
+}
+function drawCatalog() {
+  ['catState', 'catDelta', 'catDir'].forEach(id => $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === cat[{ catState: 'state', catDelta: 'delta', catDir: 'dir' }[id]]))));
+  $('catColor').querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-pressed', String(COLORS[i][0] === cat.color)));
+  if (!RX) return;
+  const R = window.React, h = R.createElement, S = GraphX.shapes, span = { min: Date.UTC(2026, 8, 1), max: Date.UTC(2026, 8, 30) }, now = Date.UTC(2026, 8, 11);
+  const groups = GROUPS.map(([fam, title, text]) => h('section', { className: 'cat-group', key: fam },
+    h('h2', null, title), h('p', null, text),
+    h('div', { className: 'cat-grid' }, S.names.filter(nm => S.families[nm] === fam).map(nm => h('figure', { className: 'cat-item', key: nm, style: { margin: 0 } },
+      h('div', { className: 'cat-fig' }, h(RX.GraphXShape, { node: sampleNode(nm, fam), state: cat.state || undefined, delta: cat.delta, color: cat.color || undefined, dir: cat.dir, span, now, maxValue: 10 })),
+      h('figcaption', null, h('div', { className: 'cat-name' }, nm), h('div', { className: 'cat-hint' }, HINTS[nm] || '')))))));
+  groups.push(h('section', { className: 'cat-group', key: 'markers' }, h('h2', null, 'Puntas de arista'), h('p', null, 'head y tail de una arista: flechas, UML (herencia, composición, agregación), patas de gallo de ER y puntas de mensaje.'), markerDemo(R)));
+  catRoot.render(h(RX.GraphXScope, null, groups));
+}
+/* ---------- árbol de ficheros ---------- */
+const TREE_SAMPLE = `tienda-web
+├── [ 1.2K]  README.md
+├── [  640]  package.json
+├── src
+│   ├── app
+│   │   ├── [ 2.1K]  main.ts
+│   │   ├── [ 3.4K]  router.ts
+│   │   └── [ 1.8K]  store.ts
+│   ├── components
+│   │   ├── [ 4.2K]  Carrito.tsx
+│   │   ├── [ 2.9K]  Ficha.tsx
+│   │   ├── [ 1.1K]  Boton.tsx
+│   │   └── [  980]  Carrito.module.css
+│   ├── api
+│   │   ├── [ 2.6K]  pedidos.ts
+│   │   └── [ 1.4K]  pagos.ts
+│   └── i18n
+│       ├── [  3K]  es.json
+│       └── [ 2.8K]  en.json
+├── public
+│   ├── [ 15K]  logo.svg
+│   └── [ 32K]  favicon.ico
+└── tests
+    ├── [ 2.2K]  carrito.test.ts
+    └── [ 1.9K]  pagos.test.ts
+
+8 directories, 17 files`;
+let treeInst = null, treeSrc = store.get('gx-tree-src', 'repo');
+function treeMsg(text, err) { const d = document.createElement('div'); d.className = 'msg' + (err ? ' err' : ''); d.textContent = text; $('treeMsgs').appendChild(d); }
+/* lo pegado: salida de tree, git diff --name-status, --numstat o una ruta por línea */
+function treeSpecFrom(text) {
+  const T = GraphX.tree, lines = text.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim());
+  if (/[├└]──|\|--|`--/.test(text)) return T.fromTreeText(text, { title: 'Árbol pegado', lang: 'es' });
+  if (lines.length && lines.every(l => /^[AMDRCTU]\d*\t/.test(l))) return T.fromGit({ nameStatus: text }, { title: 'Cambios pegados', root: 'repo', lang: 'es' });
+  if (lines.length && lines.every(l => /^(\d+|-)\t(\d+|-)\t/.test(l))) return T.fromGit({ numstat: text }, { title: 'Cambios pegados', root: 'repo', lang: 'es' });
+  return T.fromPaths(lines.map(l => l.trim()), { title: 'Rutas pegadas', root: 'repo', lang: 'es' });
+}
+function mountTree() {
+  if (treeInst) { try { treeInst.destroy(); } catch (_) {} treeInst = null; }
+  const old = $('treeHost'), host = document.createElement('div'); host.id = 'treeHost'; host.className = 'gx-host'; old.replaceWith(host);
+  $('treeMsgs').innerHTML = '';
+  let spec = null;
+  try { spec = treeSrc === 'repo' ? JSON.parse(JSON.stringify(TREE_REPO)) : treeSpecFrom($('treeCode').value); }
+  catch (e) { treeMsg(e.message, true); }
+  if (!spec || !spec.nodes.length) { host.className = 'gx-empty'; host.textContent = 'No hay rutas que dibujar.'; $('treeStat').textContent = ''; return; }
+  treeInst = GraphX.mount(host, spec, { lang: 'es' });
+  const files = spec.nodes.filter(n => n.kind === 'file'), changed = files.filter(n => n.delta !== 'unchanged');
+  $('treeStat').textContent = `${files.length} ficheros · ${spec.nodes.length - files.length} carpetas${changed.length ? ` · ${changed.length} cambiados` : ''}`;
+}
+function setTreeSrc(v) {
+  treeSrc = v; store.set('gx-tree-src', v);
+  $('treeSrc').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  $('treeBox').hidden = v === 'repo'; $('treeWork').classList.toggle('nocode', v === 'repo');
+  mountTree();
+}
+$('treeCode').value = store.get('gx-tree-code', TREE_SAMPLE);
+$('treeRun').onclick = () => { store.set('gx-tree-code', $('treeCode').value); mountTree(); };
+$('treeCode').addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') $('treeRun').onclick(); });
+$('treeSrc').querySelectorAll('button').forEach(b => b.onclick = () => setTreeSrc(b.dataset.v));
+
+function showPage(which) {
+  const shapes = which === 'shapes', tree = which === 'tree';
+  $('p-diagrams').hidden = shapes || tree; $('p-shapes').hidden = !shapes; $('p-tree').hidden = !tree;
+  $('tab-diagrams').setAttribute('aria-selected', String(!shapes && !tree)); $('tab-shapes').setAttribute('aria-selected', String(shapes)); $('tab-tree').setAttribute('aria-selected', String(tree));
+  store.set('gx-mmd-page', which);
+  if (tree && !treeInst) setTreeSrc(treeSrc);
+  if (shapes && !RX) loadReact().then(api => { RX = api; catRoot = window.ReactDOM.createRoot($('catalog')); drawCatalog(); })
+    .catch(e => { $('catalog').innerHTML = ''; const p = document.createElement('p'); p.className = 'msg err'; p.textContent = e.message + '. El catálogo necesita React desde cdnjs.'; $('catalog').appendChild(p); });
+}
+$('tab-diagrams').onclick = () => showPage('diagrams');
+$('tab-shapes').onclick = () => showPage('shapes');
+$('tab-tree').onclick = () => showPage('tree');
+showPage(location.hash === '#formas' ? 'shapes' : location.hash === '#arbol' ? 'tree' : store.get('gx-mmd-page', 'diagrams'));
+</script>

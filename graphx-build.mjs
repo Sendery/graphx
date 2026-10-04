@@ -37,8 +37,11 @@ if (!src || !SRC_RE.test(src)) { console.error('uso: graphx-build.mjs <graph.jso
 const sandbox = { console: { warn() {}, error() {}, log() {} } };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-shapes.js'), 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-layouts.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-tree.js'), 'utf8'), sandbox);
 
 const errors = [], warns = [];
 let spec;
@@ -68,12 +71,16 @@ G.warn.forEach(w => errors.push(w));
 
 const ids = new Set([...(spec.lanes || []).map(l => l.id), ...(spec.nodes || []).map(n => n.id)]);
 const eids = new Set((spec.edges || []).map(e => e.id).filter(Boolean));
-const KINDS = new Set(['service', 'app', 'module', 'function', 'method', 'class', 'file', 'route', 'job', 'queue', 'datastore', 'cache', 'external', 'ui', 'config', 'test', 'package', 'other']);
+const KINDS = new Set(['service', 'app', 'module', 'function', 'method', 'class', 'file', 'folder', 'route', 'job', 'queue', 'datastore', 'cache', 'external', 'ui', 'config', 'test', 'package', 'other']);
 const DELTAS = new Set(['added', 'modified', 'removed', 'unchanged']);
 const EKINDS = new Set(['call', 'http', 'rpc', 'event', 'queue', 'data', 'dependency', 'render', 'async', 'other']);
 
 /* iconos propios, estados propios y leyenda (1.4) */
 const PATH_RE = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]+$/;
+const SHAPE_NAMES = new Set(sandbox.GraphX.shapes.names);
+if (spec.layout && spec.layout.mode != null && !sandbox.GraphX.layouts.has(spec.layout.mode)) warns.push(`layout.mode «${spec.layout.mode}» desconocido (válidos: ${sandbox.GraphX.layouts.names.join(', ')}); se usa ELK`);
+if (spec.layout && spec.layout.backEdges != null && spec.layout.backEdges !== 'route') warns.push(`layout.backEdges «${spec.layout.backEdges}» desconocido (válido: route)`);
+const MARKER_NAMES = new Set(['arrow', 'none', 'line', ...Object.keys(sandbox.GraphX.shapes.markers)]);
 for (const [k, v] of Object.entries(spec.icons || {})) {
   const d = typeof v === 'string' ? v : v && v.path;
   if (typeof d !== 'string' || !PATH_RE.test(d) || d.length >= 6000) errors.push(`icons.${k}: path SVG no válido (solo comandos y números, <6000 caracteres)`);
@@ -92,11 +99,28 @@ for (const n of spec.nodes || []) {
   if (n.kind && !KINDS.has(n.kind)) warns.push(`nodo ${n.id}: kind «${n.kind}» desconocido (se pinta como other)`);
   if (n.status && !STATUSES[n.status]) errors.push(`nodo ${n.id}: status «${n.status}» no está en statuses`);
   if (n.delta && !DELTAS.has(n.delta)) errors.push(`nodo ${n.id}: delta «${n.delta}» inválido`);
-  if (!n.summary) warns.push(`nodo ${n.id}: sin summary — el tooltip y el panel saldrán vacíos`);
+  /* un fichero o carpeta de un árbol se explica con su ruta y sus métricas */
+  if (!n.summary && !n.path) warns.push(`nodo ${n.id}: sin summary — el tooltip y el panel saldrán vacíos`);
   if (!n.label) errors.push(`nodo ${n.id}: sin label`);
+  /* formas (graphx-shapes.js) y sus datos */
+  if (n.shape != null && !SHAPE_NAMES.has(n.shape)) warns.push(`nodo ${n.id}: shape «${n.shape}» desconocida (se pinta como tarjeta)`);
+  if (n.openShape != null && !SHAPE_NAMES.has(n.openShape)) warns.push(`nodo ${n.id}: openShape «${n.openShape}» desconocida`);
+  if (n.metrics != null && (!Array.isArray(n.metrics) || n.metrics.some(m => !m || m.label == null || m.value == null))) errors.push(`nodo ${n.id}: metrics debe ser una lista de { label, value }`);
+  if (n.rows != null && (!Array.isArray(n.rows) || n.rows.some(r => !r || typeof r !== 'object' || typeof r.name !== 'string'))) errors.push(`nodo ${n.id}: rows debe ser una lista de { name, type?, keys?, vis?, section? }`);
+  if (n.span != null) {
+    /* la misma lectura de fechas que el motor: AAAA-MM-DD, con hora y, si la trae, zona */
+    const date = v => typeof v === 'number' || !isNaN(Date.parse(String(v).length === 10 ? v + 'T00:00:00Z' : String(v).replace(' ', 'T') + (/Z|[+-]\d\d:?\d\d$/.test(v) ? '' : 'Z')));
+    if (typeof n.span !== 'object' || n.span.start == null || !date(n.span.start) || (n.span.end != null && !date(n.span.end))) errors.push(`nodo ${n.id}: span necesita start (y end, si lo trae) como fecha AAAA-MM-DD o número`);
+  }
+  ['score', 'value'].forEach(k => { if (n[k] != null && typeof n[k] !== 'number') errors.push(`nodo ${n.id}: ${k} debe ser un número`); });
+  ['badge', 'avatar'].forEach(k => { if (n[k] != null && typeof n[k] !== 'string') errors.push(`nodo ${n.id}: ${k} debe ser texto`); });
+  if (n.grid != null && (typeof n.grid !== 'object' || ['r', 'c', 'span'].some(k => n.grid[k] != null && !(Number.isInteger(n.grid[k]) && n.grid[k] >= (k === 'span' ? 1 : 0))))) errors.push(`nodo ${n.id}: grid debe ser { r, c, span } con enteros (r y c desde 0, span desde 1)`);
+  if (n.frame != null && !['dashed', 'dotted', 'solid'].includes(n.frame)) warns.push(`nodo ${n.id}: frame «${n.frame}» desconocido`);
 }
 for (const e of spec.edges || []) {
   if (!e.id) warns.push(`arista ${e.from}→${e.to}: sin id — un paso del recorrido no podrá apuntarla`);
+  ['head', 'tail'].forEach(k => { if (e[k] != null && !MARKER_NAMES.has(e[k])) warns.push(`arista ${e.id}: ${k} «${e[k]}» desconocido (válidos: ${[...MARKER_NAMES].join(', ')})`); });
+  if (e.weight != null && (typeof e.weight !== 'number' || e.weight < 0)) errors.push(`arista ${e.id}: weight debe ser un número positivo`);
   if (e.kind && !EKINDS.has(e.kind)) warns.push(`arista ${e.id}: kind «${e.kind}» desconocido`);
   if (e.delta && !DELTAS.has(e.delta)) errors.push(`arista ${e.id}: delta «${e.delta}» inválido`);
 }
@@ -126,7 +150,18 @@ const checkColor = (v, where) => {
   if (!ok) errors.push(`${where}: color no válido ${JSON.stringify(v)} — usa hex, rgb()/hsl()/oklch(), un nombre CSS o { light, dark }`);
 };
 (spec.lanes || []).forEach(n => checkColor(n.color, `carril ${n.id}`));
-(spec.nodes || []).forEach(n => checkColor(n.color, `nodo ${n.id}`));
+(spec.nodes || []).forEach(n => { checkColor(n.color, `nodo ${n.id}`); checkColor(n.fill, `nodo ${n.id} (fill)`); checkColor(n.textColor, `nodo ${n.id} (textColor)`);
+  if (n.extColor != null && (typeof n.extColor !== 'string' || !sandbox.GraphX.safeColor(n.extColor))) errors.push(`nodo ${n.id}: extColor no válido «${n.extColor}»`); });
+/* filtros por rutas: el inicial (`focus`) y los que van en la barra (`filters`) */
+const FILTER_KEYS = ['nodes', 'paths', 'delta', 'kinds', 'query'];
+const checkFilter = (f, where) => {
+  if (!f || typeof f !== 'object') return errors.push(`${where}: debe ser un objeto`);
+  (f.nodes || []).forEach(id => { if (!ids.has(id)) errors.push(`${where}: nodo desconocido ${id}`); });
+  [].concat(f.delta || []).forEach(d => { if (!DELTAS.has(d)) errors.push(`${where}: delta «${d}» inválido`); });
+  if (!FILTER_KEYS.some(k => f[k] != null)) warns.push(`${where}: no selecciona nada (usa ${FILTER_KEYS.join(', ')})`);
+};
+if (spec.focus != null) checkFilter(spec.focus, 'focus');
+(spec.filters || []).forEach((f, i) => { if (!f || !f.label) errors.push(`filters[${i}]: sin label`); checkFilter(f, `filters[${i}]`); });
 (spec.edges || []).forEach(e => checkColor(e.color, `arista ${e.id}`));
 Object.entries(spec.statuses || {}).forEach(([k, v]) => checkColor(v && v.color, `statuses.${k}`));
 ((spec.legend && spec.legend.edges) || []).forEach((e, i) => checkColor(e.color, `legend.edges[${i}]`));
@@ -155,6 +190,14 @@ for (const f of spec.flows || []) {
   for (const m of f.messages || []) {
     if (m.id && mids.has(m.id)) errors.push(`flujo ${f.id}: mensaje duplicado ${m.id}`); mids.add(m.id);
     if (m.kind === 'phase') { if (!m.label) warns.push(`flujo ${f.id}: fase sin label`); continue; }
+    if (['block', 'else', 'end'].includes(m.kind)) continue;
+    if (m.kind === 'note') {
+      if (!Array.isArray(m.over) || !m.over.length) { errors.push(`flujo ${f.id}, nota ${m.id}: over debe ser una lista de participantes`); continue; }
+      m.over.forEach(p => { if (!parts.has(p)) errors.push(`flujo ${f.id}, nota ${m.id}: participante desconocido ${p}`); });
+      continue;
+    }
+    if (['activate', 'deactivate', 'create', 'destroy'].includes(m.kind)) { if (!parts.has(m.node)) errors.push(`flujo ${f.id}, ${m.kind} ${m.id}: participante desconocido ${m.node}`); continue; }
+    [m.activate, m.deactivate].forEach(p => { if (p != null && !parts.has(p)) errors.push(`flujo ${f.id}, mensaje ${m.id}: activación de un participante desconocido ${p}`); });
     if (!parts.has(m.from) || !parts.has(m.to)) errors.push(`flujo ${f.id}, mensaje ${m.id || m.label}: extremo que no es participante`);
     if ((m.kind === 'self') !== (m.from === m.to)) errors.push(`flujo ${f.id}, mensaje ${m.id}: self exige from === to (y al revés)`);
   }
@@ -222,7 +265,7 @@ else {
   const mode = opt('--mode', 'full');
   const D = f => path.join(HERE, 'dist', f);
   /* dist/ vale si su huella coincide con la de las fuentes (tools/build-dist.mjs la escribe) */
-  const srcHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(HERE, 'graphx.js'))).update(fs.readFileSync(path.join(HERE, 'graphx.css'))).update(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'))).digest('hex');
+  const srcHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(HERE, 'graphx.js'))).update(fs.readFileSync(path.join(HERE, 'graphx.css'))).update(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-shapes.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-layouts.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-tree.js'))).digest('hex');
   const distOK = fs.existsSync(D('SOURCE_HASH')) && fs.readFileSync(D('SOURCE_HASH'), 'utf8').trim() === srcHash;
   const fresh = f => distOK && fs.existsSync(D(f));
   let engine;
@@ -231,7 +274,7 @@ else {
   }
   if (mode === 'lite' && fresh('graphx.lite.min.js')) engine = `<script>${fs.readFileSync(D('graphx.lite.min.js'), 'utf8')}</script>`;
   else if (mode !== 'dev' && mode !== 'lite' && fresh('graphx.bundle.min.js')) engine = `<script>${fs.readFileSync(D('graphx.bundle.min.js'), 'utf8')}</script>`;
-  else engine = `<style>${fs.readFileSync(path.join(HERE, 'graphx.css'), 'utf8')}</style>\n<script>${fs.readFileSync(path.join(HERE, 'vendor', 'elk.bundled.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8')}</script>\n<script>GraphX.mountAll(document);</script>`;
+  else engine = `<style>${fs.readFileSync(path.join(HERE, 'graphx.css'), 'utf8')}</style>\n<script>${fs.readFileSync(path.join(HERE, 'vendor', 'elk.bundled.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-shapes.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-layouts.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-tree.js'), 'utf8')}</script>\n<script>GraphX.mountAll(document);</script>`;
   out = `<!doctype html>
 <html lang="${spec.lang || 'es'}">
 <head>

@@ -150,7 +150,7 @@ ok(!!panel.querySelector('.gx-conn [data-go="m-entity-ar"]'), 'enlace interno: r
 ok(!!host.querySelector('.gx-leaf[data-id="m-team-result"] .gx-lk'), 'la tarjeta marca que tiene enlaces');
 const G2 = w.GraphX;
 ok(G2.resolveLink({ kind: 'url', url: 'javascript:alert(1)' }, {}) === null, 'un enlace que no es http(s) se descarta');
-ok(/atlassian\.net\/browse\/PRJ-100$/.test(G2.resolveLink({ kind: 'jira', key: 'PRJ-100' }, {}).url), 'jira con solo la clave resuelve la URL');
+ok(/atlassian\.net\/browse\/PRJ-1$/.test(G2.resolveLink({ kind: 'jira', key: 'PRJ-1' }, {}).url), 'jira con solo la clave resuelve la URL');
 
 console.log('— orientación vertical y cabeceras —');
 await gx.setDirection('down'); await wait(900);

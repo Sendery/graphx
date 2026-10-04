@@ -25,8 +25,10 @@ const edge = (s, a, b) => s.edges.find(e => e.from === a && e.to === b);
 const CHECKS = {
   flowchart: s => {
     ok(s.direction === 'right', 'LR → direction right');
-    ok(node(s, 'valida').kind === 'decision' && node(s, 'db').kind === 'datastore' && node(s, 'reserva').kind === 'subroutine', 'formas: rombo, cilindro, subrutina');
-    ok(node(s, 'correo').kind === 'document' && node(s, 'correo').label === 'Correo de confirmación', 'sintaxis nueva @{ shape, label }');
+    ok(node(s, 'valida').shape === 'decision' && node(s, 'db').shape === 'datastore' && node(s, 'reserva').shape === 'subroutine' && node(s, 'web').shape === 'rect', 'formas: rombo, cilindro, subrutina, rectángulo');
+    ok(node(s, 'fin').shape === 'dcircle' && node(s, 'cache').shape === 'circle' && node(s, 'aviso').shape === 'flag' && node(s, 'pago').shape === 'io', 'formas: doble círculo, círculo, bandera, entrada/salida');
+    ok((edge(s, 'aviso', 'cliente') || {}).head === 'cross', '--x → punta en aspa');
+    ok(node(s, 'correo').shape === 'document' && node(s, 'correo').label === 'Correo de confirmación', 'sintaxis nueva @{ shape, label }');
     ok(node(s, 'db').parent === 'datos' && node(s, 'datos').parent === 'backend', 'subgrafos anidados → niveles');
     ok((edge(s, 'valida', 'reserva') || {}).label === 'Sí' && (edge(s, 'cliente', 'web') || {}).label === 'hace un pedido', 'texto de enlace (-- x --> y |x|)');
     ok((edge(s, 'api', 'cache') || {}).kind === 'async' && (edge(s, 'reserva', 'pago') || {}).emphasis === 'hero', 'punteado → discontinua, grueso → hero');
@@ -40,31 +42,43 @@ const CHECKS = {
     ok(s.graphTab === false && f.participants.length === 5, 'solo secuencia, 5 participantes');
     ok(node(s, 'U').kind === 'actor' && node(s, 'DB').kind === 'datastore', 'actor y participante de tipo database');
     ok(s.lanes.length === 2 && node(s, 'A').lane === s.lanes[1].id, 'box → carril');
-    ok(f.messages.filter(m => m.kind === 'phase').length >= 4, 'alt/else/loop → fases');
-    ok(f.messages.some(m => m.kind === 'self') && f.messages.some(m => m.kind === 'return') && f.messages.some(m => m.kind === 'async'), 'self, return (-->>) y async (-))');
-    ok(f.messages.some(m => /redirección/.test(m.note || '')), 'Note → nota del mensaje');
+    ok(f.messages.filter(m => m.kind === 'block').length === 2 && f.messages.filter(m => m.kind === 'else').length === 1 && f.messages.filter(m => m.kind === 'end').length === 2, 'alt/else/loop → marcos con separador');
+    ok(node(s, 'U').shape === 'actor' && node(s, 'DB').shape === 'datastore', 'cabeceras con forma: actor y base de datos');
+    ok(f.messages.some(m => m.activate === 'A') && f.messages.some(m => m.deactivate === 'A'), '+/- → barras de activación');
+    ok(f.messages.some(m => m.head === 'cross') && f.messages.some(m => m.head === 'open'), 'puntas de mensaje: aspa y abierta');
+    ok(f.messages.filter(m => m.from).map(m => m.id).join() === Array.from({ length: 13 }, (_, i) => 'm' + (i + 1)).join(), 'los mensajes se numeran m1…m13 aunque haya marcos y notas entre ellos');
+    ok(f.messages.some(m => m.kind === 'self') && f.messages.some(m => m.kind === 'return') && f.messages.some(m => m.kind === 'sync' && m.head === 'open'), 'self, return (-->>) y -) continua con punta abierta');
+    ok(f.messages.some(m => m.kind === 'note' && m.side === 'right' && /redirección/.test(m.label)), 'Note → caja de nota a su lado');
     ok((node(s, 'A').links || []).length === 1, 'link A: … @ url');
   },
   class: s => {
     ok(node(s, 'Perro').parent === 'Dominio', 'namespace → contenedor');
-    ok(edge(s, 'Perro', 'Animal') && edge(s, 'Perro', 'Nadador').kind === 'async', 'herencia hacia el padre; realización discontinua');
-    ok(/Perro se compone de Collar/.test((edge(s, 'Collar', 'Perro') || {}).summary || ''), 'composición: el todo es el extremo con marca');
+    ok(edge(s, 'Animal', 'Perro').tail === 'triangle' && edge(s, 'Nadador', 'Perro').kind === 'async', 'la herencia baja del padre, con el triángulo en él; realización discontinua');
+    ok(/Perro se compone de Collar/.test((edge(s, 'Perro', 'Collar') || {}).summary || ''), 'composición: el todo va primero y lleva la marca');
+    ok(!edge(s, 'Animal', 'Perro').label && edge(s, 'Perro', 'Collar').label === 'lleva', 'sin etiqueta inventada; la de Mermaid se conserva');
     ok(node(s, 'Collar').label === 'Collar<T>' && node(s, 'Veterinario').label === 'Clínica veterinaria', 'genéricos ~T~ y etiqueta ["…"]');
     ok(/hacerRuido/.test(node(s, 'Animal').details_html) && node(s, 'Animal').subtitle === '«abstract»', 'miembros en el panel y anotación');
-    ok(node(s, 'Nadador').subtitle === '«interface»' && (node(s, 'Perro').notes || []).length === 1, '<<interface>> suelto y note for');
+    ok(node(s, 'Nadador').subtitle === '«interface»', '<<interface>> suelto');
+    ok(s.nodes.some(n => n.shape === 'note' && n.label === 'El mejor amigo') && s.edges.some(e => e.to === 'Perro' && e.head === 'none'), 'note for → nota unida a su clase');
+    ok(node(s, 'Animal').shape === 'class' && node(s, 'Animal').rows.some(r => r.section === 'method' && r.name === 'hacerRuido()' && r.type === 'void' && r.abstract), 'caja UML: filas con sección, tipo y abstracto');
+    ok(edge(s, 'Animal', 'Perro').head === 'none' && edge(s, 'Perro', 'Collar').tail === 'diamond' && edge(s, 'Veterinario', 'Animal').tail === 'odiamond' && edge(s, 'Perro', 'Hueso').head === 'arrow', 'puntas UML: triángulo, rombo lleno y hueco, flecha de dependencia');
+    ok(edge(s, 'Perro', 'Collar').tailLabel === '1' && edge(s, 'Perro', 'Collar').headLabel === '0..1', 'cardinalidades en los extremos');
   },
   state: s => {
     ok(node(s, 'start').kind === 'start' && node(s, 'end').kind === 'end', '[*] → inicio y fin');
     ok(node(s, 'Programado').parent === 'Aprobado' && s.nodes.some(n => n.kind === 'start' && n.parent === 'Aprobado'), 'estado compuesto con su propio [*]');
     ok(node(s, 'EnRevision').label === 'En revisión' && node(s, 'decide').kind === 'choice', 'state "…" as X y <<choice>>');
-    ok((node(s, 'EnRevision').notes || []).length === 1 && !!node(s, 'Aprobado').color, 'note right of y classDef');
-    ok(s.layout.cycles === 'dfs', 'ciclos rotos en profundidad, como dagre');
+    ok(s.nodes.some(n => n.shape === 'note' && /otra persona/.test(n.label)) && !!node(s, 'Aprobado').color, 'note right of → nota; classDef');
+    ok(node(s, 'Borrador').shape === 'rounded' && node(s, 'start').shape === 'start' && node(s, 'decide').shape === 'choice', 'formas de estado: redondeado, inicio, elección');
+    ok(['dfs', 'order'].includes(s.layout.cycles), 'ciclos rotos en profundidad, como dagre');
   },
   er: s => {
     ok(s.nodes.every(n => n.kind === 'table'), 'entidades');
     ok(/cero o más ORDER/.test(edge(s, 'CUSTOMER', 'ORDER').summary), 'cardinalidad ||--o{ en palabras');
     ok(edge(s, 'CUSTOMER', 'DELIVERY-ADDRESS').kind === 'async', 'relación no identificativa discontinua');
     ok(/email/.test(node(s, 'CUSTOMER').details_html) && node(s, 'CUSTOMER').tags.includes('email'), 'atributos en el panel y en la búsqueda');
+    ok(node(s, 'CUSTOMER').shape === 'table' && node(s, 'CUSTOMER').rows.some(r => r.name === 'id' && r.keys === 'PK'), 'entidad como tabla con claves');
+    ok(edge(s, 'CUSTOMER', 'ORDER').tail === 'one' && edge(s, 'CUSTOMER', 'ORDER').head === 'zero-many', 'patas de gallo ||--o{');
   },
   mindmap: s => {
     ok(s.nodes.length === 13 && s.edges.length === 12, 'árbol: 13 ideas, 12 ramas');
@@ -75,9 +89,12 @@ const CHECKS = {
   gantt: s => {
     const b = s.nodes.find(n => n.label === 'Backend'), i = s.nodes.find(n => n.label === 'Integración');
     ok(b.status === 'crit' && s.statuses.done && s.statuses.active, 'done/active/crit → estados');
-    ok((b.metrics || []).some(m => m.value === '2026-09-13'), 'fechas calculadas (after + duración)');
+    ok((b.metrics || []).some(m => m.value === '2026-09-17'), 'fechas calculadas (after + duración)');
+    ok(s.nodes.find(n => n.label === 'Investigación').span.end === '2026-09-08', 'excludes weekends: 5 días desde el martes 1 acaban el martes 8, como en Mermaid');
     ok(s.edges.filter(e => e.to === i.id).length === 2, 'after dev1 dev2 → dos dependencias');
-    ok(s.nodes.some(n => n.kind === 'milestone'), 'hito');
+    ok(s.nodes.some(n => n.kind === 'milestone' && n.span && n.span.milestone), 'hito');
+    ok(b.shape === 'gbar' && b.span.start === '2026-09-17' && s.nodes.some(n => n.span && n.span.live), 'barras con su intervalo; la activa, en movimiento');
+    ok(s.layout.mode === 'gantt' && s.layout.weekends && s.nodes.some(n => n.kind === 'group' && n.shape === 'gbar' && n.span), 'eje de fechas, fines de semana y resumen de cada sección');
   },
   journey: s => {
     ok(s.nodes.filter(n => n.kind === 'job').every(n => n.status && n.metrics[0].label), 'puntuación → estado y métrica con nombre');
@@ -90,17 +107,21 @@ const CHECKS = {
   git: s => {
     ok(s.lanes.map(l => l.label).join() === 'main,develop,feature/login', 'una rama por carril');
     ok(s.edges.some(e => e.label === 'merge') && s.edges.some(e => e.label === 'cherry-pick'), 'merge y cherry-pick');
-    ok(node(s, 'feat-a').subtitle === 'v0.1', 'tag');
+    ok(node(s, 'feat-a').badge === 'v0.1', 'tag como etiqueta del commit');
+    ok(s.nodes.some(n => n.shape === 'commit-merge') && s.nodes.some(n => n.shape === 'commit-highlight') && s.nodes.filter(n => n.head).length === 3, 'commits: fusión, destacado y un HEAD por rama');
   },
   c4: s => {
     ok(node(s, 'cliente').kind === 'actor' && node(s, 'mainframe').kind === 'datastore' && node(s, 'correo').kind === 'external', 'Person, SystemDb, System_Ext');
     ok(node(s, 'mainframe').parent === 'b1' && node(s, 'b1').parent === 'b0', 'boundaries anidados');
     ok(!!edge(s, 'correo', 'cliente'), 'Rel_Back invierte el sentido');
     ok(!!node(s, 'cliente').color, 'UpdateElementStyle');
+    ok(node(s, 'cliente').shape === 'person' && node(s, 'mainframe').shape === 'c4-db' && node(s, 'b0').frame === 'dashed', 'C4: persona, base de datos y frontera discontinua');
+    ok(node(s, 'banca').subtitle === '[Sistema]' && node(s, 'correo').subtitle === '[Sistema, externo]', 'C4: tipo traducido');
   },
   architecture: s => {
     ok(node(s, 'db').parent === 'api' && node(s, 'db').kind === 'datastore', 'service … in grupo');
     ok(node(s, 'j1').kind === 'junction' && !!edge(s, 'j1', 'server'), 'junction y arista con lados');
+    ok(node(s, 'db').shape === 'tile' && node(s, 'disk1').kind === 'disk' && node(s, 'api').frame === 'dashed', 'baldosas con icono y grupo discontinuo');
   },
   block: s => {
     ok(!s.nodes.some(n => n.label === 'space'), 'space no es una pieza');
@@ -112,15 +133,18 @@ const CHECKS = {
     ok(!!edge(s, 'test_entity', 'test_req') && !!edge(s, 'test_req', 'login_req') === false, 'relaciones en su sentido');
   },
   sankey: s => {
-    ok(s.edges.length === 5 && s.edges.filter(e => e.emphasis === 'hero').length === 2, 'flujos, los dos mayores con énfasis');
+    ok(s.edges.length === 5 && s.layout.mode === 'sankey', 'cinco flujos en un layout de sankey');
+    ok(s.edges.every(e => typeof e.weight === 'number' && e.color) && s.nodes.every(n => n.shape === 'sbar' && n.color), 'grosor por valor, barras y un color por nodo');
     ok(s.nodes.some(n => n.label === 'Mermas, transporte'), 'CSV con comillas');
   },
   kanban: s => {
     ok(s.lanes.length === 3 && node(s, 't3').lane === 'doing', 'columnas → carriles');
     ok((node(s, 't1').links || [])[0].url === 'https://example.atlassian.net/browse/PRJ-1', 'ticketBaseUrl del frontmatter');
+    ok(node(s, 't1').shape === 'ticket' && node(s, 't1').badge === 'PRJ-1' && node(s, 't4').avatar === 'lu', 'ticket con número y avatar');
   },
   treemap: s => {
     ok(s.nodes.find(n => n.label === 'Presupuesto').subtitle === '1450', 'totales sumados hacia arriba');
+    ok(s.nodes.filter(n => n.shape === 'block').every(n => typeof n.value === 'number'), 'hojas con área según su valor');
   }
 };
 
@@ -159,7 +183,7 @@ ok(s.nodes.some(n => n.id === 'root'), 'una pieza puede llamarse «root»');
 s = one('sequenceDiagram\nAlice Smith->>Bob: hola\nBob->>Bob: piensa');
 ok(s.flows[0].messages[1].kind === 'self' && s.nodes[0].label === 'Alice Smith', 'participantes con espacios y automensaje');
 s = one('classDiagram\nclassC --* classD\nclassI -- classJ');
-ok(/classD se compone de classC/.test(s.edges[0].summary), 'C --* D: D es el todo');
+ok(/classD se compone de classC/.test(s.edges[0].summary) && s.edges[0].from === 'classD' && s.edges[0].tail === 'diamond', 'C --* D: D es el todo y va primero');
 s = one('erDiagram\nCAR one or more to zero or more PERSON : drives');
 ok(/cada PERSON, con uno o más CAR/.test(s.edges[0].summary), 'cardinalidad escrita en palabras');
 s = conv('flowchart LR\nA-->B', { lang: 'en' }).spec;
@@ -176,7 +200,7 @@ if (process.argv.includes('--mount')) {
   const blocks = fs.readdirSync(EX).filter(f => f.endsWith('.mmd') && f !== 'pie.mmd').sort()
     .map(f => `<div data-gx data-name="${f}"><script type="text/plain" class="gx-mermaid">${R('examples/mermaid/' + f).replace(/<\/script/gi, '<\\/script')}</script></div>`).join('\n');
   const html = `<!doctype html><html><head><style>${R('graphx.css')}</style></head><body>${blocks}
-<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx.js')}</script><script>${R('graphx-mermaid.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
+<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx-layouts.js')}</script><script>${R('graphx.js')}</script><script>${R('graphx-mermaid.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, beforeParse(w) { w.matchMedia = q => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }); w.HTMLCanvasElement.prototype.getContext = () => null; } });
   const w = dom.window; await new Promise(res => w.addEventListener('load', res));
   for (const el of w.document.querySelectorAll('[data-gx]')) {

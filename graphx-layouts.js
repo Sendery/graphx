@@ -1,0 +1,528 @@
+/* GraphX · layouts propios por tipo de diagrama.
+ *
+ * ELK coloca bien un grafo de piezas y flechas. Otros diagramas de Mermaid no son eso: un gantt es
+ * una fila por tarea sobre un eje de fechas, un gitGraph un carril por rama en orden cronológico,
+ * un sankey columnas con cintas proporcionales… Cada función de aquí recibe las piezas visibles y
+ * devuelve dónde va cada una, por dónde van las aristas y una capa de fondo (ejes, marcas, curvas).
+ * El motor la usa en vez de ELK cuando el diagrama lo pide con `layout.mode`, y todo lo demás
+ * (tooltip, panel, selección, plegar y desplegar, animación) funciona igual.
+ *
+ *   GraphX.layouts[mode](ctx) → { rects: Map<id,{x,y,w,h}>, paths: Map<edgeId,{pts|d,label,width}>, bbox, deco }
+ *   ctx: { M, roots, vis, exp, vedges, size(id), textW, spec, now, cvar(id), lang }
+ *
+ * Son funciones puras (no tocan el DOM) y `deco` es el mismo árbol SVG descriptivo que usan las
+ * formas: `{ tag, attrs, children, text }`.                                                        */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.GraphX = Object.assign(root.GraphX || {}, { layouts: api });
+})(typeof window !== 'undefined' ? window : globalThis, function () {
+  'use strict';
+
+  const DAY = 864e5, HEAD = 44;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const r1 = v => Math.round(v * 10) / 10;
+  const E = (tag, attrs, children, text) => ({ tag, attrs: attrs || {}, children: children || [], text: text == null ? undefined : String(text) });
+  const toMs = v => {
+    if (v == null) return null;
+    if (typeof v === 'number') return v;
+    const s = String(v), t = Date.parse(s.length === 10 ? s + 'T00:00:00Z' : s.replace(' ', 'T') + (/Z|[+-]\d\d:?\d\d$/.test(s) ? '' : 'Z'));
+    return isNaN(t) ? null : t;
+  };
+  function helpers(ctx) {
+    const { M, vis, exp } = ctx;
+    const kids = id => M.get(id).children.filter(c => vis.has(c));
+    const open = id => exp.has(id) && kids(id).length > 0;
+    return { kids, open };
+  }
+  function bboxOf(rects, extra) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const r of rects.values()) { x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h); }
+    (extra || []).forEach(b => { x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h); });
+    if (x0 === Infinity) return { x: 0, y: 0, w: 400, h: 200 };
+    return { x: x0 - 24, y: y0 - 24, w: x1 - x0 + 48, h: y1 - y0 + 48 };
+  }
+  const midLabel = (v, a, b, textW) => {
+    if (!v.label) return null;
+    const w = Math.ceil(textW(v.label, 11, 500)) + 16;
+    return { x: (a.x + b.x) / 2 - w / 2, y: (a.y + b.y) / 2 - 10, w, h: 20 };
+  };
+  const center = r => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+  const L10N = {
+    es: { months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], today: 'hoy', more: 'más' },
+    en: { months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], today: 'today', more: 'more' }
+  };
+
+  /* ---------- gantt: una fila por tarea sobre un eje de fechas común ---------- */
+  function gantt(ctx) {
+    const { M, roots, vis, vedges, textW, spec } = ctx, { kids, open } = helpers(ctx), L = L10N[ctx.lang] || L10N.es;
+    let lo = Infinity, hi = -Infinity;
+    for (const n of M.values()) if (n.span) [n.span.start, n.span.end].forEach(v => { const t = toMs(v); if (t != null) { lo = Math.min(lo, t); hi = Math.max(hi, t); } });
+    if (!(lo < Infinity)) { lo = Date.UTC(2020, 0, 1); hi = lo + 30 * DAY; }
+    if (hi <= lo) hi = lo + DAY;
+    const days = (hi - lo) / DAY, chartW = clamp(days * 34, 640, 1600), k = chartW / (hi - lo);
+    const X0 = 24, TOP = 46, ROW = 36, BAR = 24;
+    const xOf = t => X0 + (t - lo) * k;
+    const rects = new Map();
+    let y = TOP + 6;
+    const placeTask = id => {
+      const n = M.get(id), s = n.span ? toMs(n.span.start) : null, e = n.span ? toMs(n.span.end != null ? n.span.end : n.span.start) : null;
+      if (s == null) { const z = ctx.size(id); rects.set(id, { x: X0, y: y + (ROW - Math.min(z.h, BAR)) / 2, w: z.w, h: Math.min(z.h, BAR) }); }
+      else if ((n.span.milestone) || e == null || e - s < 1) rects.set(id, { x: xOf(s) - 12, y: y + (ROW - 24) / 2, w: 24, h: 24 });
+      else rects.set(id, { x: xOf(s), y: y + (ROW - BAR) / 2, w: Math.max((e - s) * k, 8), h: BAR });
+      y += ROW;
+    };
+    /* a la derecha, sitio para las etiquetas que no caben dentro de su barra */
+    const W = X0 + chartW + 24 + 170;
+    for (const r of roots.filter(v => vis.has(v))) {
+      if (open(r)) {
+        const y0 = y; y += HEAD - 4;
+        kids(r).forEach(placeTask);
+        y += 10;
+        rects.set(r, { x: 6, y: y0, w: W - 6, h: y - y0 });
+        y += 12;
+      } else placeTask(r);
+    }
+    const bottom = y;
+    /* eje: marcas de fecha, fines de semana, hoy */
+    const deco = [], step = [1, 2, 7, 14, 30, 61, 91, 182, 365].find(d => d * DAY * k >= 62) || 365;
+    const first = new Date(lo); first.setUTCHours(0, 0, 0, 0);
+    let t = first.getTime();
+    if (step === 7 || step === 14) while (new Date(t).getUTCDay() !== 1) t += DAY;
+    if (spec.layout && spec.layout.weekends) {
+      for (let d = first.getTime(); d < hi; d += DAY) { const dow = new Date(d).getUTCDay(); if (dow === 0 || dow === 6) deco.push(E('rect', { class: 'gx-lg-wknd', x: r1(xOf(Math.max(d, lo))), y: TOP - 8, width: r1(Math.max(0, Math.min(d + DAY, hi) - Math.max(d, lo)) * k), height: bottom - TOP + 8 })); }
+    }
+    /* por meses, cada marca cae el día 1 (un mes no son 30 días) */
+    const nextT = t0 => { if (step < 30) return t0 + step * DAY; const d = new Date(t0), m = { 30: 1, 61: 2, 91: 3, 182: 6, 365: 12 }[step] || 1; return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + m, 1); };
+    if (step >= 30) { const d = new Date(lo); t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); }
+    for (; t <= hi; t = nextT(t)) {
+      if (t < lo) continue;
+      const x = r1(xOf(t)), d = new Date(t);
+      deco.push(E('path', { class: 'gx-lg-grid', d: `M${x},${TOP - 8}V${bottom}` }));
+      deco.push(E('text', { class: 'gx-lg-tick', x, y: TOP - 16, 'text-anchor': 'middle' }, null, step >= 30 ? `${L.months[d.getUTCMonth()]} ${d.getUTCFullYear()}` : `${d.getUTCDate()} ${L.months[d.getUTCMonth()]}`));
+    }
+    deco.push(E('path', { class: 'gx-lg-axis', d: `M${X0},${TOP - 8}H${X0 + chartW}` }));
+    if (ctx.now >= lo && ctx.now <= hi) {
+      const x = r1(xOf(ctx.now));
+      deco.push(E('path', { class: 'gx-lg-today', d: `M${x},${TOP - 10}V${bottom}` }), E('text', { class: 'gx-lg-todayt', x, y: TOP - 30, 'text-anchor': 'middle' }, null, L.today));
+    }
+    /* dependencias: del final de una barra al principio de la siguiente, en escuadra */
+    const paths = new Map();
+    for (const v of vedges) {
+      const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      if (v.list.every(e => e.emphasis === 'muted')) continue;
+      const ay = a.y + a.h / 2, by = b.y + b.h / 2, ax = a.x + a.w, bx = b.x;
+      /* con hueco, en escuadra; si la siguiente empieza donde acaba esta, una bajada vertical corta */
+      const xd = clamp(bx + 10, a.x + 4, ax - 4);
+      const pts = bx >= ax + 18 ? [{ x: ax, y: ay }, { x: ax + 9, y: ay }, { x: ax + 9, y: by }, { x: bx, y: by }]
+        : b.y > a.y ? [{ x: xd, y: a.y + a.h }, { x: xd, y: b.y }] : [{ x: xd, y: a.y }, { x: xd, y: b.y + b.h }];
+      paths.set(v.id, { pts, label: null });
+    }
+    return { rects, paths, bbox: bboxOf(rects, [{ x: 0, y: TOP - 40, w: W, h: 10 }]), deco };
+  }
+
+  /* ---------- gitGraph: un carril por rama, los commits en orden cronológico ---------- */
+  function git(ctx) {
+    const { M, roots, vis, vedges } = ctx, { open } = helpers(ctx);
+    const lanes = roots.filter(r => vis.has(r) && M.get(r).isLane);
+    const LABEL = 150, ROW = 84;
+    const rects = new Map(), laneY = new Map(lanes.map((l, i) => [l, 12 + i * ROW]));
+    const commits = [...M.values()].filter(n => !n.isLane && vis.has(n.id)).sort((a, b) => a.order - b.order);
+    /* una columna por commit, tan ancha como su etiqueta más larga (con un mínimo) */
+    const COL = clamp(Math.max(0, ...commits.map(n => ctx.size(n.id).w)) + 18, 88, 190);
+    const W = LABEL + 30 + Math.max(commits.length, 1) * COL;
+    commits.forEach((n, i) => {
+      const z = ctx.size(n.id), cy = (laneY.get(n.laneId) != null ? laneY.get(n.laneId) : 12) + ROW / 2 - 4, cx = LABEL + 30 + i * COL + COL / 2;
+      rects.set(n.id, { x: cx - z.w / 2, y: cy - z.h / 2, w: z.w, h: z.h });
+    });
+    lanes.forEach(l => {
+      if (open(l)) rects.set(l, { x: 6, y: laneY.get(l), w: W, h: ROW - 8 });
+      else { const z = ctx.size(l); rects.set(l, { x: 6, y: laneY.get(l) + (ROW - 8 - z.h) / 2, w: z.w, h: z.h }); }
+    });
+    /* misma rama: recta de punto a punto; de una rama a otra (al abrirla o al fusionar), una curva */
+    const paths = new Map();
+    for (const v of vedges) {
+      const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      /* una rama plegada es una tarjeta al margen: su historia no se dibuja como línea */
+      if (M.get(v.from).isLane || M.get(v.to).isLane) continue;
+      const ca = center(a), cb = center(b);
+      if (Math.abs(ca.y - cb.y) < 1) { paths.set(v.id, { pts: [ca, cb], label: null }); continue; }
+      /* como Mermaid: una rama nueva baja (o sube) en vertical desde su commit padre y sigue por su
+         carril; un merge o un cherry-pick sigue por su carril y llega en vertical al commit destino.
+         Así cada línea solo recorre su propio carril y no pasa por encima de commits ajenos. */
+      const merge = v.list.some(e => e.label === 'merge' || e.label === 'cherry-pick');
+      const pts = merge ? [ca, { x: cb.x, y: ca.y }, cb] : [ca, { x: ca.x, y: cb.y }, cb];
+      paths.set(v.id, { pts, label: null, radius: 18 });
+    }
+    return { rects, paths, bbox: bboxOf(rects), deco: [] };
+  }
+
+  /* ---------- sankey: columnas por profundidad, barras y cintas proporcionales ---------- */
+  function sankey(ctx) {
+    const { M, vis, vedges } = ctx;
+    const nodes = [...M.values()].filter(n => vis.has(n.id) && !(ctx.exp.has(n.id) && n.children.some(c => vis.has(c))) && !n.isLane).sort((a, b) => a.order - b.order);
+    const wOf = v => v.list.reduce((s, e) => s + (typeof e.weight === 'number' ? e.weight : 1), 0);
+    const ins = new Map(), outs = new Map();
+    nodes.forEach(n => { ins.set(n.id, []); outs.set(n.id, []); });
+    const links = vedges.filter(v => ins.has(v.to) && outs.has(v.from) && v.from !== v.to);
+    links.forEach(v => { outs.get(v.from).push(v); ins.get(v.to).push(v); });
+    /* columna = camino más largo desde un origen; las aristas que cierran un ciclo (retornos de un
+       recorrido en profundidad) no cuentan, y las columnas que quedan vacías se compactan */
+    const back = new Set(), state = new Map();
+    const dfs = id => { state.set(id, 1); outs.get(id).forEach(v => { const s = state.get(v.to); if (s === 1) back.add(v.id); else if (!s) dfs(v.to); }); state.set(id, 2); };
+    nodes.forEach(n => { if (!state.get(n.id)) dfs(n.id); });
+    const fwd = links.filter(v => !back.has(v.id));
+    const depth = new Map(nodes.map(n => [n.id, 0]));
+    for (let it = 0; it < nodes.length; it++) { let ch = false; fwd.forEach(v => { if (depth.get(v.to) < depth.get(v.from) + 1) { depth.set(v.to, depth.get(v.from) + 1); ch = true; } }); if (!ch) break; }
+    const used = [...new Set(depth.values())].sort((a, b) => a - b), dense = new Map(used.map((d, i) => [d, i]));
+    depth.forEach((d, id) => depth.set(id, dense.get(d)));
+    const ncol = used.length || 1;
+    const value = id => Math.max(ins.get(id).reduce((s, v) => s + wOf(v), 0), outs.get(id).reduce((s, v) => s + wOf(v), 0), 1);
+    const cols = Array.from({ length: ncol }, () => []);
+    nodes.forEach(n => cols[depth.get(n.id)].push(n.id));
+    const H = 520, GAP = 20, W = Math.max(720, ncol * 250);
+    const scale = Math.min(...cols.map(c => (H - (c.length - 1) * GAP) / (c.reduce((s, id) => s + value(id), 0) || 1)));
+    const colX = i => 40 + (ncol > 1 ? i * (W - 80) / (ncol - 1) : (W - 80) / 2);
+    const rects = new Map(), yMid = new Map();
+    cols.forEach((c, i) => {
+      /* orden en la columna: por la altura media de lo que le llega (menos cruces) */
+      if (i > 0) c.sort((a, b) => { const m = id => { const src = ins.get(id).map(v => yMid.get(v.from)).filter(x => x != null); return src.length ? src.reduce((s, x) => s + x, 0) / src.length : 0; }; return m(a) - m(b); });
+      const total = c.reduce((s, id) => s + value(id) * scale, 0) + (c.length - 1) * GAP;
+      let y = 20 + (H - total) / 2;
+      c.forEach(id => { const h = Math.max(value(id) * scale, 4); rects.set(id, { x: colX(i) - 8, y, w: 16, h }); yMid.set(id, y + h / 2); M.get(id).labelSide = i === ncol - 1 && ncol > 1 ? 'left' : 'right'; y += h + GAP; });
+    });
+    /* cintas: apiladas a lo largo de cada barra, en el orden vertical de su otro extremo */
+    const paths = new Map(), offOut = new Map(), offIn = new Map();
+    const byY = (a, b, key) => rects.get(a[key]).y - rects.get(b[key]).y;
+    nodes.forEach(n => { outs.get(n.id).sort((a, b) => byY(a, b, 'to')); ins.get(n.id).sort((a, b) => byY(a, b, 'from')); });
+    nodes.forEach(n => {
+      let o = 0; outs.get(n.id).forEach(v => { offOut.set(v.id, o); o += wOf(v) * scale; });
+      let q = 0; ins.get(n.id).forEach(v => { offIn.set(v.id, q); q += wOf(v) * scale; });
+    });
+    links.forEach(v => {
+      const a = rects.get(v.from), b = rects.get(v.to), t = Math.max(wOf(v) * scale, 1.5);
+      const sx = a.x + a.w, sy = a.y + offOut.get(v.id) + t / 2, tx = b.x, ty = b.y + offIn.get(v.id) + t / 2, dx = (tx - sx) / 2;
+      paths.set(v.id, { d: `M${r1(sx)},${r1(sy)} C${r1(sx + dx)},${r1(sy)} ${r1(tx - dx)},${r1(ty)} ${r1(tx)},${r1(ty)}`, width: r1(t), label: null });
+    });
+    const labelRoom = [{ x: 0, y: 0, w: W + 150, h: H + 40 }];
+    return { rects, paths, bbox: bboxOf(rects, labelRoom), deco: [] };
+  }
+
+  /* ---------- treemap: teselado «squarified» por valor ---------- */
+  function squarify(items, box) {
+    const out = [], total = items.reduce((s, x) => s + x.v, 0) || 1, area = box.w * box.h;
+    const list = items.map(x => ({ id: x.id, a: x.v / total * area })).filter(x => x.a > 0).sort((a, b) => b.a - a.a);
+    let r = Object.assign({}, box);
+    const worst = (row, side) => { const s = row.reduce((t, x) => t + x.a, 0), mx = Math.max(...row.map(x => x.a)), mn = Math.min(...row.map(x => x.a)); return Math.max(side * side * mx / (s * s), (s * s) / (side * side * mn)); };
+    let row = [];
+    const flush = () => {
+      if (!row.length) return;
+      const s = row.reduce((t, x) => t + x.a, 0), horiz = r.w >= r.h;
+      if (horiz) { const w = s / r.h; let y = r.y; row.forEach(x => { const h = x.a / w; out.push({ id: x.id, x: r.x, y, w, h }); y += h; }); r = { x: r.x + w, y: r.y, w: r.w - w, h: r.h }; }
+      else { const h = s / r.w; let x0 = r.x; row.forEach(x => { const w = x.a / h; out.push({ id: x.id, x: x0, y: r.y, w, h }); x0 += w; }); r = { x: r.x, y: r.y + h, w: r.w, h: r.h - h }; }
+      row = [];
+    };
+    for (const it of list) {
+      const side = Math.min(r.w, r.h);
+      if (!row.length || worst(row.concat(it), side) <= worst(row, side)) row.push(it); else { flush(); row.push(it); }
+    }
+    flush();
+    return out;
+  }
+  function treemap(ctx) {
+    const { M, roots, vis } = ctx, { kids, open } = helpers(ctx);
+    const val = id => { const n = M.get(id); return n.children.length ? n.children.reduce((s, c) => s + val(c), 0) : (typeof n.value === 'number' ? Math.max(n.value, 0) : 0); };
+    const rects = new Map(), GAP = 4;
+    const place = (id, box) => {
+      rects.set(id, box);
+      if (!open(id)) return;
+      const inner = { x: box.x + 8, y: box.y + HEAD, w: Math.max(box.w - 16, 10), h: Math.max(box.h - HEAD - 8, 10) };
+      squarify(kids(id).map(c => ({ id: c, v: val(c) || 1 })), inner).forEach(c => place(c.id, { x: c.x + GAP / 2, y: c.y + GAP / 2, w: Math.max(c.w - GAP, 8), h: Math.max(c.h - GAP, 8) }));
+    };
+    const top = roots.filter(r => vis.has(r)), total = top.reduce((s, r) => s + val(r), 0) || 1;
+    const W = 1100, H = clamp(Math.sqrt(total) * 18, 460, 760);
+    if (top.length === 1) place(top[0], { x: 0, y: 0, w: W, h: H });
+    else squarify(top.map(r => ({ id: r, v: val(r) || 1 })), { x: 0, y: 0, w: W, h: H }).forEach(c => place(c.id, { x: c.x + GAP / 2, y: c.y + GAP / 2, w: Math.max(c.w - GAP, 1), h: Math.max(c.h - GAP, 1) }));
+    return { rects, paths: new Map(), bbox: bboxOf(rects), deco: [] };
+  }
+
+  /* ---------- timeline: periodos sobre un eje, sus eventos debajo ---------- */
+  function timeline(ctx) {
+    const { M, roots, vis } = ctx, { kids, open } = helpers(ctx);
+    const rects = new Map(), deco = [], GAP = 18, EV_GAP = 10;
+    const tops = roots.filter(r => vis.has(r));
+    /* una sección (`section` en Mermaid) agrupa periodos; el conversor la marca con `section: true` */
+    const hasSections = tops.some(r => M.get(r).section);
+    const AXIS = hasSections ? 16 + HEAD + 18 : 30, PTOP = AXIS + 22;
+    let x = 10, bottom = PTOP;
+    const dots = [];
+    const period = id => {
+      const n = M.get(id);
+      if (open(id)) {
+        const ev = kids(id), w = Math.max(190, ...ev.map(c => ctx.size(c).w + 28), ctx.textW(n.label, 12.5, 700) + 90);
+        let y = PTOP + HEAD;
+        ev.forEach(c => { const z = ctx.size(c); rects.set(c, { x: x + 14, y, w: w - 28, h: z.h }); y += z.h + EV_GAP; });
+        rects.set(id, { x, y: PTOP, w, h: y - PTOP + 4 });
+        bottom = Math.max(bottom, y + 4); dots.push({ x: x + w / 2, id }); x += w + GAP;
+      } else { const z = ctx.size(id); rects.set(id, { x, y: PTOP, w: z.w, h: z.h }); bottom = Math.max(bottom, PTOP + z.h); dots.push({ x: x + z.w / 2, id }); x += z.w + GAP; }
+    };
+    tops.forEach(r => {
+      if (M.get(r).section && open(r)) {
+        const x0 = x; x += 12;
+        kids(r).forEach(period);
+        x += 12 - GAP;
+        rects.set(r, { x: x0, y: 16, w: x - x0, h: 0 });
+        x += GAP + 8;
+      } else period(r);
+    });
+    for (const [id, r] of rects) if (r.h === 0) r.h = bottom - r.y + 14;
+    const x1 = x - GAP;
+    deco.push(E('path', { class: 'gx-lg-tl', d: `M4,${AXIS}H${x1 + 14}` }), E('path', { class: 'gx-lg-tlhead', d: `M${x1 + 8},${AXIS - 6}L${x1 + 18},${AXIS}L${x1 + 8},${AXIS + 6}` }));
+    dots.forEach(d => deco.push(E('path', { class: 'gx-lg-tlstem', d: `M${r1(d.x)},${AXIS}V${PTOP}` }), E('circle', { class: 'gx-lg-tldot', cx: r1(d.x), cy: AXIS, r: 6, style: ctx.cvar(d.id) ? `fill:${ctx.cvar(d.id)}` : undefined })));
+    return { rects, paths: new Map(), bbox: bboxOf(rects, [{ x: 0, y: AXIS - 10, w: x1 + 24, h: 20 }]), deco };
+  }
+
+  /* ---------- journey: las tareas en fila y, debajo, la curva de emoción ---------- */
+  function journey(ctx) {
+    const { M, roots, vis } = ctx, { kids, open } = helpers(ctx);
+    const rects = new Map(), deco = [], GAP = 16;
+    let x = 10, rowH = 0;
+    const tasks = [];
+    const task = (id, y) => { const z = ctx.size(id); rects.set(id, { x, y, w: z.w, h: z.h }); tasks.push(id); rowH = Math.max(rowH, z.h); x += z.w + GAP; };
+    roots.filter(r => vis.has(r)).forEach(r => {
+      if (open(r)) { const x0 = x; x += 12; kids(r).forEach(c => task(c, 16 + HEAD)); x += 12 - GAP; rects.set(r, { x: x0, y: 16, w: x - x0, h: 0 }); x += GAP + 6; }
+      else task(r, 16 + HEAD);
+    });
+    const secBottom = 16 + HEAD + rowH + 14;
+    for (const r of rects.values()) if (r.h === 0) r.h = secBottom - r.y;
+    /* cinco niveles: arriba, muy buena; abajo, muy mala */
+    const top = secBottom + 30, LV = 30, pts = [];
+    for (let s = 5; s >= 1; s--) deco.push(E('path', { class: 'gx-lg-lv', d: `M4,${top + (5 - s) * LV}H${x}` }));
+    tasks.filter(id => typeof M.get(id).score === 'number').forEach(id => { const n = M.get(id), r = rects.get(id), sc = clamp(Math.round(n.score), 1, 5); pts.push({ x: r.x + r.w / 2, y: top + (5 - sc) * LV, sc, id }); });
+    if (pts.length > 1) {
+      let d = `M${r1(pts[0].x)},${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], mx = (a.x + b.x) / 2; d += ` C${r1(mx)},${a.y} ${r1(mx)},${b.y} ${r1(b.x)},${b.y}`; }
+      deco.push(E('path', { class: 'gx-lg-jcurve', d }));
+    }
+    pts.forEach(p => {
+      const col = ctx.cvar(p.id), mouth = p.sc >= 4 ? `M-5,3Q0,8 5,3` : p.sc === 3 ? 'M-5,4H5' : `M-5,6Q0,1 5,6`;
+      deco.push(E('path', { class: 'gx-lg-jstem', d: `M${r1(p.x)},${secBottom - 14}V${p.y - 12}` }));
+      deco.push(E('g', { class: 'gx-lg-face', transform: `translate(${r1(p.x)},${p.y})` }, [
+        E('circle', { r: 12, class: 'gx-lg-facebg', style: col ? `fill:${col}` : undefined }),
+        E('circle', { cx: -4, cy: -3, r: 1.6, class: 'gx-lg-eye' }), E('circle', { cx: 4, cy: -3, r: 1.6, class: 'gx-lg-eye' }), E('path', { d: mouth, class: 'gx-lg-mouth' })]));
+    });
+    return { rects, paths: new Map(), bbox: bboxOf(rects, [{ x: 0, y: top - 16, w: x, h: 4 * LV + 32 }]), deco };
+  }
+
+  /* ---------- rejilla de block-beta: columnas, anchos y huecos ---------- */
+  function grid(ctx) {
+    const { M, roots, vis, vedges, textW } = ctx, { kids, open } = helpers(ctx);
+    const rects = new Map(), GAP = 14, PAD = 14;
+    const ROUND = { circle: 1, dcircle: 1, start: 1, end: 1, junction: 1, choice: 1 };
+    /* tamaño de un contenedor abierto: celdas de ancho uniforme; alto, el mayor de cada fila */
+    const sizeOf = id => (open(id) ? layoutBox(id).size : ctx.size(id));
+    const cache = new Map(), cells = new Map();
+    /* la celda de cada pieza: la que trae (`grid`) o, si no trae, la siguiente libre */
+    const place0 = (items, own) => {
+      const int = (v, d) => (Number.isFinite(+v) && +v >= 0 ? Math.floor(+v) : d);
+      const given = items.filter(c => M.get(c).grid);
+      const cols = Math.max(1, own || 0, ...given.map(c => int(M.get(c).grid.c, 0) + Math.max(1, int(M.get(c).grid.span, 1))), own ? 0 : items.length);
+      let r = 0, cc = 0;
+      given.forEach(c => { const g = M.get(c).grid; const cell = { r: int(g.r, 0), c: int(g.c, 0), span: Math.max(1, int(g.span, 1)) }; cells.set(c, cell); if (cell.r > r || (cell.r === r && cell.c + cell.span > cc)) { r = cell.r; cc = cell.c + cell.span; } });
+      items.filter(c => !M.get(c).grid).forEach(c => { if (cc >= cols) { r++; cc = 0; } cells.set(c, { r, c: cc, span: 1 }); cc++; });
+      return cols;
+    };
+    const cellOf = c => cells.get(c) || { r: 0, c: 0, span: 1 };
+    function layoutBox(id, list) {
+      if (cache.has(id)) return cache.get(id);
+      const own = id != null ? M.get(id).gridCols : (ctx.spec.layout && ctx.spec.layout.columns);
+      const items = list || kids(id), cols = place0(items, own);
+      const colW = Math.max(60, ...items.map(c => { const g = cellOf(c); return (sizeOf(c).w - (g.span - 1) * GAP) / g.span; }));
+      const rowsN = Math.max(1, ...items.map(c => cellOf(c).r + 1));
+      const rowH = Array.from({ length: rowsN }, (_, r) => Math.max(40, ...items.filter(c => cellOf(c).r === r).map(c => sizeOf(c).h)));
+      const head = id != null ? HEAD : 0;
+      const size = { w: PAD * 2 + cols * colW + (cols - 1) * GAP, h: head + PAD + rowH.reduce((s, h) => s + h, 0) + (rowsN - 1) * GAP + PAD - (id != null ? 6 : 0) };
+      const out = { size, items, colW, rowH, head };
+      cache.set(id, out);
+      return out;
+    }
+    function place(id, x, y, list) {
+      const b = layoutBox(id, list);
+      if (id != null) rects.set(id, { x, y, w: b.size.w, h: b.size.h });
+      const rowY = []; let acc = y + b.head + PAD - (id != null ? 6 : 0);
+      b.rowH.forEach((h, i) => { rowY[i] = acc; acc += h + GAP; });
+      b.items.forEach(c => {
+        const g = cellOf(c), span = g.span;
+        const cx = x + PAD + g.c * (b.colW + GAP), cw = span * b.colW + (span - 1) * GAP, ch = b.rowH[g.r];
+        if (open(c)) { const s = layoutBox(c).size; place(c, cx + (cw - s.w) / 2, rowY[g.r] + (ch - s.h) / 2); return; }
+        const z = ctx.size(c), n = M.get(c);
+        if (ROUND[n.shape]) rects.set(c, { x: cx + (cw - z.w) / 2, y: rowY[g.r] + (ch - z.h) / 2, w: z.w, h: z.h });
+        else rects.set(c, { x: cx, y: rowY[g.r] + (ch - z.h) / 2, w: cw, h: z.h });
+      });
+    }
+    place(null, 0, 0, roots.filter(r => vis.has(r)));
+    /* recta de centro a centro; si atraviesa otra pieza, en L por el lado libre */
+    const leaves = [...rects.entries()].filter(([id]) => !open(id));
+    const inside = (id, anc) => { let p = M.get(id).parent; while (p != null) { if (p === anc) return true; p = M.get(p).parent; } return false; };
+    const crosses = (p, q, skip) => leaves.some(([id, r]) => {
+      if ([...skip].some(s => inside(id, s))) return false;
+      if (skip.has(id)) return false;
+      const x0 = r.x - 4, y0 = r.y - 4, x1 = r.x + r.w + 4, y1 = r.y + r.h + 4;
+      for (let t = 0; t <= 1; t += 1 / 24) { const x = p.x + (q.x - p.x) * t, y = p.y + (q.y - p.y) * t; if (x > x0 && x < x1 && y > y0 && y < y1) return true; }
+      return false;
+    });
+    const paths = new Map();
+    for (const v of vedges) {
+      const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      const pa = center(a), pb = center(b), skip = new Set([v.from, v.to]);
+      /* y en U por debajo (o por encima) de lo que haya entre los dos, si las anteriores chocan */
+      const lo = Math.min(pa.x, pb.x) - 4, hi = Math.max(pa.x, pb.x) + 4;
+      const between = leaves.filter(([, r]) => r.x < hi && r.x + r.w > lo).map(([, r]) => r);
+      const yb = Math.max(a.y + a.h, b.y + b.h, ...between.map(r => r.y + r.h)) + 16, yt = Math.min(a.y, b.y, ...between.map(r => r.y)) - 16;
+      const routes = [[pa, pb], [pa, { x: pb.x, y: pa.y }, pb], [pa, { x: pa.x, y: pb.y }, pb],
+        [pa, { x: pa.x, y: yb }, { x: pb.x, y: yb }, pb], [pa, { x: pa.x, y: yt }, { x: pb.x, y: yt }, pb]];
+      const hitsOf = rt => rt.reduce((k, p, i) => k + (i && crosses(rt[i - 1], p, skip) ? 1 : 0), 0);
+      const ok = routes.find(rt => !hitsOf(rt)) || routes.slice().sort((x, y) => hitsOf(x) - hitsOf(y))[0];
+      let li = 0, best = -1;
+      ok.forEach((p, i) => { if (i) { const d = Math.hypot(p.x - ok[i - 1].x, p.y - ok[i - 1].y); if (d > best) { best = d; li = i; } } });
+      paths.set(v.id, { pts: ok, label: midLabel(v, ok[li - 1], ok[li], textW) });
+    }
+    return { rects, paths, bbox: bboxOf(rects), deco: [] };
+  }
+
+  /* ---------- árbol de ficheros: sangrado como `tree` (hacia abajo) o en columnas (a la derecha) ---------- */
+  /* Una carpeta abierta no es un contenedor: es una tarjeta más, y sus hijos cuelgan de ella. Las líneas
+     no van en `paths` sino en `wires`: el motor las redibuja en cada fotograma con `wire()` a partir de
+     dónde está cada tarjeta, así crecen con los hijos que nacen y se recogen con los que se pliegan.
+     Cada hijo tiene dos tramos: el de tronco, que sale del codo del hermano anterior (no se solapan), y
+     el codo hasta su tarjeta. El tronco toma el color del cambio más fuerte que queda por debajo; el
+     codo, el de su hijo. `ctx.hidden` dice cuántos hijos ha ocultado el filtro en cada carpeta abierta:
+     en su lugar va una pastilla «··· N más» que los muestra. `pos` dice, de cada hijo, su lado y su
+     orden desde el padre (el motor lo usa para iluminar el tronco hasta él). */
+  const TREE_IND = 44, TREE_TRUNK = 26, TREE_STEM = 24;
+  const TONE = { removed: 3, added: 2, modified: 1 };
+  function tree(ctx) {
+    const { M, roots, vis, exp, vedges, textW } = ctx, { kids } = helpers(ctx), Lx = L10N[ctx.lang] || L10N.es;
+    const hidden = ctx.hidden || new Map(), down = ctx.dir !== 'right';
+    const rects = new Map(), heads = new Map(), wires = [], deco = [], order = [], pills = [], pos = new Map();
+    const sz = id => ctx.size(id), headOf = id => { const z = sz(id); return z.head || z.h; };
+    const toneOf = id => (M.get(id).delta && TONE[M.get(id).delta] ? M.get(id).delta : 'unchanged');
+    const strongest = ids => ids.reduce((b, id) => ((TONE[toneOf(id)] || 0) > (TONE[b] || 0) ? toneOf(id) : b), 'unchanged');
+    const pill = (id, x, y) => {
+      const k = hidden.get(id), text = `··· ${k} ${Lx.more}`, w = Math.ceil(textW(text, 11.5, 600)) + 26, box = { x, y, w, h: 26 };
+      pills.push(box);
+      deco.push(E('g', { class: 'gx-more', 'data-more': id, transform: `translate(${x},${y})`, role: 'button', tabindex: 0 }, [
+        E('rect', { width: w, height: 26, rx: 13 }), E('text', { x: w / 2, y: 17 }, null, text)]));
+      return box;
+    };
+    /* los tramos de los hijos de una carpeta, ya colocados: `side` 0 (abajo) o -1 (arriba, en columnas) */
+    const chain = (id, list, side, cols) => list.forEach((c, i) => {
+      pos.set(c, { side, idx: i });
+      wires.push({ from: id, to: c, prev: i ? list[i - 1] : null, kind: cols ? 'ctrunk' : 'trunk', side, idx: i, tone: strongest(list.slice(i)) },
+        { from: id, to: c, kind: cols ? 'celbow' : 'elbow', side, idx: i, tone: toneOf(c) });
+    });
+    const top = roots.filter(r => vis.has(r));
+    if (down) {
+      /* los ficheros hermanos (con el detalle cerrado) tienen el mismo ancho: + y − y la letra de git en columna */
+      const wOf = new Map();
+      const even = id => { const fs = kids(id).filter(c => !M.get(c).children.length && !M.get(c)._open); const mx = Math.max(0, ...fs.map(c => sz(c).w)); fs.forEach(c => wOf.set(c, mx)); };
+      let y = 0;
+      const walk = (id, depth) => {
+        const z = sz(id);
+        rects.set(id, { x: depth * TREE_IND, y, w: wOf.get(id) || z.w, h: z.h }); heads.set(id, headOf(id)); order.push(id);
+        y += z.h + 8;
+        if (!exp.has(id)) return;
+        even(id);
+        const ks = kids(id);
+        ks.forEach(c => walk(c, depth + 1));
+        chain(id, ks, 0, false);
+        if (hidden.get(id)) {
+          /* la pastilla, en la fila del último hijo, a su derecha; sin hijos visibles, en su propia fila */
+          const last = ks[ks.length - 1];
+          if (last != null) {
+            const r = rects.get(last), box = pill(id, r.x + r.w + 14, r.y + (heads.get(last) - 26) / 2);
+            wires.push({ from: last, toBox: box, kind: 'side', more: true });
+          } else {
+            const box = pill(id, (depth + 1) * TREE_IND, y); y += 34;
+            wires.push({ from: id, toBox: box, kind: 'trunk', more: true }, { from: id, toBox: box, kind: 'elbow', more: true });
+          }
+        }
+      };
+      top.forEach(r => walk(r, 0));
+      /* raíces que el filtro ha ocultado enteras: su pastilla, al final */
+      if (ctx.rootsKey && hidden.get(ctx.rootsKey)) pill(ctx.rootsKey, 0, y);
+    } else {
+      /* columnas: cada nivel, una columna tan ancha como su tarjeta más ancha; el padre, centrado en sus hijos */
+      const colW = [];
+      const measure = (id, d) => { colW[d] = Math.max(colW[d] || 0, sz(id).w); if (exp.has(id)) kids(id).forEach(c => measure(c, d + 1)); if (exp.has(id) && hidden.get(id)) colW[d + 1] = Math.max(colW[d + 1] || 0, 90); };
+      top.forEach(r => measure(r, 0));
+      const colX = [0]; for (let d = 1; d < colW.length + 1; d++) colX[d] = colX[d - 1] + (colW[d - 1] || 0) + 72;
+      const place = (id, d, y) => {
+        const z = sz(id), ks = exp.has(id) ? kids(id) : [], hd = headOf(id), more = exp.has(id) && hidden.get(id);
+        order.push(id); heads.set(id, hd);
+        if (!ks.length && !more) { rects.set(id, { x: colX[d], y, w: z.w, h: z.h }); return y + z.h; }
+        let cy = y; const anchors = [];
+        ks.forEach(c => { const b = place(c, d + 1, cy); anchors.push(rects.get(c).y + heads.get(c) / 2); cy = b + 10; });
+        let box = null;
+        if (more) { box = pill(id, colX[d + 1], cy); anchors.push(box.y + 13); cy += 36; }
+        const py = Math.max(y, (anchors[0] + anchors[anchors.length - 1]) / 2 - hd / 2), y0 = py + hd / 2;
+        rects.set(id, { x: colX[d], y: py, w: z.w, h: z.h });
+        /* un tallo corto y, desde él, un tronco hacia arriba y otro hacia abajo con los hijos de cada lado */
+        const upper = ks.filter(c => rects.get(c).y + heads.get(c) / 2 < y0 - .5).reverse(), lower = ks.filter(c => !upper.includes(c));
+        wires.push({ from: id, kind: 'cstem', tone: strongest(ks) });
+        chain(id, upper, -1, true); chain(id, lower, 0, true);
+        if (box) { wires.push({ from: id, toBox: box, kind: 'ctrunk', prev: lower[lower.length - 1] || null, more: true }, { from: id, toBox: box, kind: 'celbow', more: true }); }
+        return Math.max(cy - 10, py + z.h);
+      };
+      let y = 0; top.forEach(r => { y = place(r, 0, y) + 18; });
+      if (ctx.rootsKey && hidden.get(ctx.rootsKey)) pill(ctx.rootsKey, 0, y);
+      /* el orden de lectura es el de la pantalla: de arriba abajo */
+      order.sort((a, b) => rects.get(a).y - rects.get(b).y || rects.get(a).x - rects.get(b).x);
+    }
+    /* referencias entre ficheros (imports, usos): un arco por fuera, a la derecha de las tarjetas */
+    const paths = new Map(), arcs = [];
+    for (const v of vedges) {
+      const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      let d, lx, ly;
+      if (down) {
+        const ya = a.y + heads.get(v.from) / 2, yb = b.y + heads.get(v.to) / 2, xa = a.x + a.w, xb = b.x + b.w;
+        const cx = Math.max(xa, xb) + clamp(30 + Math.abs(yb - ya) * .2, 40, 180);
+        d = `M${xa},${ya} C${cx},${ya} ${cx},${yb} ${xb + 6},${yb}`; lx = .125 * xa + .75 * cx + .125 * xb; ly = (ya + yb) / 2;
+      } else {
+        const pa = { x: a.x + a.w / 2, y: a.y + heads.get(v.from) / 2 }, pb = { x: b.x + b.w / 2, y: b.y + heads.get(v.to) / 2 };
+        d = `M${pa.x},${pa.y} C${pa.x},${pa.y - 60} ${pb.x},${pb.y - 60} ${pb.x},${pb.y}`; lx = (pa.x + pb.x) / 2; ly = Math.min(pa.y, pb.y) - 45;
+      }
+      arcs.push({ x: lx, y: ly, w: 1, h: 1 });
+      const lw = v.label ? Math.ceil(textW(v.label, 11, 500)) + 16 : 0;
+      paths.set(v.id, { d, label: v.label ? { x: lx - lw / 2, y: ly - 10, w: lw, h: 20 } : null });
+    }
+    return { rects, paths, bbox: bboxOf(rects, pills.concat(arcs)), deco, wires, heads, order, pos };
+  }
+  /* El trazo de un tramo del árbol con las tarjetas donde están ahora (también a mitad de animación).
+     `a`: el padre (o, en `side`, el último hijo); `b`: el hijo o la pastilla; `p`: el hermano anterior. */
+  function wire(kind, a, b, ha, hb, p, hp) {
+    const f = r1;
+    if (kind === 'side') return `M${f(a.x + a.w)},${f(a.y + ha / 2)} H${f(b.x)}`;
+    if (kind === 'trunk' || kind === 'elbow' || kind === 'indent') {
+      const x0 = a.x + Math.min(TREE_TRUNK, a.w / 2), rad = x => Math.max(0, Math.min(10, x - x0));
+      const y1 = b.y + hb / 2, r = rad(b.x);
+      if (kind === 'elbow') return r < 1 ? `M${f(x0)},${f(y1)} H${f(b.x)}` : `M${f(x0)},${f(y1 - r)} Q${f(x0)},${f(y1)} ${f(x0 + r)},${f(y1)} H${f(b.x)}`;
+      const y0 = p ? p.y + hp / 2 - rad(p.x) : a.y + a.h;
+      if (kind === 'trunk') return `M${f(x0)},${f(y0)} V${f(Math.max(y0, y1 - r))}`;
+      return `M${f(x0)},${f(y0)} V${f(y1 - r)} Q${f(x0)},${f(y1)} ${f(x0 + r)},${f(y1)} H${f(b.x)}`;
+    }
+    /* columnas: tallo, tronco y codo, con el tronco en x = mx, a la derecha del padre */
+    const mx = a.x + a.w + TREE_STEM, y0 = a.y + ha / 2;
+    if (kind === 'cstem') return `M${f(a.x + a.w)},${f(y0)} H${f(mx)}`;
+    const yk = b.y + hb / 2, dir = yk < y0 - .5 ? -1 : 1, r = Math.max(0, Math.min(10, Math.abs(yk - y0), b.x - mx));
+    if (kind === 'celbow') return r < 1 ? `M${f(mx)},${f(yk)} H${f(b.x)}` : `M${f(mx)},${f(yk - dir * r)} Q${f(mx)},${f(yk)} ${f(mx + r)},${f(yk)} H${f(b.x)}`;
+    /* desde donde el codo del hermano anterior deja el tronco */
+    const yp = p ? p.y + hp / 2 : y0, ys = p ? yp - dir * Math.max(0, Math.min(10, Math.abs(yp - y0), p.x - mx)) : y0;
+    return `M${f(mx)},${f(ys)} V${f(yk - dir * r)}`;
+  }
+
+  const modes = { gantt, git, sankey, treemap, timeline, journey, grid, tree };
+  /* `flat`: modos en los que una pieza abierta no envuelve a sus hijos (sigue siendo una tarjeta) */
+  const FLAT = { tree: 1 };
+  return Object.assign({ names: Object.keys(modes), squarify, wire, has: m => Object.prototype.hasOwnProperty.call(modes, m), flat: m => Object.prototype.hasOwnProperty.call(FLAT, m) }, modes);
+});
