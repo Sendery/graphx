@@ -1805,7 +1805,8 @@
       if (S.expanded.has(id)) { S.expanded.delete(id); descendantsOf(id).forEach(d => S.expanded.delete(d)); }
       else S.expanded.add(id);
       hideTip(); hoverSet = null;
-      return relayout({ anchor: id, after: () => { if (S.selected === id) renderPanel(); } });
+      /* el panel se actualiza si ya estaba abierto; plegar o desplegar no lo abre */
+      return relayout({ anchor: id, after: () => { if (S.selected === id && panel.classList.contains('on')) renderPanel(); } });
     }
     /* --- árbol: navegar como en un explorador --- */
     /* marca la pieza (cursor del teclado, selección) sin abrir el panel; si ya estaba abierto, lo sigue */

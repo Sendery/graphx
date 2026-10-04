@@ -94,6 +94,7 @@ const ui = idOf('src/ui');
 click(ui, '.gx-det'); await wait(700);
 ok(S.detail.has(ui) && el(ui).querySelectorAll('.gx-dfill').length >= 1, 'el chevron de una carpeta abre su detalle (reparto por extensión)');
 click(ui); await wait(700);
+ok(!host.querySelector('.gx-panel.on'), 'plegar o desplegar con un clic no abre el panel');
 ok(!S.expanded.has(ui) && el(ui).classList.contains('sh-folder') && el(ui).querySelectorAll('.gx-stack').length === 2, 'clic en una carpeta abierta: se pliega y vuelve a ser la tarjeta que agrupa, con su pila');
 ok(!!el(ui).querySelector('.gx-hits') && /1/.test(el(ui).querySelector('.gx-hits').textContent), 'plegada, cuenta las coincidencias del filtro que lleva dentro');
 click(ui); await wait(700);

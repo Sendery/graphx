@@ -95,7 +95,8 @@
   background-image: radial-gradient(circle, color-mix(in srgb, var(--gx-faint) 32%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; }
 .gx-stage.gx-grab { cursor: grabbing; }
 /* el lienzo del diagrama ocupa todo el escenario; una forma suelta (React, GraphXShape) va a su tamaño */
-.gx-stage > .gx-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* sin display: lo deciden .gx-seq y .gx-flowview (la vista que no toca, oculta, no tapa los clics de la otra) */
+.gx-stage > .gx-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .gx-shape-svg { display: inline-block; overflow: visible; vertical-align: middle; }
 /* GraphXScope: solo los tokens del tema, sin la maqueta del diagrama (barra, escenario) */
 .gx.gx-scope { display: block; gap: 0; font: inherit; color: inherit; }
