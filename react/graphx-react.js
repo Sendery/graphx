@@ -8,6 +8,7 @@
  *   <GraphXShape node={{ label, shape: 'decision' }} />       una forma suelta
  *   <GraphXScope>…</GraphXScope>                              tokens de color para formas sueltas
  *   Shapes.Decision, Shapes.Table…                            un componente por forma
+ *   Shapes.File, Shapes.Folder, Shapes.FolderOpen             las tarjetas del árbol de ficheros
  *
  * Necesita React (16.8+) y graphx-shapes.js. `GraphX` necesita además el motor (graphx.js) y, para
  * `mermaid`, graphx-mermaid.js. Sin JSX: funciona cargado desde un <script> o desde un bundler.     */
@@ -70,7 +71,8 @@
      `delta`: added | modified | removed. El resto de la pieza (`rows`, `span`, `score`…) va en `node`. */
   function GraphXShape(p) {
     const GX = getGX(), S = GX.shapes;
-    const node = Object.assign({ kind: 'other', label: '' }, p.node, p.shape ? { shape: p.shape } : null);
+    /* `open`: la tarjeta de detalle abierta; `hits`: coincidencias de un filtro (tarjetas del árbol de ficheros) */
+    const node = Object.assign({ kind: 'other', label: '' }, p.node, p.shape ? { shape: p.shape } : null, p.open != null ? { _open: !!p.open } : null, p.hits != null ? { _hits: p.hits } : null);
     const ctx = useMemo(() => {
       const est = S && S.estW;
       return { textW: (t, sz, w, m) => { const v = textW(t, sz, w, m); return v == null ? est(t, sz, w, m) : v; }, dir: p.dir || 'right', span: p.span || null, maxValue: p.maxValue || 1, now: p.now != null ? p.now : Date.now() };

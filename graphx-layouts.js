@@ -49,8 +49,8 @@
   };
   const center = r => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
   const L10N = {
-    es: { months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], today: 'hoy' },
-    en: { months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], today: 'today' }
+    es: { months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], today: 'hoy', more: 'más' },
+    en: { months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], today: 'today', more: 'more' }
   };
 
   /* ---------- gantt: una fila por tarea sobre un eje de fechas común ---------- */
@@ -390,6 +390,139 @@
     return { rects, paths, bbox: bboxOf(rects), deco: [] };
   }
 
-  const modes = { gantt, git, sankey, treemap, timeline, journey, grid };
-  return Object.assign({ names: Object.keys(modes), squarify, has: m => Object.prototype.hasOwnProperty.call(modes, m) }, modes);
+  /* ---------- árbol de ficheros: sangrado como `tree` (hacia abajo) o en columnas (a la derecha) ---------- */
+  /* Una carpeta abierta no es un contenedor: es una tarjeta más, y sus hijos cuelgan de ella. Las líneas
+     no van en `paths` sino en `wires`: el motor las redibuja en cada fotograma con `wire()` a partir de
+     dónde está cada tarjeta, así crecen con los hijos que nacen y se recogen con los que se pliegan.
+     Cada hijo tiene dos tramos: el de tronco, que sale del codo del hermano anterior (no se solapan), y
+     el codo hasta su tarjeta. El tronco toma el color del cambio más fuerte que queda por debajo; el
+     codo, el de su hijo. `ctx.hidden` dice cuántos hijos ha ocultado el filtro en cada carpeta abierta:
+     en su lugar va una pastilla «··· N más» que los muestra. `pos` dice, de cada hijo, su lado y su
+     orden desde el padre (el motor lo usa para iluminar el tronco hasta él). */
+  const TREE_IND = 44, TREE_TRUNK = 26, TREE_STEM = 24;
+  const TONE = { removed: 3, added: 2, modified: 1 };
+  function tree(ctx) {
+    const { M, roots, vis, exp, vedges, textW } = ctx, { kids } = helpers(ctx), Lx = L10N[ctx.lang] || L10N.es;
+    const hidden = ctx.hidden || new Map(), down = ctx.dir !== 'right';
+    const rects = new Map(), heads = new Map(), wires = [], deco = [], order = [], pills = [], pos = new Map();
+    const sz = id => ctx.size(id), headOf = id => { const z = sz(id); return z.head || z.h; };
+    const toneOf = id => (M.get(id).delta && TONE[M.get(id).delta] ? M.get(id).delta : 'unchanged');
+    const strongest = ids => ids.reduce((b, id) => ((TONE[toneOf(id)] || 0) > (TONE[b] || 0) ? toneOf(id) : b), 'unchanged');
+    const pill = (id, x, y) => {
+      const k = hidden.get(id), text = `··· ${k} ${Lx.more}`, w = Math.ceil(textW(text, 11.5, 600)) + 26, box = { x, y, w, h: 26 };
+      pills.push(box);
+      deco.push(E('g', { class: 'gx-more', 'data-more': id, transform: `translate(${x},${y})`, role: 'button', tabindex: 0 }, [
+        E('rect', { width: w, height: 26, rx: 13 }), E('text', { x: w / 2, y: 17 }, null, text)]));
+      return box;
+    };
+    /* los tramos de los hijos de una carpeta, ya colocados: `side` 0 (abajo) o -1 (arriba, en columnas) */
+    const chain = (id, list, side, cols) => list.forEach((c, i) => {
+      pos.set(c, { side, idx: i });
+      wires.push({ from: id, to: c, prev: i ? list[i - 1] : null, kind: cols ? 'ctrunk' : 'trunk', side, idx: i, tone: strongest(list.slice(i)) },
+        { from: id, to: c, kind: cols ? 'celbow' : 'elbow', side, idx: i, tone: toneOf(c) });
+    });
+    const top = roots.filter(r => vis.has(r));
+    if (down) {
+      /* los ficheros hermanos (con el detalle cerrado) tienen el mismo ancho: + y − y la letra de git en columna */
+      const wOf = new Map();
+      const even = id => { const fs = kids(id).filter(c => !M.get(c).children.length && !M.get(c)._open); const mx = Math.max(0, ...fs.map(c => sz(c).w)); fs.forEach(c => wOf.set(c, mx)); };
+      let y = 0;
+      const walk = (id, depth) => {
+        const z = sz(id);
+        rects.set(id, { x: depth * TREE_IND, y, w: wOf.get(id) || z.w, h: z.h }); heads.set(id, headOf(id)); order.push(id);
+        y += z.h + 8;
+        if (!exp.has(id)) return;
+        even(id);
+        const ks = kids(id);
+        ks.forEach(c => walk(c, depth + 1));
+        chain(id, ks, 0, false);
+        if (hidden.get(id)) {
+          /* la pastilla, en la fila del último hijo, a su derecha; sin hijos visibles, en su propia fila */
+          const last = ks[ks.length - 1];
+          if (last != null) {
+            const r = rects.get(last), box = pill(id, r.x + r.w + 14, r.y + (heads.get(last) - 26) / 2);
+            wires.push({ from: last, toBox: box, kind: 'side', more: true });
+          } else {
+            const box = pill(id, (depth + 1) * TREE_IND, y); y += 34;
+            wires.push({ from: id, toBox: box, kind: 'trunk', more: true }, { from: id, toBox: box, kind: 'elbow', more: true });
+          }
+        }
+      };
+      top.forEach(r => walk(r, 0));
+      /* raíces que el filtro ha ocultado enteras: su pastilla, al final */
+      if (ctx.rootsKey && hidden.get(ctx.rootsKey)) pill(ctx.rootsKey, 0, y);
+    } else {
+      /* columnas: cada nivel, una columna tan ancha como su tarjeta más ancha; el padre, centrado en sus hijos */
+      const colW = [];
+      const measure = (id, d) => { colW[d] = Math.max(colW[d] || 0, sz(id).w); if (exp.has(id)) kids(id).forEach(c => measure(c, d + 1)); if (exp.has(id) && hidden.get(id)) colW[d + 1] = Math.max(colW[d + 1] || 0, 90); };
+      top.forEach(r => measure(r, 0));
+      const colX = [0]; for (let d = 1; d < colW.length + 1; d++) colX[d] = colX[d - 1] + (colW[d - 1] || 0) + 72;
+      const place = (id, d, y) => {
+        const z = sz(id), ks = exp.has(id) ? kids(id) : [], hd = headOf(id), more = exp.has(id) && hidden.get(id);
+        order.push(id); heads.set(id, hd);
+        if (!ks.length && !more) { rects.set(id, { x: colX[d], y, w: z.w, h: z.h }); return y + z.h; }
+        let cy = y; const anchors = [];
+        ks.forEach(c => { const b = place(c, d + 1, cy); anchors.push(rects.get(c).y + heads.get(c) / 2); cy = b + 10; });
+        let box = null;
+        if (more) { box = pill(id, colX[d + 1], cy); anchors.push(box.y + 13); cy += 36; }
+        const py = Math.max(y, (anchors[0] + anchors[anchors.length - 1]) / 2 - hd / 2), y0 = py + hd / 2;
+        rects.set(id, { x: colX[d], y: py, w: z.w, h: z.h });
+        /* un tallo corto y, desde él, un tronco hacia arriba y otro hacia abajo con los hijos de cada lado */
+        const upper = ks.filter(c => rects.get(c).y + heads.get(c) / 2 < y0 - .5).reverse(), lower = ks.filter(c => !upper.includes(c));
+        wires.push({ from: id, kind: 'cstem', tone: strongest(ks) });
+        chain(id, upper, -1, true); chain(id, lower, 0, true);
+        if (box) { wires.push({ from: id, toBox: box, kind: 'ctrunk', prev: lower[lower.length - 1] || null, more: true }, { from: id, toBox: box, kind: 'celbow', more: true }); }
+        return Math.max(cy - 10, py + z.h);
+      };
+      let y = 0; top.forEach(r => { y = place(r, 0, y) + 18; });
+      if (ctx.rootsKey && hidden.get(ctx.rootsKey)) pill(ctx.rootsKey, 0, y);
+      /* el orden de lectura es el de la pantalla: de arriba abajo */
+      order.sort((a, b) => rects.get(a).y - rects.get(b).y || rects.get(a).x - rects.get(b).x);
+    }
+    /* referencias entre ficheros (imports, usos): un arco por fuera, a la derecha de las tarjetas */
+    const paths = new Map(), arcs = [];
+    for (const v of vedges) {
+      const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      let d, lx, ly;
+      if (down) {
+        const ya = a.y + heads.get(v.from) / 2, yb = b.y + heads.get(v.to) / 2, xa = a.x + a.w, xb = b.x + b.w;
+        const cx = Math.max(xa, xb) + clamp(30 + Math.abs(yb - ya) * .2, 40, 180);
+        d = `M${xa},${ya} C${cx},${ya} ${cx},${yb} ${xb + 6},${yb}`; lx = .125 * xa + .75 * cx + .125 * xb; ly = (ya + yb) / 2;
+      } else {
+        const pa = { x: a.x + a.w / 2, y: a.y + heads.get(v.from) / 2 }, pb = { x: b.x + b.w / 2, y: b.y + heads.get(v.to) / 2 };
+        d = `M${pa.x},${pa.y} C${pa.x},${pa.y - 60} ${pb.x},${pb.y - 60} ${pb.x},${pb.y}`; lx = (pa.x + pb.x) / 2; ly = Math.min(pa.y, pb.y) - 45;
+      }
+      arcs.push({ x: lx, y: ly, w: 1, h: 1 });
+      const lw = v.label ? Math.ceil(textW(v.label, 11, 500)) + 16 : 0;
+      paths.set(v.id, { d, label: v.label ? { x: lx - lw / 2, y: ly - 10, w: lw, h: 20 } : null });
+    }
+    return { rects, paths, bbox: bboxOf(rects, pills.concat(arcs)), deco, wires, heads, order, pos };
+  }
+  /* El trazo de un tramo del árbol con las tarjetas donde están ahora (también a mitad de animación).
+     `a`: el padre (o, en `side`, el último hijo); `b`: el hijo o la pastilla; `p`: el hermano anterior. */
+  function wire(kind, a, b, ha, hb, p, hp) {
+    const f = r1;
+    if (kind === 'side') return `M${f(a.x + a.w)},${f(a.y + ha / 2)} H${f(b.x)}`;
+    if (kind === 'trunk' || kind === 'elbow' || kind === 'indent') {
+      const x0 = a.x + Math.min(TREE_TRUNK, a.w / 2), rad = x => Math.max(0, Math.min(10, x - x0));
+      const y1 = b.y + hb / 2, r = rad(b.x);
+      if (kind === 'elbow') return r < 1 ? `M${f(x0)},${f(y1)} H${f(b.x)}` : `M${f(x0)},${f(y1 - r)} Q${f(x0)},${f(y1)} ${f(x0 + r)},${f(y1)} H${f(b.x)}`;
+      const y0 = p ? p.y + hp / 2 - rad(p.x) : a.y + a.h;
+      if (kind === 'trunk') return `M${f(x0)},${f(y0)} V${f(Math.max(y0, y1 - r))}`;
+      return `M${f(x0)},${f(y0)} V${f(y1 - r)} Q${f(x0)},${f(y1)} ${f(x0 + r)},${f(y1)} H${f(b.x)}`;
+    }
+    /* columnas: tallo, tronco y codo, con el tronco en x = mx, a la derecha del padre */
+    const mx = a.x + a.w + TREE_STEM, y0 = a.y + ha / 2;
+    if (kind === 'cstem') return `M${f(a.x + a.w)},${f(y0)} H${f(mx)}`;
+    const yk = b.y + hb / 2, dir = yk < y0 - .5 ? -1 : 1, r = Math.max(0, Math.min(10, Math.abs(yk - y0), b.x - mx));
+    if (kind === 'celbow') return r < 1 ? `M${f(mx)},${f(yk)} H${f(b.x)}` : `M${f(mx)},${f(yk - dir * r)} Q${f(mx)},${f(yk)} ${f(mx + r)},${f(yk)} H${f(b.x)}`;
+    /* desde donde el codo del hermano anterior deja el tronco */
+    const yp = p ? p.y + hp / 2 : y0, ys = p ? yp - dir * Math.max(0, Math.min(10, Math.abs(yp - y0), p.x - mx)) : y0;
+    return `M${f(mx)},${f(ys)} V${f(yk - dir * r)}`;
+  }
+
+  const modes = { gantt, git, sankey, treemap, timeline, journey, grid, tree };
+  /* `flat`: modos en los que una pieza abierta no envuelve a sus hijos (sigue siendo una tarjeta) */
+  const FLAT = { tree: 1 };
+  return Object.assign({ names: Object.keys(modes), squarify, wire, has: m => Object.prototype.hasOwnProperty.call(modes, m), flat: m => Object.prototype.hasOwnProperty.call(FLAT, m) }, modes);
 });

@@ -37,7 +37,10 @@
       bandAdd: 'nuevas', bandMod: 'modificadas', orient: 'Orientación', explore: 'Explorar', exitExplore: 'Cerrar',
       touchHint: 'Dos dedos para mover el diagrama · o pulsa ⤢ Explorar', changedFiles: 'Ficheros cambiados', allChanges: 'Todos los cambios en GitHub',
       links: 'Enlaces', related: 'Relacionado en este diagrama', linkKinds: { jira: 'Jira', pr: 'PR', notion: 'Notion', artifact: 'Artefacto', doc: 'Documento', url: 'Enlace', node: 'Pieza' },
-      filesBtn: 'Ficheros', inNodes: 'en', unchangedFiles: 'Ficheros de contexto (sin cambios)', filesOf: 'ficheros', openDiff: 'Abrir diff'
+      filesBtn: 'Ficheros', inNodes: 'en', unchangedFiles: 'Ficheros de contexto (sin cambios)', filesOf: 'ficheros', openDiff: 'Abrir diff',
+      treeHint: 'Clic para abrir o plegar · doble clic para el panel', leafHint: 'Clic para ver el detalle · doble clic para el panel',
+      showDetail: 'Ver el detalle', hideDetail: 'Ocultar el detalle', filter: 'Filtro', clearFilter: 'Quitar el filtro', matches: 'coincidencias',
+      treeOrient: 'Árbol: sangrado o columnas', treeKbd: '↑ ↓ moverse · → abrir · ← plegar · espacio detalle · intro panel'
     },
     en: {
       graph: 'Graph', depth: 'Depth', expandAll: 'Expand all', collapseAll: 'Collapse all',
@@ -58,7 +61,10 @@
       bandAdd: 'new', bandMod: 'modified', orient: 'Orientation', explore: 'Explore', exitExplore: 'Close',
       touchHint: 'Two fingers to move the diagram · or tap ⤢ Explore', changedFiles: 'Changed files', allChanges: 'All changes on GitHub',
       links: 'Links', related: 'Related in this diagram', linkKinds: { jira: 'Jira', pr: 'PR', notion: 'Notion', artifact: 'Artifact', doc: 'Doc', url: 'Link', node: 'Part' },
-      filesBtn: 'Files', inNodes: 'in', unchangedFiles: 'Context files (unchanged)', filesOf: 'files', openDiff: 'Open diff'
+      filesBtn: 'Files', inNodes: 'in', unchangedFiles: 'Context files (unchanged)', filesOf: 'files', openDiff: 'Open diff',
+      treeHint: 'Click to open or fold · double-click for the panel', leafHint: 'Click for details · double-click for the panel',
+      showDetail: 'Show details', hideDetail: 'Hide details', filter: 'Filter', clearFilter: 'Clear filter', matches: 'matches',
+      treeOrient: 'Tree: indented or columns', treeKbd: '↑ ↓ move · → open · ← fold · space details · enter panel'
     }
   };
 
@@ -82,6 +88,7 @@
     method: 'M5 4L2 8l3 4M11 4l3 4-3 4',
     class: 'M3 3h10v10H3zM3 6.5h10M6 3v10',
     file: 'M4 2h5l3 3v9H4zM9 2v3h3',
+    folder: 'M2 4.5a1 1 0 0 1 1-1h3.2l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1zM2 7h12',
     other: 'M8 3a5 5 0 1 0 0 10A5 5 0 0 0 8 3z',
     link: 'M6.5 9.5l3-3M7 4.5l1-1a2.5 2.5 0 0 1 3.5 3.5l-1 1M9 11.5l-1 1A2.5 2.5 0 0 1 4.5 9l1-1',
     jira: 'M8 2l6 6-6 6-6-6zM8 5.5L10.5 8 8 10.5 5.5 8z',
@@ -232,6 +239,7 @@
       n.laneId = p;
     }
     /* delta y stats de un contenedor: si no los declara, se derivan de lo que contiene */
+    const declared = new Set((spec.nodes || []).filter(x => x && x.delta).map(x => x.id));
     const post = id => {
       const n = M.get(id); let add = 0, del = 0, files = new Map(), rank = 0, count = 0;
       (n.files || []).forEach(f => files.set(f.path, f));
@@ -240,7 +248,7 @@
         r.files.forEach((f, k) => files.set(k, f));
       }
       files.forEach(f => { add += f.additions || 0; del += f.deletions || 0; });
-      if (!n.isLane && n.delta === 'unchanged' && !(spec.nodes || []).find(x => x.id === id && x.delta)) {
+      if (!n.isLane && n.delta === 'unchanged' && !declared.has(id)) {
         if (rank > 0) n.delta = 'modified';
       }
       n.stat = { additions: add, deletions: del, files: files.size };
@@ -297,6 +305,9 @@
     /* estados propios (`statuses`): cada pieza con `status` toma su etiqueta y, si no trae color, el suyo */
     const STATUSES = spec.statuses && typeof spec.statuses === 'object' ? spec.statuses : {};
     const HAS_DELTA = (spec.nodes || []).some(n => n.delta) || (spec.edges || []).some(e => e.delta);
+    /* algo cambiado de verdad (un árbol de ficheros marca todo con delta, aunque sea "unchanged") */
+    const HAS_CHANGES = (spec.nodes || []).some(n => n.delta && n.delta !== 'unchanged');
+    const ROOTS = ' gx-roots';
     const colorVar = v => {
       const c = colorPair(v); if (!c) return null;
       const key = c.light + '|' + c.dark;
@@ -329,7 +340,9 @@
     const searchIn = h('input', null, null, searchWrap);
     searchIn.type = 'search'; searchIn.placeholder = T.search; searchIn.setAttribute('aria-label', T.search);
     const searchList = h('div', 'gx-search-list', null, searchWrap);
+    const filterPill = h('div', 'gx-filter gx-graphonly', null, tools);
     const bOnly = btn(tools, T.onlyChanges, T.onlyChanges, 'gx-toggle gx-graphonly');
+    const filterSeg = h('div', 'gx-seg gx-filters gx-graphonly', null, tools);
     const bFrames = btn(tools, T.frames, T.frames, 'gx-toggle gx-graphonly');
     const bLegend = btn(tools, T.legend, T.legend, 'gx-toggle');
     const bDir = btn(tools, '↦', T.orient, 'gx-graphonly');
@@ -352,6 +365,8 @@
     const frameR = s('rect', { class: 'gx-frame', rx: 18 }, world);
     const gGroups = s('g', { class: 'gx-groups' }, world);
     const gDeco = s('g', { class: 'gx-deco' }, world);
+    /* líneas del árbol (layouts planos): se redibujan en cada fotograma con las tarjetas */
+    const gWires = s('g', { class: 'gx-wires' }, world);
     const gEdges = s('g', { class: 'gx-edges' }, world);
     const gNodes = s('g', { class: 'gx-nodes' }, world);
     const gLabels = s('g', { class: 'gx-elabels' }, world);
@@ -409,10 +424,17 @@
     const S = {
       expanded: new Set(), visible: new Set(), rects: new Map(), vedges: [], els: new Map(), edgeEls: [],
       cam: { x: 0, y: 0, k: 1 }, seqCam: { x: 0, y: 0, k: 1 }, view: 'graph', selected: null, trace: null,
-      tourTok: 0, onlyChanges: false, dir: spec.direction === 'down' ? 'down' : 'right', expanded2: false, frames: !(spec.layout && spec.layout.frames === false), bands: [], bandEls: new Map(), tour: -1, present: false, engaged: false, seq: null, seqPlay: null, layoutId: 0, bbox: null
+      tourTok: 0, onlyChanges: false, dir: spec.direction === 'down' ? 'down' : 'right', expanded2: false, frames: !(spec.layout && spec.layout.frames === false), bands: [], bandEls: new Map(), tour: -1, present: false, engaged: false, seq: null, seqPlay: null, layoutId: 0, bbox: null,
+      /* árbol: tarjetas con el detalle abierto, filtro por rutas (`focus`), carpetas que el filtro deja ver enteras, líneas */
+      detail: new Set(), focus: null, unpruned: new Set(), wires: new Map(), order: null
     };
     const initial = spec.initialDepth != null ? spec.initialDepth : Math.min(1, G.maxDepth);
     setDepthSet(initial);
+    /* las cuentas de una carpeta (ficheros y subcarpetas), si el JSON no las trae */
+    for (const n of M.values()) if (n.children.length && !n.isLane && n.tree == null && n.shape && /^folder/.test(n.shape)) {
+      let files = 0, dirs = 0; const w = id => M.get(id).children.forEach(c => { if (M.get(c).children.length) { dirs++; w(c); } else files++; }); w(n.id);
+      n.tree = { files, dirs };
+    }
 
     /* --- pestañas de vista --- */
     const tabBtns = [];
@@ -432,7 +454,7 @@
     G.levels.forEach((lv, i) => {
       const b = btn(depthSeg, lv.label, `${T.depth}: ${lv.label}`, 'gx-seg-b');
       b.dataset.depth = lv.depth != null ? lv.depth : i;
-      b.onclick = () => { setDepthSet(+b.dataset.depth); relayout({ fit: true }); };
+      b.onclick = () => { dropFocus(); setDepthSet(+b.dataset.depth); relayout({ fit: true }); };
     });
     if (G.levels.length < 2) depthSeg.style.display = 'none';
     function setDepthSet(d) {
@@ -452,18 +474,30 @@
       const d = currentDepth();
       depthSeg.querySelectorAll('.gx-seg-b').forEach(b => b.classList.toggle('on', +b.dataset.depth === d));
     }
-    bExpand.onclick = () => { setDepthSet(G.maxDepth + 1); relayout({ fit: true }); };
-    bCollapse.onclick = () => { setDepthSet(0); relayout({ fit: true }); };
+    bExpand.onclick = () => { dropFocus(); setDepthSet(G.maxDepth + 1); relayout({ fit: true }); };
+    bCollapse.onclick = () => { dropFocus(); setDepthSet(0); relayout({ fit: true }); };
 
     /* --- grafo visible: arista elevada al contenedor visible más cercano --- */
     function computeVisible() {
-      const vis = new Set();
-      const walk = id => { vis.add(id); const n = M.get(id); if (n.children.length && S.expanded.has(id)) n.children.forEach(walk); };
-      G.roots.forEach(walk);
-      const rep = id => { let x = id; while (!vis.has(x)) x = M.get(x).parent; return x; };
+      const vis = new Set(), hidden = new Map();
+      /* Con un filtro que poda (`focus.prune`), de cada pieza abierta solo se ven los hijos que están
+         en una ruta referenciada; el resto se cuenta en `hidden` y el layout pone «··· N más» en su lugar.
+         Una pieza referenciada, una que el usuario ha pedido ver entera o una ajena al filtro se ve entera. */
+      const F = S.focus && S.focus.prune ? S.focus : null;
+      const walk = id => {
+        vis.add(id); const n = M.get(id);
+        if (!n.children.length || !S.expanded.has(id)) return;
+        const all = !F || F.ids.has(id) || S.unpruned.has(id) || !F.keep.has(id);
+        n.children.forEach(c => { if (all || F.keep.has(c)) walk(c); else hidden.set(id, (hidden.get(id) || 0) + 1); });
+      };
+      /* las raíces que no llevan a nada referenciado se cuentan en una pastilla propia (clave ROOTS) */
+      G.roots.forEach(r => { if (!F || F.keep.has(r) || !F.keep.size || S.unpruned.has(ROOTS)) walk(r); else hidden.set(ROOTS, (hidden.get(ROOTS) || 0) + 1); });
+      /* una arista sube al antepasado visible; si el filtro ha ocultado su raíz entera, no se dibuja */
+      const rep = id => { let x = id; while (x != null && !vis.has(x)) x = M.get(x).parent; return x; };
       const agg = new Map();
       for (const e of G.edges) {
         const a = rep(e.from), b = rep(e.to);
+        if (a == null || b == null) continue;
         if (a === b || isAncestor(M, a, b) || isAncestor(M, b, a)) continue;
         const k = a + '\u0000' + b;
         if (!agg.has(k)) agg.set(k, { id: 'v:' + a + '>' + b, from: a, to: b, list: [] });
@@ -480,11 +514,12 @@
           label: v.list.length > 1 ? (lead.label ? `${lead.label} +${v.list.length - 1}` : `×${v.list.length}`) : (lead.label || '')
         });
       });
-      return { vis, vedges, rep };
+      return { vis, vedges, rep, hidden };
     }
 
     /* --- tamaños --- */
-    const isGroup = id => { const n = M.get(id); return n.children.length > 0 && S.expanded.has(id) && S.visible.has(id); };
+    /* en un layout plano (el árbol) una pieza abierta sigue siendo una tarjeta: no envuelve a sus hijos */
+    const isGroup = id => { if (FLAT) return false; const n = M.get(id); return n.children.length > 0 && S.expanded.has(id) && S.visible.has(id); };
     /* Tarjetas más estrechas y más altas: el título parte en dos líneas antes que ensanchar
        la caja, así cuatro piezas enlazadas caben en pantalla sin bajar el zoom. */
     const CARD_MIN = 140, CARD_MAX = 212, PADX = 66;
@@ -508,7 +543,8 @@
       const lines = wrap2(n.label, CARD_MAX - PADX - chipW, CARD_MAX - PADX);
       return (n._card = { w: CARD_MAX, h: lines.length > 1 ? 80 : 64, lines });
     }
-    function leafSize(n) { const c = cardLayout(n); return { w: c.w, h: c.h }; }
+    /* `head`: el alto de la cabecera de la tarjeta, sin el detalle abierto (ahí se anclan las líneas del árbol) */
+    function leafSize(n) { const c = cardLayout(n); return { w: c.w, h: c.h, head: c.lay ? SHP.headOf(n, c.lay) : c.h }; }
 
     /* --- formas (graphx-shapes.js): rombos, círculos, tablas, barras… --- */
     /* El módulo es opcional: sin él, toda pieza es una tarjeta. El contexto lleva lo que una forma
@@ -524,11 +560,17 @@
       }
       return { textW, dir: S.dir, span: lo < hi ? { min: lo, max: hi } : null, maxValue: maxV || 1, now: Date.now() };
     })();
+    /* La forma que toca ahora: una carpeta abierta en el árbol cambia a su `openShape`. Lo que cambia el
+       dibujo (forma, detalle abierto, coincidencias del filtro) va en la firma: si cambia, se rehace. */
+    const effShape = n => (FLAT && SHP && n.openShape && n.children.length && S.expanded.has(n.id) && SHP.has(n.openShape) ? n.openShape : n.shape);
+    const shapeNode = n => { const sh = effShape(n); return sh === n.shape ? n : Object.assign({}, n, { shape: sh }); };
+    const sigOf = n => `${S.dir}|${effShape(n)}|${FLAT && n.children.length && S.expanded.has(n.id) ? 'o' : ''}|${n._open ? 1 : 0}|${n._hits || 0}|${n._dense ? 1 : 0}|${n.labelSide || ''}`;
     function shapeLayout(n) {
       shapeCtx.dir = S.dir;
-      if (n._card && n._card.dir === S.dir) return n._card;
-      const lay = SHP.measure(n, shapeCtx);
-      return (n._card = { w: lay.w, h: lay.h, lines: [n.label], lay, dir: S.dir });
+      const key = sigOf(n);
+      if (n._card && n._card.key === key) return n._card;
+      const lay = SHP.measure(shapeNode(n), shapeCtx);
+      return (n._card = { w: lay.w, h: lay.h, lines: [n.label], lay, dir: S.dir, key });
     }
 
     /* --- layout con ELK --- */
@@ -565,16 +607,19 @@
     /* layouts propios por tipo de diagrama (graphx-layouts.js), elegidos con `layout.mode` */
     const LAYOUTS = global.GraphX && global.GraphX.layouts ? global.GraphX.layouts : null;
     const MODE = spec.layout && spec.layout.mode && LAYOUTS && LAYOUTS.has && LAYOUTS.has(spec.layout.mode) ? spec.layout.mode : null;
-    if (MODE) { host.classList.add('gx-mode-' + MODE); bDir.style.display = 'none'; }
-    async function layout(vis, vedges) {
+    const FLAT = !!(MODE && LAYOUTS.flat && LAYOUTS.flat(MODE));
+    /* en el árbol, el botón de orientación cambia entre sangrado (↓, como `tree`) y columnas (→) */
+    if (MODE) { host.classList.add('gx-mode-' + MODE); if (!FLAT) bDir.style.display = 'none'; }
+    if (FLAT) { host.classList.add('gx-flat'); if (spec.direction !== 'right') S.dir = 'down'; }
+    async function layout(vis, vedges, hidden) {
       /* foto del estado: la segunda pasada de ELK ocurre tras un await, y para entonces otra
          acción (Detener, un paso nuevo) puede haber cambiado lo que está abierto */
       const exp = new Set(S.expanded);
       if (MODE) {
-        const out = LAYOUTS[MODE]({ M, roots: G.roots, vis, exp, vedges, size: id => leafSize(M.get(id)), textW, spec, now: Date.now(), cvar: id => (M.get(id) || {}).cvar || null, lang });
+        const out = LAYOUTS[MODE]({ M, roots: G.roots, vis, exp, vedges, size: id => leafSize(M.get(id)), textW, spec, now: Date.now(), cvar: id => (M.get(id) || {}).cvar || null, lang, dir: S.dir, hidden: hidden || new Map(), rootsKey: ROOTS });
         vedges.forEach(v => { v.back = false; });
         clipPaths(out.rects, out.paths, vedges, vis, exp);
-        return { rects: out.rects, paths: out.paths, bbox: out.bbox, deco: out.deco || [] };
+        return { rects: out.rects, paths: out.paths, bbox: out.bbox, deco: out.deco || [], wires: out.wires || [], heads: out.heads || null, order: out.order || null, pos: out.pos || null };
       }
       const make = id => {
         const n = M.get(id);
@@ -705,14 +750,15 @@
     /* Una pieza con forma se construye una vez, con su tamaño final; al animar (nacer de su
        contenedor, plegarse) se escala el grupo entero en vez de rehacer el dibujo en cada fotograma. */
     function makeShapeLeaf(n, size) {
-      const cl = shapeLayout(n), W = size ? size.w : cl.w, H = size ? size.h : cl.h;
-      const tree = SHP.render(n, W, H, shapeCtx, cl.lay);
-      const g = s('g', { class: `gx-node gx-leaf gx-shape fam-${tree.family} sh-${n.shape} d-${n.delta}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label}${n.delta !== 'unchanged' ? ' — ' + (T.delta[n.delta] || '') : ''}` });
+      const cl = shapeLayout(n), W = size ? size.w : cl.w, H = size ? size.h : cl.h, sh = effShape(n);
+      const open = FLAT && n.children.length > 0 && S.expanded.has(n.id);
+      const tree = SHP.render(shapeNode(n), W, H, shapeCtx, cl.lay);
+      const g = s('g', { class: `gx-node gx-leaf gx-shape fam-${tree.family} sh-${sh} d-${n.delta}${n._open ? ' det' : ''}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label}${n.delta !== 'unchanged' ? ' — ' + (T.delta[n.delta] || '') : ''}`, 'aria-expanded': n.children.length && FLAT ? String(open) : null });
       paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
       if (n.status) g.classList.add('st-' + String(n.status).replace(/[^\w-]/g, ''));
       paintFill(g, n);
       /* plegada con hijos: dos copias del contorno detrás, como la pila de una tarjeta */
-      const od = n.children.length ? SHP.outlineOf(tree) : null;
+      const od = n.children.length && !open ? SHP.outlineOf(tree) : null;
       if (od) [8, 4].forEach(k => s('path', { class: 'gx-stack', d: od, transform: `translate(${k},${k})` }, g));
       tree.children.forEach(c => toSVG(c, g));
       const parts = {}, ch = tree.chrome;
@@ -726,15 +772,27 @@
           x -= kinds.length * 15 + 6;
         }
         if (n.children.length) {
-          parts.exp = s('g', { class: 'gx-exp', role: 'button', 'aria-label': T.expand }, g);
-          const txt = '+' + n.descendants, ew = textW(txt, 10.5, 700) + 14;
+          /* en el árbol, una carpeta abierta cambia su +N por un − que la pliega */
+          parts.exp = s('g', { class: 'gx-exp' + (open ? ' open' : ''), role: 'button', 'aria-label': open ? T.collapse : T.expand }, g);
+          /* en el árbol, +N son los hijos que aparecen al abrirla (no todo lo que lleva dentro) */
+          const txt = open ? '−' : '+' + (FLAT ? n.children.length : n.descendants), ew = Math.max(textW(txt, 10.5, 700) + 14, 24);
           s('rect', { rx: 8, height: 17, width: ew }, parts.exp);
           const t = s('text', { y: 12.5, x: ew / 2 }, parts.exp); t.textContent = txt;
           parts.exp.setAttribute('transform', `translate(${x - ew},${ch.y - 8.5})`);
           parts.exp.addEventListener('click', ev => { ev.stopPropagation(); toggle(n.id); });
         }
+        /* el botón de la tarjeta de detalle (las formas que la tienen dicen dónde va) */
+        if (ch.det) {
+          parts.det = s('g', { class: 'gx-det' + (n._open ? ' on' : ''), role: 'button', 'aria-label': n._open ? T.hideDetail : T.showDetail, 'aria-pressed': String(!!n._open), transform: `translate(${ch.det.x - 9},${ch.det.y - 9})` }, g);
+          s('rect', { width: 18, height: 18, rx: 5 }, parts.det);
+          /* «i» de información: el detalle no es desplegar la carpeta (eso es el clic y el +N) */
+          s('path', { class: 'gx-det-ring', d: 'M9,2.8a6.2,6.2 0 1 1 0,12.4a6.2,6.2 0 1 1 0,-12.4z' }, parts.det);
+          s('path', { d: 'M9,8.3v4.2M9,5.7v.1' }, parts.det);
+          parts.det.addEventListener('click', ev => { ev.stopPropagation(); toggleDetail(n.id); });
+        }
       }
       g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: W, h: H }; g._side = n.labelSide;
+      g._sig = sigOf(n); g._sh = sh; g._head = cl.lay ? SHP.headOf(n, cl.lay) : H;
       return g;
     }
     function makeLeaf(n, size) {
@@ -1080,13 +1138,23 @@
       o = o || {};
       /* solo secuencia: no hay grafo que colocar, asi que ni se carga ELK */
       if (!graphTab) { if (o.after) o.after(); return; }
+      if (S.dead) return;
       const my = ++S.layoutId;
       hoverSet = null; hideTip();
       clearTimeout(busyTimer); busyTimer = setTimeout(() => busy.classList.add('on'), 180);
       const prevRects = S.rects;
-      const { vis, vedges } = computeVisible();
+      /* si el foco del teclado está en una tarjeta (o en una pastilla «más») que se va a rehacer, se le devuelve después */
+      const ae = document.activeElement, focusId = ae && host.contains(ae) && ae.closest ? ((ae.closest('.gx-node') || {}).dataset || {}).id || (ae.closest('[data-more]') && ae.closest('[data-more]').getAttribute('data-more')) : null;
+      syncFlags();
+      const { vis, vedges, hidden } = computeVisible();
+      /* `layout.density`: "compact" siempre; "auto", cuando hay muchos ficheros a la vista a la vez */
+      if (FLAT) {
+        const dm = spec.layout && spec.layout.density, nLeaves = [...vis].filter(id => !M.get(id).children.length).length;
+        const dense = dm === 'compact' || (dm === 'auto' && nLeaves > 140);
+        for (const n of M.values()) n._dense = dense && !n.children.length;
+      }
       let L;
-      try { L = await layout(vis, vedges); } catch (err) { busy.classList.remove('on'); clearTimeout(busyTimer); if (global.console) console.error(err); return; }
+      try { L = await layout(vis, vedges, hidden); } catch (err) { busy.classList.remove('on'); clearTimeout(busyTimer); if (global.console) console.error(err); return; }
       clearTimeout(busyTimer); busy.classList.remove('on');
       if (my !== S.layoutId) return;
       const prevVisible = S.visible;
@@ -1098,7 +1166,7 @@
       }
       const prevBands = new Map(S.bands.map(b => [b.id, b]));
       S.bands = bands;
-      S.visible = vis; S.vedges = vedges; S.rects = L.rects; S.bbox = L.bbox;
+      S.visible = vis; S.vedges = vedges; S.rects = L.rects; S.bbox = L.bbox; S.order = L.order || null;
       /* ejes, marcas y curvas de un layout propio: se rehacen con cada layout */
       gDeco.innerHTML = '';
       (L.deco || []).forEach(t => toSVG(t, gDeco));
@@ -1111,10 +1179,10 @@
         const a = prevRects.get(o.anchor), b = L.rects.get(o.anchor);
         camTo = { k: S.cam.k, x: S.cam.x - (b.x - a.x) * S.cam.k, y: S.cam.y - (b.y - a.y) * S.cam.k };
       } else if (o.focus) camTo = camFor(bboxOf(o.focus.nodes, o.focus.edges) || L.bbox, o.pad);
-      else if (o.fit || prevRects.size === 0) camTo = camFor(L.bbox);
+      else if (o.fit || prevRects.size === 0) camTo = fitCam(L.bbox);
 
       const items = [];
-      const next = new Map();
+      const next = new Map(), handled = new Set();
       const order = [...vis].sort((a, b) => M.get(a).depth - M.get(b).depth);
       for (const id of order) {
         const n = M.get(id), r = L.rects.get(id); if (!r) continue;
@@ -1123,8 +1191,14 @@
         if (el && el._kind !== kind) { fadeOut(el); el = null; }
         /* una forma se dibuja a su tamaño: si cambia (al girar el diagrama, la bifurcación se tumba),
            se rehace y se anima desde el rectángulo que ocupaba */
-        let reshaped = null;
-        if (el && el._shape && kind === 'leaf' && (Math.abs(r.w - el._sz.w) > .5 || Math.abs(r.h - el._sz.h) > .5 || el._side !== n.labelSide)) { reshaped = el._r; el.remove(); el = null; }
+        let reshaped = null, morph = null;
+        if (el && el._shape && kind === 'leaf') {
+          const off = Math.abs(r.w - el._sz.w) > .5 || Math.abs(r.h - el._sz.h) > .5;
+          /* En el árbol no se escala: el detalle se despliega como una persiana y una carpeta que se abre
+             funde su tarjeta de grupo con la de carpeta abierta, cada una dibujada a su tamaño */
+          if (FLAT && (off || el._sig !== sigOf(n))) { morph = { old: el, from: el._r || r, same: el._sh === effShape(n) }; handled.add(el); el = null; }
+          else if (!FLAT && (off || el._side !== n.labelSide)) { reshaped = el._r; el.remove(); el = null; }
+        }
         const fresh = !el;
         if (fresh) {
           el = kind === 'group' ? makeGroup(n) : makeLeaf(n, r);
@@ -1138,12 +1212,21 @@
           const anc = [n.parent].concat(ancestors(M, id)).find(a => a != null && prevRects.has(a));
           const pr = prevRects.get(id) || (anc ? prevRects.get(anc) : null);
           from = pr ? { x: pr.x + pr.w / 2 - r.w * .3, y: pr.y + pr.h / 2 - r.h * .3, w: r.w * .6, h: r.h * .6 } : { x: r.x + r.w * .2, y: r.y + r.h * .2, w: r.w * .6, h: r.h * .6 };
-          if (reshaped) from = reshaped; else el.style.opacity = 0;
+          if (reshaped) from = reshaped; else if (!morph) el.style.opacity = 0;
+        }
+        if (morph) {
+          const o = morph.old, a = morph.from, oz = o._sz, at = { x: a.x, y: a.y }, clip = { w0: oz.w, h0: oz.h, w1: r.w, h1: r.h };
+          const nf = Object.assign({}, at, { w: r.w, h: r.h }), of = Object.assign({}, at, { w: oz.w, h: oz.h }), ot = { x: r.x, y: r.y, w: oz.w, h: oz.h };
+          if (morph.same && r.w >= oz.w - .5 && r.h >= oz.h - .5) { o.remove(); items.push({ el, n, from: nf, to: r, kind, clip }); }
+          else if (morph.same) { el.style.opacity = 0; items.push({ el, n, from: nf, to: r, kind }, { el: o, n, from: of, to: ot, kind, dying: true, clip }); }
+          else { el.style.opacity = 0; items.push({ el, n, from: nf, to: r, kind, fade: 1 }, { el: o, n, from: of, to: ot, kind, dying: true, fade: -1 }); }
+          continue;
         }
         items.push({ el, n, from, to: r, fresh: fresh && !reshaped, kind });
       }
       for (const [id, el] of S.els) {
         if (next.has(id) && next.get(id) === el) continue;
+        if (handled.has(el)) continue;
         if (!el.isConnected) continue;
         let p = M.get(id).parent; while (p != null && !L.rects.has(p)) p = M.get(p).parent;
         const target = p != null && isGroup(p) ? null : (p != null ? L.rects.get(p) : null);
@@ -1170,8 +1253,28 @@
       const pf = S.frameBox || fb;
       S.frameBox = fb;
       frameR.style.display = fb ? '' : 'none';
+      /* líneas del árbol: las que siguen se reutilizan, las nuevas aparecen y las que sobran se apagan */
+      const wireNext = new Map();
+      (L.wires || []).forEach(w => {
+        const key = `${w.kind}:${w.from}>${w.to != null ? w.to : '+'}`;
+        let o = S.wires.get(key);
+        /* las de «··· N más» van debajo: su tramo de tronco no tapa el de las tarjetas */
+        if (!o) { o = { el: s('path', { class: 'gx-wire' }), fresh: true }; o.el.style.opacity = 0; if (w.more) gWires.insertBefore(o.el, gWires.firstChild); else gWires.appendChild(o.el); } else o.fresh = false;
+        const tone = w.tone || (w.to != null ? M.get(w.to).delta : null);
+        o.w = w; o.el.setAttribute('class', `gx-wire k-${w.kind}${w.more ? ' more' : ''}${tone ? ' d-' + tone : ''}`);
+        wireNext.set(key, o);
+      });
+      const wireOut = [...S.wires.entries()].filter(([k]) => !wireNext.has(k)).map(([, o]) => o);
+      S.wires = wireNext; S.treePos = L.pos || null;
+      const headNow = (id, el) => (L.heads && L.heads.get(id)) || (el && el._head) || null;
+      /* en el árbol, los hijos que aparecen al abrir una carpeta entran en cascada, uno tras otro */
+      if (FLAT && !reduce) {
+        const k = new Map();
+        items.filter(it => it.fresh).forEach(it => { const p = it.n.parent; const i = k.get(p) || 0; k.set(p, i + 1); it.delay = Math.min(i * .045, .4); });
+      }
       const camFrom = Object.assign({}, S.cam);
-      await tween(t => {
+      await tween(t0 => {
+        const t = t0;
         for (const it of bandItems) {
           const r = it.from ? lerpRect(it.from, it.to, t) : it.to;
           placeBand(it.el, Object.assign({}, it.to, r), it.n);
@@ -1181,16 +1284,36 @@
           const f = pf ? lerpRect(pf, fb, t) : fb;
           [clipR, frameR].forEach(r => { r.setAttribute('x', f.x); r.setAttribute('y', f.y); r.setAttribute('width', f.w); r.setAttribute('height', f.h); });
         }
+        const cur = new Map();
         for (const it of items) {
+          const t = it.delay ? clamp((t0 - it.delay) / (1 - it.delay), 0, 1) : t0;
           const r = lerpRect(it.from || it.to, it.to, it.from ? t : 1);
           (it.kind === 'group' ? placeGroup : placeLeaf)(it.el, r, it.n);
           it.el._r = it.dying ? it.from : it.to;
           if (it.fresh) it.el.style.opacity = t;
-          if (it.dying) it.el.style.opacity = 1 - t;
+          if (it.dying && !it.clip) it.el.style.opacity = 1 - t;
+          if (it.fade > 0) it.el.style.opacity = t;
+          /* persiana: lo que se ve de la tarjeta va del tamaño de antes al de después */
+          if (it.clip) {
+            const c = it.clip, z = it.el._sz, cw = lerp(c.w0, c.w1, t), ch = lerp(c.h0, c.h1, t);
+            it.el.style.clipPath = t < 1 ? `inset(-12px ${Math.max(0, z.w - cw).toFixed(1)}px ${Math.max(0, z.h - ch).toFixed(1)}px -12px round 10px)` : '';
+          }
+          /* las líneas del árbol siguen a la tarjeta tal como se ve (con la persiana a medio abrir) */
+          const vr = it.clip ? { x: r.x, y: r.y, w: lerp(it.clip.w0, it.clip.w1, t), h: lerp(it.clip.h0, it.clip.h1, t) } : r;
+          if (!it.dying || !cur.has(it.n.id)) cur.set(it.n.id, { r: vr, el: it.el });
         }
-        if (camTo) setCam(lerpCam(camFrom, camTo, t));
+        const drawWire = (o, op) => {
+          const w = o.w, a = cur.get(w.from), b = w.toBox ? { r: w.toBox } : w.to != null ? cur.get(w.to) : a, p = w.prev != null ? cur.get(w.prev) : null;
+          if (a && b && (w.prev == null || p)) o.el.setAttribute('d', LAYOUTS.wire(w.kind, a.r, b.r, headNow(w.from, a.el) || a.r.h, w.toBox ? w.toBox.h : headNow(w.to, b.el) || b.r.h, p && p.r, p && (headNow(w.prev, p.el) || p.r.h)));
+          if (op != null) o.el.style.opacity = op;
+        };
+        wireNext.forEach(o => drawWire(o, o.fresh ? t0 : null));
+        wireOut.forEach(o => drawWire(o, 1 - t0));
+        if (camTo) setCam(lerpCam(camFrom, camTo, t0));
       }, (items.length ? dur : 0));
-      items.forEach(it => { if (it.dying) it.el.remove(); else { it.el.style.opacity = ''; it.el._r = it.to; } });
+      items.forEach(it => { if (it.dying) it.el.remove(); else { it.el.style.opacity = ''; it.el._r = it.to; } it.el.style.clipPath = ''; });
+      wireOut.forEach(o => o.el.remove());
+      wireNext.forEach(o => { o.el.style.opacity = ''; o.fresh = false; });
       bandItems.forEach(it => { it.el.style.opacity = ''; });
       if (my !== S.layoutId) return;
 
@@ -1209,7 +1332,15 @@
       }
       applyHighlight();
       drawMini();
+      if (focusId && (!document.activeElement || !host.contains(document.activeElement) || document.activeElement === host)) {
+        const el = S.els.get(focusId) || (M.has(focusId) ? S.els.get(repOf(focusId)) : null);
+        if (el && el.focus) try { el.focus({ preventScroll: true }); } catch (_) { }
+      }
       if (o.after) o.after();
+    }
+    /* lo que una forma necesita saber del estado: si su detalle está abierto y cuántas coincidencias del filtro tiene dentro */
+    function syncFlags() {
+      for (const n of M.values()) { n._open = S.detail.has(n.id); n._hits = S.focus ? (S.focus.hits.get(n.id) || 0) : 0; }
     }
     function fadeOut(el) { el.style.transition = 'opacity .18s'; el.style.opacity = 0; setTimeout(() => el.remove(), 200); }
     function tween(fn, ms) {
@@ -1262,6 +1393,15 @@
       const k = clamp(Math.min((W - pad * 2) / Math.max(b.w, 1), (H - pad * 2) / Math.max(b.h, 1)), .12, maxK || 1.6);
       return { k, x: (W - b.w * k) / 2 - b.x * k, y: (H - b.h * k) / 2 - b.y * k };
     }
+    /* Encuadre del diagrama entero. Un árbol largo, encajado entero, deja tarjetas ilegibles: si no cabe
+       a un tamaño que se lea, se encaja a lo ancho y se empieza por arriba (el resto, desplazando). */
+    function fitCam(b) {
+      if (!FLAT || !b) return camFor(b);
+      const all = camFor(b, null, null, 1.1);
+      if (all.k >= .72) return all;
+      const v = viewSize(), pad = 36, k = clamp((v.w - pad * 2) / Math.max(b.w, 1), .72, 1.05);
+      return { k, x: b.w * k < v.w - pad * 2 ? (v.w - b.w * k) / 2 - b.x * k : pad - b.x * k, y: pad - b.y * k };
+    }
     function bboxOf(nodes, edges) {
       const R = [];
       (nodes || []).forEach(id => { const r = S.rects.get(repOf(id)); if (r) R.push(r); });
@@ -1298,7 +1438,7 @@
         const [a, b] = [...ptrs.values()];
         pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; drag = null; return;
       }
-      if (ev.target.closest('.gx-node,.gx-ghead,.gx-bandhead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-fpill')) return;
+      if (ev.target.closest('.gx-node,.gx-ghead,.gx-bandhead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-fpill,.gx-more')) return;
       if (ev.pointerType === 'touch' && !ownsOneFinger()) { touchHint(); return; }
       const c = which() === 'seq' ? S.seqCam : S.cam;
       drag = { x: ev.clientX, y: ev.clientY, cx: c.x, cy: c.y, moved: 0 };
@@ -1322,7 +1462,7 @@
     });
     const endPtr = ev => {
       ptrs.delete(ev.pointerId); if (ptrs.size < 2) pinch = null;
-      if (drag) { if (drag.moved < 4 && !ev.target.closest('.gx-node,.gx-ghead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-panel')) clearSelection(); drag = null; stage.classList.remove('gx-grab'); }
+      if (drag) { if (drag.moved < 4 && !ev.target.closest('.gx-node,.gx-ghead,.gx-edge,.gx-elabel,.gx-seq-msg,.gx-seq-p,.gx-panel,.gx-more')) clearSelection(); drag = null; stage.classList.remove('gx-grab'); }
     };
     stage.addEventListener('pointerup', endPtr); stage.addEventListener('pointercancel', endPtr);
     /* si la pieza bajo el puntero se sustituye al relayoutear, el navegador no emite su
@@ -1372,7 +1512,8 @@
         ${sum ? `<p>${sum}</p>` : ''}
         ${(n.links || []).length ? `<div class="gx-tip-f">${(n.links || []).map(l => resolveLink(l, spec)).filter(Boolean).slice(0, 4).map(l => `<span>${iconHTML(IC[l.kind] ? l.kind : 'url')} ${esc(l.kind === 'node' ? (M.get(l.target) || {}).label || l.label : l.label)}</span>`).join('')}</div>` : ''}
         <div class="gx-tip-f">${statTxt(n.stat)}${deg ? `<span>${deg.out}↗ ${deg.in}↘</span>` : ''}${n.children.length ? `<span>${esc(nItems(n.descendants))}</span>` : ''}</div>
-        <div class="gx-tip-k">${esc(T.clickHint)} · ${esc(T.dblHint)}${n.children.length && !S.expanded.has(n.id) ? ' · ' + esc(T.expHint) : ''}${n.stat && n.stat.files ? ' · ± ' + esc(T.openDiff).toLowerCase() : ''}</div>`;
+        ${n.path && !n.isLane ? `<code class="gx-tip-p">${esc(n.path)}</code>` : ''}
+        <div class="gx-tip-k">${FLAT ? esc(n.children.length ? T.treeHint : T.leafHint) : `${esc(T.clickHint)} · ${esc(T.dblHint)}${n.children.length && !S.expanded.has(n.id) ? ' · ' + esc(T.expHint) : ''}${n.stat && n.stat.files ? ' · ± ' + esc(T.openDiff).toLowerCase() : ''}`}</div>`;
     }
     function edgeTip(v) {
       const lines = v.list.slice(0, 5).map(e => `<li><b>${esc(M.get(e.from).label)}</b> → <b>${esc(M.get(e.to).label)}</b>${e.label ? ` · ${esc(e.label)}` : ''}</li>`).join('');
@@ -1397,9 +1538,14 @@
       target.addEventListener('pointerenter', ev => { if (S.tour >= 0 && S.present) return; hoverLit(id); showTip(nodeTip(M.get(id)), ev); });
       target.addEventListener('pointermove', moveTip);
       target.addEventListener('pointerleave', () => { hideTip(); hoverLit(null); });
-      target.addEventListener('click', ev => { ev.stopPropagation(); if (ev.detail > 1) return; select(id); });
-      target.addEventListener('dblclick', ev => { ev.stopPropagation(); focusNode(id); });
-      target.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(id); } });
+      /* en el árbol, el clic navega como en un explorador: una carpeta se abre o se pliega, un fichero
+         abre su detalle; el panel queda en el doble clic (y en Intro) */
+      target.addEventListener('click', ev => { ev.stopPropagation(); if (ev.detail > 1) return; if (FLAT) treeClick(id); else select(id); });
+      target.addEventListener('dblclick', ev => { ev.stopPropagation(); if (FLAT) select(id); else focusNode(id); });
+      target.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' || (ev.key === ' ' && !FLAT)) { ev.preventDefault(); select(id); }
+        else if (ev.key === ' ' && FLAT) { ev.preventDefault(); ev.stopPropagation(); mark(id); toggleDetail(id); }
+      });
     }
     function bindEdge(el, v) {
       el.addEventListener('pointerenter', ev => { hoverLit(null, v); showTip(edgeTip(v), ev); });
@@ -1419,17 +1565,50 @@
         nodes.add(id);
         for (const e of S.vedges) if (e.from === id || e.to === id) { edges.add(e.id); nodes.add(e.from); nodes.add(e.to); }
       }
-      hoverSet = { nodes, edges }; applyHighlight();
+      /* en el árbol se ilumina el camino desde la raíz y no se apaga lo demás: se sigue leyendo el árbol entero */
+      if (FLAT && id) { const chain = new Set([id, ...ancestors(M, id)]); chain.forEach(x => nodes.add(x)); hoverSet = { nodes, edges, chain, soft: !edges.size }; }
+      else hoverSet = { nodes, edges };
+      applyHighlight();
     }
     let stepSet = null;
     function applyHighlight() {
       const set = hoverSet || S.trace || stepSet;
-      world.classList.toggle('gx-dim', !!set);
+      world.classList.toggle('gx-dim', !!set && !set.soft);
+      const F = S.focus;
       for (const [id, el] of S.els) {
         const lit = set ? (set.nodes.has(id) || (isGroup(id) && [...set.nodes].some(x => isAncestor(M, id, x)))) : false;
         el.classList.toggle('lit', lit);
         el.classList.toggle('sel', S.selected === id);
         el.classList.toggle('faded', S.onlyChanges && M.get(id).delta === 'unchanged' && !isGroup(id));
+        /* filtro: lo que coincide se marca; lo que no está en ninguna ruta referenciada se apaga */
+        el.classList.toggle('hit', !!(F && F.ids.has(id)));
+        el.classList.toggle('off', !!(F && !F.empty && !F.keep.has(id)));
+      }
+      /* líneas del árbol: el camino iluminado (al pasar), el de la pieza seleccionada y los del filtro */
+      if (S.wires.size) {
+        /* Un tramo está en el camino hacia una pieza si sale de uno de sus antepasados y llega (el codo) o
+           pasa (el tronco, que sigue hacia los hermanos de más allá) hasta el hijo que lleva a ella. */
+        const P = S.treePos || new Map();
+        const childOf = list => { const m = new Map(); list.forEach(id => { const n = M.get(id); if (n && n.parent != null) m.set(n.parent, id); }); return m; };
+        const reach = (w, c) => {
+          if (c == null || w.more) return false;
+          if (w.kind === 'cstem') return true;
+          const q = P.get(c); if (!q) return false;
+          return /elbow/.test(w.kind) ? c === w.to : q.side === w.side && q.idx >= w.idx;
+        };
+        const selIds = S.selected && M.has(S.selected) ? [S.selected, ...ancestors(M, S.selected)] : [];
+        const viaSel = childOf(selIds), viaHover = childOf(set && set.chain ? [...set.chain] : []);
+        /* con el filtro, el tramo lleva a algo referenciado si alguno de los hijos a los que llega está en sus rutas */
+        const kept = new Map();
+        if (F) for (const [c, q] of P) { const n = M.get(c); if (n && F.keep.has(c)) { const k = n.parent + '|' + q.side; kept.set(k, Math.max(kept.has(k) ? kept.get(k) : -1, q.idx)); kept.set(n.parent + '|*', 1); } }
+        const top = [];
+        for (const o of S.wires.values()) {
+          const w = o.w, lit = reach(w, viaHover.get(w.from)), sel = reach(w, viaSel.get(w.from));
+          const on = !!F && !w.more && (w.kind === 'cstem' ? kept.has(w.from + '|*') : /elbow/.test(w.kind) ? F.keep.has(w.to) : (kept.has(w.from + '|' + w.side) && kept.get(w.from + '|' + w.side) >= w.idx));
+          o.el.classList.toggle('lit', lit); o.el.classList.toggle('sel', sel); o.el.classList.toggle('on', on);
+          if (lit || sel) top.push(o.el);
+        }
+        top.forEach(el => gWires.appendChild(el));
       }
       for (const [id, el] of S.bandEls) {
         const lit = set ? [...set.nodes].some(x => x === id || isAncestor(M, id, x)) : false;
@@ -1626,23 +1805,138 @@
       if (S.expanded.has(id)) { S.expanded.delete(id); descendantsOf(id).forEach(d => S.expanded.delete(d)); }
       else S.expanded.add(id);
       hideTip(); hoverSet = null;
-      return relayout({ anchor: id, after: () => { if (S.selected === id) renderPanel(); } });
+      /* el panel se actualiza si ya estaba abierto; plegar o desplegar no lo abre */
+      return relayout({ anchor: id, after: () => { if (S.selected === id && panel.classList.contains('on')) renderPanel(); } });
     }
+    /* --- árbol: navegar como en un explorador --- */
+    /* marca la pieza (cursor del teclado, selección) sin abrir el panel; si ya estaba abierto, lo sigue */
+    function mark(id) {
+      S.selected = id; S.selEdge = null; S.trace = null;
+      if (panel.classList.contains('on')) renderPanel();
+      applyHighlight();
+    }
+    function treeClick(id) {
+      const n = M.get(id); if (!n) return;
+      mark(id);
+      return n.children.length ? toggle(id) : toggleDetail(id);
+    }
+    /* abre o cierra la tarjeta de detalle de una pieza; la pieza se queda donde estaba en pantalla */
+    function toggleDetail(id, on) {
+      if (!M.has(id)) return;
+      const open = on != null ? !!on : !S.detail.has(id);
+      if (open === S.detail.has(id)) return;
+      if (open) S.detail.add(id); else S.detail.delete(id);
+      hideTip(); hoverSet = null;
+      return relayout({ anchor: id });
+    }
+    /* la pieza entra en pantalla si el cursor la saca de ella */
+    function inView(id) {
+      const r = S.rects.get(id); if (!r) return;
+      const v = viewSize(), c = S.cam, x0 = r.x * c.k + c.x, y0 = r.y * c.k + c.y, x1 = x0 + r.w * c.k, y1 = y0 + r.h * c.k;
+      if (x0 >= 16 && y0 >= 16 && x1 <= v.w - 16 && y1 <= v.h - 16) return;
+      animateCam({ k: c.k, x: x0 < 16 || x1 > v.w - 16 ? v.w / 2 - (r.x + r.w / 2) * c.k : c.x, y: v.h / 2 - (r.y + r.h / 2) * c.k });
+    }
+    function treeKey(k) {
+      const order = (S.order || []).filter(id => S.visible.has(id));
+      if (!order.length) return;
+      const cur = S.selected && order.includes(S.selected) ? S.selected : null;
+      const go = id => { if (id == null) return; mark(id); inView(id); const el = S.els.get(id); if (el && el.focus) try { el.focus({ preventScroll: true }); } catch (_) { } };
+      if (!cur) return go(order[0]);
+      const n = M.get(cur), i = order.indexOf(cur);
+      if (k === 'ArrowDown') go(order[Math.min(i + 1, order.length - 1)]);
+      else if (k === 'ArrowUp') go(order[Math.max(i - 1, 0)]);
+      else if (k === 'ArrowRight') { if (n.children.length && !S.expanded.has(cur)) toggle(cur); else go(n.children.find(c => S.visible.has(c))); }
+      else if (k === 'ArrowLeft') { if (n.children.length && S.expanded.has(cur)) toggle(cur); else if (n.parent != null && S.visible.has(n.parent)) go(n.parent); }
+    }
+
+    /* --- filtro por rutas: deja abiertas solo las ramas que llevan a lo referenciado --- */
+    /* `ids`: las piezas referenciadas (una búsqueda, los ficheros de un diff). Se abren sus antepasados y
+       se pliega todo lo demás; con `prune` (por defecto) lo que no lleva a nada referenciado ni se ve.
+       Al quitar el filtro vuelve lo que estaba abierto antes. */
+    function setFocus(ids, o) {
+      o = o || {};
+      const list = [...new Set([...ids].filter(id => M.has(id) && !M.get(id).isLane))];
+      const keep = new Set(), hits = new Map();
+      list.forEach(id => { keep.add(id); ancestors(M, id).forEach(a => { keep.add(a); hits.set(a, (hits.get(a) || 0) + 1); }); });
+      const prev = S.focus ? S.focus.prev : new Set(S.expanded);
+      /* una búsqueda sobre otro filtro (los cambios de un diff) lo recuerda: al vaciarla, vuelve a él */
+      const base = o.key === 'search' && S.focus ? (S.focus.key === 'search' ? S.focus.base : { ids: [...S.focus.ids], o: { label: S.focus.label, key: S.focus.key, prune: S.focus.prune } }) : null;
+      /* sin coincidencias no se pliega nada: el árbol se queda como estaba y la barra lo avisa */
+      const empty = !list.length;
+      if (empty && S.focus) S.expanded = new Set(prev);
+      S.focus = { ids: new Set(list), keep, hits, prune: !empty && o.prune !== false, label: o.label || '', key: o.key || 'custom', prev, empty, base };
+      S.unpruned = new Set();
+      if (!empty) { S.expanded = new Set(); list.forEach(id => ancestors(M, id).forEach(a => S.expanded.add(a))); }
+      syncFilterUI();
+    }
+    function filter(sel, o) {
+      const ids = typeof sel === 'function' ? [...M.values()].filter(n => !n.isLane && sel(n)).map(n => n.id) : [].concat(sel || []);
+      setFocus(ids, o);
+      return relayout({ fit: !(o && o.fit === false), after: ping });
+    }
+    /* al filtrar, lo que coincide hace un pulso: se ve dónde ha caído cada resultado */
+    function ping() {
+      if (reduce || !S.focus) return;
+      const els = [...S.focus.ids].map(id => S.els.get(id)).filter(Boolean).slice(0, 60);
+      els.forEach(el => { el.classList.remove('gx-ping'); void el.getBBox; el.classList.add('gx-ping'); });
+      setTimeout(() => els.forEach(el => el.classList.remove('gx-ping')), 1300);
+    }
+    /* sin relayout: lo usan los botones de profundidad, que ya recolocan */
+    function dropFocus() { clearTimeout(S.qT); if (!S.focus) return false; S.focus = null; S.unpruned = new Set(); syncFilterUI(); return true; }
+    function clearFilter() {
+      clearTimeout(S.qT);
+      if (!S.focus) return;
+      if (searchIn.value) searchIn.value = '';
+      const F = S.focus;
+      if (F.base) { S.focus = null; setFocus(F.base.ids, Object.assign({}, F.base.o)); S.focus.prev = F.prev; return relayout({ fit: true }); }
+      dropFocus(); S.expanded = new Set(F.prev);
+      return relayout({ fit: true });
+    }
+    function syncFilterUI() {
+      const F = S.focus;
+      filterPill.classList.toggle('on', !!F); filterPill.classList.toggle('warn', !!(F && F.empty));
+      /* en una búsqueda, lo que coincide lleva anillo; en los cambios de un diff ya lo dice su color */
+      host.classList.toggle('gx-filter-q', !!(F && F.key !== 'changes'));
+      filterPill.innerHTML = F ? `<span>${esc(F.empty ? T.noMatch : T.filter)}${F.label ? ' · ' + esc(F.label) : ''}</span><b title="${esc(T.matches)}">${F.ids.size}</b><button type="button" class="gx-x2" aria-label="${esc(T.clearFilter)}" title="${esc(T.clearFilter)}">×</button>` : '';
+      if (F) filterPill.querySelector('button').onclick = () => clearFilter();
+      bOnly.classList.toggle('on', FLAT ? !!(F && F.key === 'changes') : S.onlyChanges);
+      filterSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', !!(F && F.key === b.dataset.key)));
+    }
+
     async function reveal(id, noSelect) {
       if (!M.has(id)) return;
       if (S.view !== 'graph') showView('graph');
       let changed = false;
       ancestors(M, id).forEach(a => { if (!S.expanded.has(a)) { S.expanded.add(a); changed = true; } });
+      if (S.focus && S.focus.prune && !S.focus.keep.has(id)) {
+        ancestors(M, id).forEach(a => { if (!S.unpruned.has(a)) { S.unpruned.add(a); changed = true; } });
+        const root = [id].concat(ancestors(M, id)).pop();
+        if (!S.focus.keep.has(root) && !S.unpruned.has(ROOTS)) { S.unpruned.add(ROOTS); changed = true; }
+      }
       if (changed) await relayout({});
       if (!noSelect) select(id);
       await animateCam(camFor(bboxOf([id]) || S.bbox, 80));
     }
 
     /* --- búsqueda --- */
-    const index = [...M.values()].map(n => ({ id: n.id, key: fold([n.label, n.id, n.subtitle, (n.tags || []).join(' ')].join(' ')), n }));
+    const index = [...M.values()].map(n => ({ id: n.id, key: fold([n.label, n.id, n.subtitle, n.path, (n.tags || []).join(' ')].join(' ')), name: fold([n.label, n.subtitle, (n.tags || []).join(' ')].join(' ')), path: fold(n.path || ''), n }));
+    /* el filtro del árbol busca en el nombre; en la ruta, solo si la consulta lleva «/» (si no, «s» casaría con todo src/) */
+    const MAX_HITS = 400;
+    const matchQ = q => index.filter(x => !x.n.isLane && (q.includes('/') ? x.path.includes(q) || x.name.includes(q) : x.name.includes(q))).slice(0, MAX_HITS).map(x => x.id);
     let hits = [], hitI = 0;
     searchIn.addEventListener('input', () => {
       const q = fold(searchIn.value.trim());
+      /* en el árbol, buscar también filtra: quedan abiertas solo las ramas con coincidencias */
+      if (FLAT) {
+        clearTimeout(S.qT);
+        S.qT = setTimeout(() => {
+          /* se lee el campo al dispararse: Esc o elegir un resultado lo habrán vaciado */
+          const raw = searchIn.value.trim(), q2 = fold(raw);
+          if (!q2) { if (S.focus && S.focus.key === 'search') clearFilter(); return; }
+          if (q2.length < 2) return;
+          filter(matchQ(q2), { label: '“' + raw + '”', key: 'search' });
+        }, 260);
+      }
       if (!q) { searchList.classList.remove('on'); return; }
       hits = index.filter(x => x.key.includes(q)).slice(0, 8); hitI = 0;
       searchList.innerHTML = hits.length ? hits.map((x, i) => `<button type="button" class="${i === 0 ? 'on' : ''}" data-go="${esc(x.id)}">${iconHTML(x.n.kind)}<span><b>${esc(x.n.label)}</b><small>${esc(ancestors(M, x.id).reverse().map(a => M.get(a).label).join(' › '))}</small></span></button>`).join('') : `<div class="gx-nomatch">${esc(T.noMatch)}</div>`;
@@ -1655,11 +1949,11 @@
         hitI = (hitI + (ev.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length;
         searchList.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === hitI));
       } else if (ev.key === 'Enter' && hits[hitI]) { ev.preventDefault(); pickHit(hits[hitI].id); }
-      else if (ev.key === 'Escape') { searchIn.value = ''; searchList.classList.remove('on'); }
+      else if (ev.key === 'Escape') { clearTimeout(S.qT); searchIn.value = ''; searchList.classList.remove('on'); if (S.focus && S.focus.key === 'search') clearFilter(); }
       ev.stopPropagation();
     });
     searchIn.addEventListener('blur', () => setTimeout(() => searchList.classList.remove('on'), 120));
-    function pickHit(id) { searchList.classList.remove('on'); searchIn.value = ''; searchIn.blur(); reveal(id); }
+    function pickHit(id) { clearTimeout(S.qT); searchList.classList.remove('on'); searchIn.value = ''; searchIn.blur(); reveal(id); }
 
     /* --- filtros, leyenda, ajustar --- */
     const syncDir = () => { bDir.innerHTML = S.dir === 'down' ? '↧' : '↦'; bDir.title = `${T.orient}: ${S.dir === 'down' ? '↓' : '→'}`; };
@@ -1673,7 +1967,34 @@
       S.frames = !S.frames; bFrames.classList.toggle('on', S.frames); host.classList.toggle('gx-framed', framed());
       S.frameBox = null; relayout({ fit: true });
     };
-    bOnly.onclick = () => { S.onlyChanges = !S.onlyChanges; bOnly.classList.toggle('on', S.onlyChanges); applyHighlight(); };
+    const changedIds = () => [...M.values()].filter(n => !n.isLane && !n.children.length && n.delta !== 'unchanged').map(n => n.id);
+    bOnly.onclick = () => {
+      if (FLAT) { if (S.focus && S.focus.key === 'changes') clearFilter(); else filter(changedIds(), { label: T.onlyChanges, key: 'changes' }); return; }
+      S.onlyChanges = !S.onlyChanges; bOnly.classList.toggle('on', S.onlyChanges); applyHighlight();
+    };
+    if (FLAT && !HAS_CHANGES) bOnly.style.display = 'none';
+    /* filtros con nombre del JSON (`filters`): ids, rutas, deltas, tipos o una búsqueda */
+    const resolveFilter = f => {
+      const out = new Set(f.nodes || []);
+      const paths = new Set(f.paths || []), deltas = new Set(f.delta ? [].concat(f.delta) : []), kinds = new Set(f.kinds || []);
+      for (const n of M.values()) {
+        if (n.isLane) continue;
+        if (paths.has(n.path) || (deltas.size && deltas.has(n.delta) && !n.children.length) || kinds.has(n.kind)) out.add(n.id);
+      }
+      if (f.query) matchQ(fold(f.query)).forEach(id => out.add(id));
+      return [...out].filter(id => M.has(id));
+    };
+    (spec.filters || []).forEach((f, i) => {
+      if (!f || !f.label) return;
+      const b = btn(filterSeg, f.label, f.label, 'gx-seg-b'); b.dataset.key = 'f' + i;
+      b.onclick = () => (S.focus && S.focus.key === 'f' + i ? clearFilter() : filter(resolveFilter(f), { label: f.label, key: 'f' + i, prune: f.prune }));
+    });
+    if (!filterSeg.children.length) filterSeg.style.display = 'none';
+    /* la pastilla «··· N más» de una carpeta filtrada enseña lo que el filtro ocultaba */
+    const moreOf = ev => ev.target.closest && ev.target.closest('[data-more]');
+    const showMore = m => { const id = m.getAttribute('data-more'); S.unpruned.add(id); relayout({ anchor: id }); };
+    gDeco.addEventListener('click', ev => { const m = moreOf(ev); if (m) { ev.stopPropagation(); showMore(m); } });
+    gDeco.addEventListener('keydown', ev => { const m = moreOf(ev); if (m && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); ev.stopPropagation(); showMore(m); } });
     const kindsUsed = [...new Set([...M.values()].filter(n => !n.isLane).map(n => n.kind))];
     const LG = spec.legend || {};
     const swatches = Object.keys(STATUSES).length
@@ -1691,7 +2012,7 @@
       <li><span class="gx-lg-agg">+2</span>${esc(T.edgeKinds.agg)}</li></ul><ul class="gx-lg-k">
       ${kindsUsed.map(k => `<li>${iconHTML(k)}${esc(kindLabel(k))}</li>`).join('')}</ul>`;
     bLegend.onclick = () => { legend.classList.toggle('on'); bLegend.classList.toggle('on', legend.classList.contains('on')); };
-    bFit.onclick = () => S.view === 'graph' ? animateCam(camFor(S.bbox)) : animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
+    bFit.onclick = () => S.view === 'graph' ? animateCam(fitCam(S.bbox)) : animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
 
     /* --- minimapa --- */
     const miniWorld = s('g', null, miniSvg), miniView = s('rect', { class: 'gx-mini-v' }, miniSvg);
@@ -2037,6 +2358,8 @@
       (st.expand || []).forEach(id => { S.expanded.add(id); ancestors(M, id).forEach(a => S.expanded.add(a)); });
       (st.collapse || []).forEach(id => S.expanded.delete(id));
       (f.nodes || []).forEach(id => ancestors(M, id).forEach(a => S.expanded.add(a)));
+      /* con un filtro que poda, lo que señala el paso tiene que verse */
+      if (S.focus && S.focus.prune) (f.nodes || []).filter(id => M.has(id) && !S.focus.keep.has(id)).forEach(id => { ancestors(M, id).forEach(a => S.unpruned.add(a)); S.unpruned.add(ROOTS); });
       (f.edges || []).forEach(eid => { const e = G.edges.find(x => x.id === eid); if (e) [e.from, e.to].forEach(x => ancestors(M, x).forEach(a => S.expanded.add(a))); });
       if (st.select) { S.selected = st.select; S.selEdge = null; } else if (!S.present) { S.selected = null; panel.classList.remove('on'); }
       await relayout({ after: () => { if (tok !== S.tourTok) return; setFocusSet(f.nodes, f.edges); if (st.select) renderPanel(); } });
@@ -2052,7 +2375,7 @@
       S.trace = null; S.selected = null; S.selEdge = null; panel.classList.remove('on');
       if (S.view !== homeView) showView(homeView);
       else if (S.view !== 'graph' && S.seq) animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
-      setDepthSet(initial); S.frameBox = null;
+      dropFocus(); S.detail = new Set(); setDepthSet(initial); applyInitialFocus(); S.frameBox = null;
       return relayout({ fit: true });
     }
     function setPresent(on) {
@@ -2076,6 +2399,9 @@
     host.addEventListener('keydown', ev => {
       if (ev.target.tagName === 'INPUT') return;
       const k = ev.key;
+      /* árbol: las flechas mueven el cursor por las tarjetas, abren y pliegan (fuera del recorrido) */
+      if (FLAT && S.view === 'graph' && S.tour < 0 && !S.present && /^Arrow(Up|Down|Left|Right)$/.test(k)) { ev.preventDefault(); treeKey(k); return; }
+      if (FLAT && k === 'Escape' && S.focus && !S.selected && !S.present && !S.expanded2 && S.tour < 0) { clearFilter(); return; }
       if ((k === 'ArrowRight' || k === 'PageDown' || (k === ' ' && S.present)) && (S.tour >= 0 || S.present)) { ev.preventDefault(); goStep(S.tour + 1); }
       else if ((k === 'ArrowLeft' || k === 'PageUp') && S.tour >= 0) { ev.preventDefault(); goStep(Math.max(0, S.tour - 1)); }
       else if (k === 'Escape') { if (S.present) setPresent(false); else if (S.expanded2) setExplore(false); else if (S.tour >= 0) resetView(); else clearSelection(); }
@@ -2093,7 +2419,7 @@
         const w0 = stage.getBoundingClientRect().width;
         if (w0 && !lastW && !S.touched) {
           if (S.view !== 'graph' && S.seq) setSeqCam(camFor(S.seq.bbox, 30, seqSvg));
-          else if (S.bbox) setCam(camFor(S.bbox));
+          else if (S.bbox) setCam(fitCam(S.bbox));
         }
         lastW = w0; drawMiniView();
       }, 80);
@@ -2101,17 +2427,23 @@
     if (ro) ro.observe(stage);
 
     renderTour(); syncTabs();
+    /* `focus` del JSON: el diagrama se abre ya filtrado (los cambios de un diff, una búsqueda) */
+    const applyInitialFocus = () => { if (spec.focus && typeof spec.focus === 'object') setFocus(resolveFilter(spec.focus), { label: spec.focus.label, key: spec.focus.key || 'initial', prune: spec.focus.prune }); };
+    applyInitialFocus();
     const ready = relayout({ fit: true });
     if (homeView !== 'graph') showView(homeView);
 
     return {
       ready, diffReady, model: G, state: S, setExplore, resetView, focusNode,
       setDirection: d => { S.dir = d === 'down' ? 'down' : 'right'; syncDir(); S.frameBox = null; return relayout({ fit: true }); },
-      expandTo: d => { setDepthSet(d); return relayout({ fit: true }); },
+      expandTo: d => { dropFocus(); setDepthSet(d); return relayout({ fit: true }); },
       toggle, reveal, select, goStep, showView, setPresent, trace,
+      /* árbol y filtros: `filter(ids | n => bool, { label, prune })`, `clearFilter()`, `toggleDetail(id, on?)` */
+      filter, clearFilter, toggleDetail,
       /* deja el host como estaba: sin contenido, sin las clases de estado (una vista solo de secuencia
          ocultaría el grafo del siguiente montaje) y sin el id y los atributos que puso el motor */
       destroy() {
+        S.dead = true; S.layoutId++; clearTimeout(S.qT);
         document.removeEventListener('pointerdown', onDocDown); document.removeEventListener('fullscreenchange', onFs); ro && ro.disconnect();
         host.innerHTML = '';
         [...host.classList].filter(c => c === 'gx' || c.startsWith('gx-') && c !== 'gx-host').forEach(c => host.classList.remove(c));

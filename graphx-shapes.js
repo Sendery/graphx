@@ -180,8 +180,8 @@
     text: flow({ fit: (w, h) => pad(w, h, 16, 12, 40, 280, 30), outline: (w, h) => rectD(w, h, 6), ghost: true }),
     'arrow-right': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly(PTS['arrow-right'](w, h)), box: (w, h) => ({ x: 4, y: 0, w: w - h * .5, h }) }),
     'arrow-left': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly(PTS['arrow-left'](w, h)), box: (w, h) => ({ x: h * .5, y: 0, w: w - h * .5 - 4, h }) }),
-    'arrow-up': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-up'](w, h)), box: (w, h) => ({ x: w * .2, y: w * .45, w: w * .6, h: h - w * .45 }) }),
-    'arrow-down': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-down'](w, h)), box: (w, h) => ({ x: w * .2, y: 0, w: w * .6, h: h - w * .45 }) })
+    'arrow-up': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w / .6 + 16, 100, 240); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-up'](w, h)), box: (w, h) => ({ x: w * .2, y: w * .45, w: w * .6, h: h - w * .45 }) }),
+    'arrow-down': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w / .6 + 16, 100, 240); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-down'](w, h)), box: (w, h) => ({ x: w * .2, y: 0, w: w * .6, h: h - w * .45 }) })
   };
 
   /* ---------- nota ---------- */
@@ -485,6 +485,199 @@
     }
   };
 
+  /* ---------- árbol de ficheros: fichero, carpeta plegada y carpeta abierta ---------- */
+  /* Las tres comparten una tarjeta de detalle que se abre debajo de la cabecera (`n._open`): ruta,
+     métricas, reparto por extensión, ficheros cambiados y resumen. `n._hits` es cuántas piezas de
+     dentro coinciden con el filtro activo (búsqueda, cambios de un diff). Los colores que vienen en
+     los datos (`extColor`, `tree.exts[].color`) van en un atributo style: solo pasan si son un color. */
+  const COLOR_RE = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\([0-9.,%\s/+-]+(deg|turn|rad)?[0-9.,%\s/+-]*\)|[a-z]{3,20})$/i;
+  const safeColor = v => (typeof v === 'string' && COLOR_RE.test(v.trim()) ? v.trim() : null);
+  /* texto oscuro sobre un color claro (el amarillo de JS), blanco sobre el resto */
+  const inkOn = c => {
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c || ''); if (!m) return '#fff';
+    const x = m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1], [r, g, b] = [0, 2, 4].map(i => parseInt(x.slice(i, i + 2), 16) / 255);
+    return .2126 * r + .7152 * g + .0722 * b > .6 ? '#1f2328' : '#fff';
+  };
+  const statOf = n => {
+    const a = n.stat ? n.stat.additions : n.additions, d = n.stat ? n.stat.deletions : n.deletions;
+    return a || d ? { a: a || 0, d: d || 0 } : null;
+  };
+  const GIT_LETTER = { added: 'A', modified: 'M', removed: 'D' };
+  const gitLetter = n => (n.renamed ? 'R' : GIT_LETTER[n.delta] || '');
+  const fmtN = v => (v >= 1e4 ? Math.round(v / 1e3) + 'k' : v >= 1e3 ? (v / 1e3).toFixed(1).replace(/\.0$/, '') + 'k' : String(v));
+  /* + y − en texto: el lado que vale cero no se escribe (es ruido) */
+  const statParts = st => [st.a ? ['+' + fmtN(st.a), 'gx-fadd'] : null, st.d ? ['−' + fmtN(st.d), 'gx-fdel'] : null].filter(Boolean);
+  const statTextW = (ctx, st, size) => statParts(st).reduce((w, [t], i) => w + tw(ctx, t, size || 11, 600, true) + (i ? 5 : 0), 0);
+  /* + y − alineados a la derecha en xr, con los cinco cuadros de GitHub debajo: cuántos se colorean
+     dice cuánto ha cambiado (escala logarítmica), y de esos, cuántos en verde, la proporción */
+  function statBlock(ctx, st, xr, y, noSq) {
+    const kids = []; let x = xr;
+    statParts(st).reverse().forEach(([t, c]) => { kids.push(T(x, y, t, c, 'end')); x -= tw(ctx, t, 11, 600, true) + 5; });
+    if (!noSq) {
+      const tot = st.a + st.d, on = tot ? clamp(Math.round(Math.log10(tot + 1) / 3 * 5), 1, 5) : 0, ga = tot ? Math.round(on * st.a / tot) : 0;
+      for (let i = 0; i < 5; i++) kids.push(E('rect', { class: 'gx-fsq' + (i < ga ? ' a' : i < on ? ' d' : ''), x: r1(xr - 38 + i * 8), y: y + 5, width: 6, height: 6, rx: 1.5 }));
+    }
+    return kids;
+  }
+  const statBlockW = (ctx, st, noSq) => Math.max(statTextW(ctx, st), noSq ? 0 : 38);
+  /* los dos iconos pequeños de las cuentas de una carpeta (fichero y carpeta), de 10×10 */
+  const MINI_FILE = (x, y) => P(`M${x + 1.5},${y}h4.5l2.5,2.5v7.5h-7z`, 'gx-fmini');
+  const MINI_DIR = (x, y) => P(`M${x},${y + 1.5}h3.5l1.2,1.2h5.3v6.8h-10z`, 'gx-fmini');
+  /* cuentas de una carpeta (▢ ficheros, ▢ subcarpetas) y su + y −: medida y dibujo salen de aquí */
+  function countsOf(ctx, n) {
+    const tr = n.tree || {}, items = [];
+    if (tr.files != null) items.push({ icon: MINI_FILE, text: fmtN(tr.files) });
+    if (tr.dirs) items.push({ icon: MINI_DIR, text: fmtN(tr.dirs) });
+    items.forEach(it => { it.w = 14 + tw(ctx, it.text, 11, 500, true); });
+    const st = statOf(n), stW = st ? statTextW(ctx, st) : 0;
+    const w = items.reduce((a, it) => a + it.w + 9, 0) + (stW ? stW + 2 : 0);
+    return { items, st, stW, w };
+  }
+  function drawCounts(ctx, c, x, y, maxX) {
+    const kids = [];
+    c.items.forEach(it => { kids.push(it.icon(x, y - 9), T(x + 14, y, it.text, 'gx-fcount', 'start')); x += it.w + 9; });
+    /* el + y − solo si cabe entero antes de lo que haya a la derecha */
+    if (c.st && x + c.stW <= maxX) statParts(c.st).forEach(([t, k]) => { kids.push(T(x, y, t, k, 'start')); x += tw(ctx, t, 11, 600, true) + 5; });
+    return kids;
+  }
+  /* el icono de carpeta: cerrada (agrupando) o abierta (desplegada), de 28×22 en (x, y) */
+  function folderIcon(x, y, open) {
+    const back = P(`M${x},${y + 3}a3,3 0 0 1 3,-3h7l3,3.2h12a3,3 0 0 1 3,3V${y + 19}a3,3 0 0 1 -3,3H${x + 3}a3,3 0 0 1 -3,-3z`, 'gx-fold-b');
+    if (!open) return [back, P(`M${x},${y + 8}H${x + 28}`, 'gx-fold-l')];
+    return [back, P(`M${x + 2.5},${y + 9.5}H${x + 30}a1.5,1.5 0 0 1 1.4,2L${x + 27.6},${y + 20.6}a2,2 0 0 1 -1.9,1.4H${x + 1}z`, 'gx-fold-f')];
+  }
+  const hitsPill = (ctx, text, x, y, soft) => E('g', { class: 'gx-hits' + (soft ? ' soft' : '') }, [E('rect', { x, y, width: tw(ctx, text, 10.5, 700) + 22, height: 18, rx: 9 }), P(circleD(x + 9, y + 9, 3), 'gx-hitsd'), T(x + 15, y + 13, text, 'gx-hitst', 'start')]);
+  const hitsW = (ctx, text) => (text ? tw(ctx, text, 10.5, 700) + 22 : 0);
+  /* la letra de git en una pastilla: A, M, D, R */
+  const letterPill = (x, y, letter, delta, sm) => E('g', { class: 'd-' + (delta || 'modified') }, [E('rect', { class: 'gx-gitl', x, y, width: sm ? 14 : 18, height: sm ? 14 : 20, rx: sm ? 3 : 4 }), T(x + (sm ? 7 : 9), y + (sm ? 10.5 : 14), letter, 'gx-gitlt' + (sm ? ' sm' : ''))]);
+  /* La tarjeta de detalle: piezas apiladas con su alto; se mide una vez y se dibuja desde y0. Sin
+     repetir lo que ya dice la cabecera: la ruta solo si no es el nombre, el + y − de un fichero como
+     barra, el reparto por extensión y los cambiados (con su letra) de una carpeta y el resumen. */
+  function detailOf(n, ctx, w) {
+    const parts = [], tr = n.tree || {}, add = (h, draw) => parts.push({ h, draw });
+    if (n.path && n.path !== n.label && n.path !== '.') {
+      const lines = wrap(ctx, String(n.path).replace(/\//g, '/ '), w - 28, 10.5, 400, 3, true).map(l => l.replace(/\/ /g, '/'));
+      add(lines.length * 14 + 6, y => lines.map((l, i) => T(14, y + 12 + i * 14, l, 'gx-dpath', 'start')));
+    }
+    (n.metrics || []).slice(0, 6).forEach(m => {
+      const v = fit(ctx, m.value, w * .55, 11.5, 600), l = fit(ctx, m.label, w - 40 - tw(ctx, v, 11.5, 600), 11, 400);
+      add(19, y => [T(14, y + 13, l, 'gx-dk', 'start'), T(w - 14, y + 13, v, 'gx-dv', 'end')]);
+    });
+    const st = statOf(n);
+    if (st && !n.tree) {
+      const tW = statTextW(ctx, st), bw = w - 28 - tW - 12, tot = st.a + st.d;
+      add(22, y => {
+        const out = [E('rect', { class: 'gx-dtrack', x: 14, y: y + 8, width: bw, height: 6, rx: 3 })];
+        if (st.a) out.push(E('rect', { class: 'gx-dbar-a', x: 14, y: y + 8, width: r1(Math.max(3, bw * st.a / tot)), height: 6, rx: 3 }));
+        if (st.d) out.push(E('rect', { class: 'gx-dbar-d', x: r1(14 + bw * st.a / tot), y: y + 8, width: r1(Math.max(3, bw * st.d / tot)), height: 6, rx: 3 }));
+        let x = w - 14; statParts(st).reverse().forEach(([t, c]) => { out.push(T(x, y + 15, t, c, 'end')); x -= tw(ctx, t, 11, 600, true) + 5; });
+        return out;
+      });
+    }
+    const exts = (tr.exts || []).slice(0, 5), maxE = Math.max(1, ...exts.map(e => e.n || 0));
+    if (exts.length) add(4, () => []);
+    exts.forEach(e => {
+      const c = safeColor(e.color), lab = String(e.ext || '·').slice(0, 4).toUpperCase(), bw = w - 28 - 34 - 34;
+      add(19, y => [E('rect', { class: 'gx-fbadge sm', x: 14, y: y + 3, width: 28, height: 13, rx: 3.5, style: c ? `fill:${c}` : undefined }),
+        T(28, y + 12.6, lab, 'gx-fbt sm', 'middle', c ? { style: `fill:${inkOn(c)}` } : null),
+        E('rect', { class: 'gx-dtrack', x: 48, y: y + 7, width: bw, height: 5, rx: 2.5 }),
+        E('rect', { class: 'gx-dfill', x: 48, y: y + 7, width: r1(Math.max(3, bw * (e.n || 0) / maxE)), height: 5, rx: 2.5, style: c ? `fill:${c}` : undefined }),
+        T(w - 14, y + 13, fmtN(e.n || 0), 'gx-dv', 'end')]);
+    });
+    const ch = (tr.changed || []).slice(0, 5);
+    if (ch.length) add(8, y => [P(`M14,${y + 4}H${w - 14}`, 'gx-shl')]);
+    ch.forEach(f => {
+      const fs = { a: f.additions || 0, d: f.deletions || 0 }, room = w - 50 - (fs.a || fs.d ? statTextW(ctx, fs, 10.5) + 12 : 0);
+      add(20, y => {
+        const out = [letterPill(14, y + 3, f.renamed ? 'R' : GIT_LETTER[f.delta] || 'M', f.delta, true), T(34, y + 14, fit(ctx, f.name || f.path, room, 11.5, 500), 'gx-dn', 'start')];
+        let x = w - 14; statParts(fs).reverse().forEach(([t, c]) => { out.push(T(x, y + 14, t, c + ' sm', 'end')); x -= tw(ctx, t, 10.5, 600, true) + 4; });
+        return out;
+      });
+    });
+    if (tr.more) add(16, y => [T(34, y + 11, `+${tr.more}`, 'gx-dk', 'start')]);
+    if (n.summary) {
+      const lines = wrap(ctx, n.summary, w - 28, 12, 400, 4);
+      add(lines.length * 16 + 8, y => lines.map((l, i) => T(14, y + 17 + i * 16, l, 'gx-dsum', 'start')));
+    }
+    const h = parts.reduce((s, p) => s + p.h, 0) + 14;
+    return { h, draw(y0) { let y = y0 + 6; const out = [P(`M1,${y0}H${w - 1}`, 'gx-ddiv')]; parts.forEach(p => { out.push(...p.draw(y)); y += p.h; }); return out; } };
+  }
+  /* Las tres formas reservan a la derecha el sitio de los botones que añade el motor (+N o −, y el del
+     detalle). `n._dense`: la variante compacta de un fichero, una sola línea, para árboles grandes. */
+  SHAPES.file = {
+    family: 'tree',
+    measure(n, ctx) {
+      const dense = !!n._dense, ext = n.badge || (n.ext ? String(n.ext).slice(0, 4).toUpperCase() : '');
+      const st = statOf(n), letter = gitLetter(n), sub = !dense && n.subtitle ? fit(ctx, n.subtitle, 240, 10.5, 400, true) : '';
+      const right = (st ? statBlockW(ctx, st, dense) + 12 : 0) + (letter ? 26 : 0) + 24;
+      const name = fit(ctx, n.label, 260, 13, 600), head = dense ? 30 : 44;
+      const w0 = clamp(54 + Math.max(tw(ctx, name, 13, 600), sub ? tw(ctx, sub, 10.5, 400, true) : 0) + 12 + right, 176, 420);
+      const w = n._open ? Math.max(w0, 300) : w0, det = n._open ? detailOf(n, ctx, w) : null;
+      return { w: Math.round(w), h: head + (det ? det.h : 0), head, dense, name, sub, ext, st, letter, det };
+    },
+    render(n, w, h, ctx, lay) {
+      const c = safeColor(n.extColor), H = lay.head, by = (H - 20) / 2;
+      const kids = [P(rectD(w, h, lay.dense ? 8 : 10), 'gx-card'), E('rect', { class: 'gx-accent', x: 6, y: lay.dense ? 8 : 11, width: 3, height: H - (lay.dense ? 16 : 22), rx: 1.5 })];
+      kids.push(E('rect', { class: 'gx-fbadge', x: 14, y: by, width: 32, height: 20, rx: 5, style: c ? `fill:${c}` : undefined }));
+      if (lay.ext) kids.push(T(30, by + 13.6, lay.ext, 'gx-fbt', 'middle', c ? { style: `fill:${inkOn(c)}` } : null));
+      else kids.push(P(`M25,${by + 3}h5.5l3.5,3.5v10.5h-9z`, 'gx-fmini lg'));
+      kids.push(T(54, lay.sub ? 20 : H / 2 + 4.5, lay.name, 'gx-t', 'start'));
+      if (lay.sub) kids.push(T(54, 35, lay.sub, 'gx-st gx-fsub', 'start'));
+      let xr = w - 30;
+      if (lay.letter) { kids.push(letterPill(xr - 18, by, lay.letter, n.delta)); xr -= 26; }
+      if (lay.st) kids.push(...statBlock(ctx, lay.st, xr, lay.dense ? H / 2 + 4 : 18, lay.dense || n.delta === 'removed'));
+      if (lay.det) kids.push(...lay.det.draw(H));
+      return { children: kids, chrome: { x: w - 30, y: H - 8, det: { x: w - 15, y: H / 2 } } };
+    }
+  };
+  function folderShape(open) {
+    return {
+      family: 'tree',
+      measure(n, ctx) {
+        const hits = n._hits ? fmtN(n._hits) : '', hW = hitsW(ctx, hits), c = countsOf(ctx, n), head = open ? 40 : 62;
+        let w0, name;
+        if (open) {
+          /* abierta: una cabecera fina, todo en una línea; el nombre se recorta a lo que deja el resto */
+          const fixed = 50 + 12 + c.w + 8 + (hW ? hW + 8 : 0) + 64;
+          name = fit(ctx, n.label, Math.min(280, 460 - fixed), 13, 700);
+          w0 = clamp(fixed + tw(ctx, name, 13, 700), 190, 460);
+        } else {
+          /* plegada: nombre arriba (con la pastilla de coincidencias y el botón del detalle a su derecha), cuentas debajo */
+          const top = 54 + 12 + (hW ? hW + 6 : 0) + 26;
+          name = fit(ctx, n.label, Math.min(270, 400 - top), 13, 600);
+          w0 = clamp(Math.max(top + tw(ctx, name, 13, 600), 54 + c.w + 54), 210, 400);
+        }
+        const w = n._open ? Math.max(w0, 300) : w0, det = n._open ? detailOf(n, ctx, w) : null;
+        return { w: Math.round(w), h: head + (det ? det.h : 0), head, name, hits, hW, c, det };
+      },
+      render(n, w, h, ctx, lay) {
+        const H = lay.head, tr = n.tree || {}, kids = [P(rectD(w, h, 10), 'gx-card' + (open ? ' gx-fopen' : ''))];
+        kids.push(...folderIcon(12, open ? 9 : 13, open));
+        if (open) {
+          kids.push(T(50, 25, lay.name, 'gx-t gx-ftitle', 'start'));
+          const px = w - 64 - lay.hW;
+          kids.push(...drawCounts(ctx, lay.c, 50 + tw(ctx, lay.name, 13, 700) + 12, 25, (lay.hits ? px : w - 64) - 8));
+          if (lay.hits) kids.push(hitsPill(ctx, lay.hits, px, 11, true));
+        } else {
+          kids.push(T(52, 26, lay.name, 'gx-t', 'start'));
+          if (lay.hits) kids.push(hitsPill(ctx, lay.hits, w - 32 - lay.hW, 9));
+          kids.push(...drawCounts(ctx, lay.c, 52, 45, w - 54));
+          /* el reparto de ficheros por extensión, como la barra de lenguajes de GitHub */
+          const exts = tr.exts || [], tot = exts.reduce((s, e) => s + (e.n || 0), 0);
+          if (tot) {
+            let bx = 14; const bw = w - 28;
+            kids.push(E('rect', { class: 'gx-dtrack', x: 14, y: H - 10, width: bw, height: 4, rx: 2 }));
+            exts.forEach(e => { const sw = bw * (e.n || 0) / tot, col = safeColor(e.color); if (sw >= .8) kids.push(E('rect', { class: 'gx-fseg', x: r1(bx), y: H - 10, width: r1(Math.max(sw - .8, .6)), height: 4, style: col ? `fill:${col}` : undefined })); bx += sw; });
+          }
+        }
+        if (lay.det) kids.push(...lay.det.draw(H));
+        return { children: kids, chrome: open ? { x: w - 34, y: 20, det: { x: w - 17, y: 20 } } : { x: w - 14, y: 40, det: { x: w - 17, y: 18 } } };
+      }
+    };
+  }
+  SHAPES.folder = folderShape(false);
+  SHAPES['folder-open'] = folderShape(true);
+
   /* ---------- API ---------- */
   const names = Object.keys(SHAPES);
   function measure(n, ctx) { const sh = SHAPES[n.shape]; return sh ? sh.measure(n, ctx || {}) : null; }
@@ -494,6 +687,8 @@
     const out = sh.render(n, w, h, ctx, lay);
     return { family: sh.family, children: out.children, chrome: out.chrome };
   }
+  /* alto de la cabecera de una forma con tarjeta de detalle (ahí se anclan las líneas del árbol) */
+  const headOf = (n, lay) => (lay && lay.head) || (lay && lay.h) || 0;
   /* Casco de una forma: dónde deben acabar las aristas. ELK las lleva hasta la caja; el motor las
      recorta contra esto para que toquen el rombo, el círculo o el punto, no el aire de alrededor.
      Las formas rectangulares no lo necesitan (su caja es su contorno). */
@@ -558,5 +753,5 @@
     open: { d: 'M4,4 L19,10 L4,16', fill: 'line', w: 20 }
   };
 
-  return { has: n => !!SHAPES[n], names, measure, render, outlineOf, hull, hit, markers: MARKERS, wrap, fit, estW, families: names.reduce((o, k) => (o[k] = SHAPES[k].family, o), {}) };
+  return { has: n => !!SHAPES[n], names, measure, render, outlineOf, headOf, safeColor, hull, hit, markers: MARKERS, wrap, fit, estW, families: names.reduce((o, k) => (o[k] = SHAPES[k].family, o), {}) };
 });

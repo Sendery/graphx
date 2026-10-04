@@ -1,4 +1,4 @@
-<title>Mermaid en GraphX</title>
+<title>Galería de GraphX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -62,6 +62,8 @@ footer code { font-family: "IBM Plex Mono", ui-monospace, monospace; }
 .ptabs button { font: 600 14px "IBM Plex Sans", system-ui, sans-serif; border: 0; background: none; color: var(--muted); padding: 8px 14px 10px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent-ink); }
 .page { display: flex; flex-direction: column; gap: 14px; }
+/* el atributo hidden manda sobre el display de cada bloque (.page, .src…) */
+[hidden] { display: none !important; }
 .cat-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
 .cat-bar .label { margin-right: -6px; }
 .sw-row { display: inline-flex; gap: 6px; align-items: center; }
@@ -79,17 +81,23 @@ footer code { font-family: "IBM Plex Mono", ui-monospace, monospace; }
 .cat-hint { font: 11.5px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; }
 .gx.gx-scope { display: block; gap: 0; font: inherit; color: inherit; }
 .cat-status { color: var(--muted); font-size: 13.5px; }
+#p-tree .gx-host { --gx-h: min(78vh, 840px); min-width: 0; }
+.tree-hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+.tree-hint code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; }
+.tree-keys { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.tree-keys kbd { font: 500 11.5px "IBM Plex Mono", ui-monospace, monospace; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--hairline); background: var(--surface); color: var(--ink); }
 @media (max-width: 860px) { .work { grid-template-columns: minmax(0, 1fr); } textarea { min-height: 220px; } .bar .stat { margin-left: 0; width: 100%; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 <div class="wrap">
 <header>
-  <h1>Mermaid en GraphX</h1>
-  <p>El mismo código de Mermaid, dibujado por GraphX y por Mermaid. Elige un tipo de diagrama, compara las dos vistas, cambia los colores de GraphX en vivo o pega tu propio diagrama y pulsa «Convertir».</p>
+  <h1>Galería de GraphX</h1>
+  <p>El mismo código de Mermaid, dibujado por GraphX y por Mermaid: elige un tipo de diagrama, compara las dos vistas, cambia los colores en vivo o pega tu propio diagrama. En «Árbol de ficheros», un repo dibujado con tarjetas que se navegan como carpetas.</p>
 </header>
 <div class="ptabs" role="tablist" aria-label="Secciones">
   <button type="button" role="tab" id="tab-diagrams" aria-selected="true" aria-controls="p-diagrams">Diagramas</button>
   <button type="button" role="tab" id="tab-shapes" aria-selected="false" aria-controls="p-shapes">Formas (React)</button>
+  <button type="button" role="tab" id="tab-tree" aria-selected="false" aria-controls="p-tree">Árbol de ficheros</button>
 </div>
 <section class="page" id="p-diagrams" role="tabpanel" aria-labelledby="tab-diagrams">
 <nav class="types" id="types" aria-label="Ejemplos por tipo de diagrama"></nav>
@@ -149,12 +157,32 @@ footer code { font-family: "IBM Plex Mono", ui-monospace, monospace; }
   </div>
   <div id="catalog"><p class="cat-status">Cargando React…</p></div>
 </section>
+<section class="page" id="p-tree" role="tabpanel" aria-labelledby="tab-tree" hidden>
+  <p class="cat-status">Un árbol de ficheros dibujado con tarjetas. Una carpeta plegada agrupa (cuántos ficheros, de qué tipo, cuánto ha cambiado); abierta, es una cabecera de la que cuelgan sus hijos. Cada tarjeta abre su detalle con ⓘ o con un clic en el fichero. Buscar o pulsar «Solo cambios» filtra el árbol: quedan abiertas solo las ramas que llevan a lo que coincide, y el resto se recoge en «··· N más».</p>
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Qué árbol ver" id="treeSrc">
+      <button type="button" data-v="repo" aria-pressed="true">Este repo · cambios de la rama</button><button type="button" data-v="paste" aria-pressed="false">Pegar un árbol</button>
+    </div>
+    <div class="tree-keys" aria-label="Atajos"><span><kbd>↑</kbd> <kbd>↓</kbd> moverse</span><span><kbd>→</kbd> abrir</span><span><kbd>←</kbd> plegar</span><span><kbd>espacio</kbd> detalle</span><span><kbd>/</kbd> buscar</span><span>doble clic: panel</span></div>
+    <span class="stat" id="treeStat"></span>
+  </div>
+  <div class="work" id="treeWork">
+    <section class="src" id="treeBox" aria-label="Árbol de entrada">
+      <div class="src-h"><span class="label" id="treeLabel">Árbol de entrada</span><button class="run" id="treeRun" type="button">Dibujar</button></div>
+      <textarea id="treeCode" spellcheck="false" aria-labelledby="treeLabel"></textarea>
+      <p class="tree-hint">Acepta la salida de <code>tree</code> (también <code>tree -h</code>), una ruta por línea, o <code>git diff --name-status</code> / <code>--numstat</code>.</p>
+      <div class="msgs" id="treeMsgs"></div>
+    </section>
+    <section class="stage" aria-label="Árbol"><div id="treeHost" class="gx-host"></div></section>
+  </div>
+</section>
 <footer>GraphX <span id="ver"></span> · conversor <code>graphx-mermaid.js</code>, sin depender de Mermaid · ELK y Mermaid 11.17.0 se cargan de jsDelivr la primera vez que hacen falta.</footer>
 </div>
 <script>__ENGINE__</script>
 <script>__REACT_BRIDGE__</script>
 <script>
 const SAMPLES = __SAMPLES__;
+const TREE_REPO = __TREE_REPO__;
 const $ = id => document.getElementById(id);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (_) { return d; } },
@@ -329,7 +357,8 @@ const GROUPS = [
   ['tile', 'Iconos: arquitectura y actores', 'Una baldosa con el icono grande y la etiqueta debajo.'],
   ['c4', 'C4', 'Cajas rellenas del color de la notación, con tipo y descripción.'],
   ['card', 'Tarjetas con datos: gantt, journey, kanban, sankey y treemap', 'La tarjeta de GraphX con algo más: la barra de fechas, la puntuación, el ticket, el nivel o un área que crece con el valor.'],
-  ['bar', 'Barras de los layouts propios', 'En un gantt, la barra mide lo que dura la tarea; en un sankey, lo alta que es su valor. Aquí, a su tamaño por defecto.']
+  ['bar', 'Barras de los layouts propios', 'En un gantt, la barra mide lo que dura la tarea; en un sankey, lo alta que es su valor. Aquí, a su tamaño por defecto.'],
+  ['tree', 'Árbol de ficheros', 'El fichero con su extensión, sus líneas cambiadas y la letra de git; la carpeta plegada, que agrupa (cuántos ficheros, de qué tipo); y la abierta, una cabecera fina de la que cuelgan sus hijos.']
 ];
 const HINTS = {
   rect: 'A[texto]', rounded: 'A(texto)', terminal: 'A([texto])', subroutine: 'A[[texto]]', datastore: 'A[(texto)]', 'cylinder-h': '@{ shape: h-cyl }', circle: 'A((texto))', dcircle: 'A(((texto)))',
@@ -340,6 +369,7 @@ const HINTS = {
   commit: 'gitGraph: commit', 'commit-merge': 'gitGraph: merge rama', 'commit-highlight': 'commit type: HIGHLIGHT', 'commit-reverse': 'commit type: REVERSE',
   table: 'erDiagram: CLIENTE { … }', class: 'classDiagram: class A { … }', requirement: 'requirementDiagram', tile: 'architecture: service a(server)[…]', actor: 'sequence: actor U',
   person: 'C4: Person(…)', c4: 'C4: System(…) · Container(…)', 'c4-db': 'C4: SystemDb(…)', 'c4-queue': 'C4: SystemQueue(…)',
+  file: 'GraphX.tree.fromPaths([…])', folder: 'carpeta plegada', 'folder-open': 'carpeta abierta (openShape)',
   bar: 'gantt: tarea :a1, 2026-09-08, 6d (en tarjeta)', gbar: 'gantt: tarea :a1, 2026-09-08, 6d', sbar: 'sankey-beta: A,B,10', score: 'journey: Tarea: 4: Yo', ticket: 'kanban: t1[…]@{ ticket, assigned }', flowbar: 'sankey-beta', block: 'treemap-beta: "Hoja": 7'
 };
 const LABELS = { flow: 'Revisar pedido', dot: 'v1.0', note: 'Se guarda 30 días y luego se borra', table: 'CLIENTE', tile: 'Base de datos', c4: 'Banca online', card: 'Preparar envío' };
@@ -361,6 +391,11 @@ const sampleNode = (name, fam) => {
   if (name === 'block') { n.label = 'Salarios'; n.subtitle = '700'; n.value = 7; }
   if (name === 'gbar') { n.label = 'Backend'; n.kind = 'job'; n.span = { start: '2026-09-08', end: '2026-09-14', live: true }; }
   if (name === 'sbar') { n.label = 'Red'; n.subtitle = '105'; }
+  if (fam === 'tree') {
+    const exts = [{ ext: 'ts', n: 9, color: '#3178c6' }, { ext: 'css', n: 3, color: '#7c4dff' }, { ext: 'json', n: 2, color: '#0f9d8a' }];
+    if (name === 'file') Object.assign(n, { label: 'Carrito.tsx', ext: 'tsx', badge: 'TSX', extColor: '#3178c6', subtitle: '4,2 KB · 128 líneas', additions: 42, deletions: 7, delta: 'modified', path: 'src/components/Carrito.tsx' });
+    else Object.assign(n, { label: 'components', path: 'src/components', tree: { files: 14, dirs: 2, exts }, additions: 120, deletions: 31, _hits: name === 'folder' ? 3 : 0 });
+  }
   if (name === 'start' || name === 'end' || name === 'junction' || name === 'choice' || name === 'fork') n.label = name;
   return n;
 };
@@ -391,15 +426,78 @@ function drawCatalog() {
   groups.push(h('section', { className: 'cat-group', key: 'markers' }, h('h2', null, 'Puntas de arista'), h('p', null, 'head y tail de una arista: flechas, UML (herencia, composición, agregación), patas de gallo de ER y puntas de mensaje.'), markerDemo(R)));
   catRoot.render(h(RX.GraphXScope, null, groups));
 }
+/* ---------- árbol de ficheros ---------- */
+const TREE_SAMPLE = `tienda-web
+├── [ 1.2K]  README.md
+├── [  640]  package.json
+├── src
+│   ├── app
+│   │   ├── [ 2.1K]  main.ts
+│   │   ├── [ 3.4K]  router.ts
+│   │   └── [ 1.8K]  store.ts
+│   ├── components
+│   │   ├── [ 4.2K]  Carrito.tsx
+│   │   ├── [ 2.9K]  Ficha.tsx
+│   │   ├── [ 1.1K]  Boton.tsx
+│   │   └── [  980]  Carrito.module.css
+│   ├── api
+│   │   ├── [ 2.6K]  pedidos.ts
+│   │   └── [ 1.4K]  pagos.ts
+│   └── i18n
+│       ├── [  3K]  es.json
+│       └── [ 2.8K]  en.json
+├── public
+│   ├── [ 15K]  logo.svg
+│   └── [ 32K]  favicon.ico
+└── tests
+    ├── [ 2.2K]  carrito.test.ts
+    └── [ 1.9K]  pagos.test.ts
+
+8 directories, 17 files`;
+let treeInst = null, treeSrc = store.get('gx-tree-src', 'repo');
+function treeMsg(text, err) { const d = document.createElement('div'); d.className = 'msg' + (err ? ' err' : ''); d.textContent = text; $('treeMsgs').appendChild(d); }
+/* lo pegado: salida de tree, git diff --name-status, --numstat o una ruta por línea */
+function treeSpecFrom(text) {
+  const T = GraphX.tree, lines = text.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim());
+  if (/[├└]──|\|--|`--/.test(text)) return T.fromTreeText(text, { title: 'Árbol pegado', lang: 'es' });
+  if (lines.length && lines.every(l => /^[AMDRCTU]\d*\t/.test(l))) return T.fromGit({ nameStatus: text }, { title: 'Cambios pegados', root: 'repo', lang: 'es' });
+  if (lines.length && lines.every(l => /^(\d+|-)\t(\d+|-)\t/.test(l))) return T.fromGit({ numstat: text }, { title: 'Cambios pegados', root: 'repo', lang: 'es' });
+  return T.fromPaths(lines.map(l => l.trim()), { title: 'Rutas pegadas', root: 'repo', lang: 'es' });
+}
+function mountTree() {
+  if (treeInst) { try { treeInst.destroy(); } catch (_) {} treeInst = null; }
+  const old = $('treeHost'), host = document.createElement('div'); host.id = 'treeHost'; host.className = 'gx-host'; old.replaceWith(host);
+  $('treeMsgs').innerHTML = '';
+  let spec = null;
+  try { spec = treeSrc === 'repo' ? JSON.parse(JSON.stringify(TREE_REPO)) : treeSpecFrom($('treeCode').value); }
+  catch (e) { treeMsg(e.message, true); }
+  if (!spec || !spec.nodes.length) { host.className = 'gx-empty'; host.textContent = 'No hay rutas que dibujar.'; $('treeStat').textContent = ''; return; }
+  treeInst = GraphX.mount(host, spec, { lang: 'es' });
+  const files = spec.nodes.filter(n => n.kind === 'file'), changed = files.filter(n => n.delta !== 'unchanged');
+  $('treeStat').textContent = `${files.length} ficheros · ${spec.nodes.length - files.length} carpetas${changed.length ? ` · ${changed.length} cambiados` : ''}`;
+}
+function setTreeSrc(v) {
+  treeSrc = v; store.set('gx-tree-src', v);
+  $('treeSrc').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  $('treeBox').hidden = v === 'repo'; $('treeWork').classList.toggle('nocode', v === 'repo');
+  mountTree();
+}
+$('treeCode').value = store.get('gx-tree-code', TREE_SAMPLE);
+$('treeRun').onclick = () => { store.set('gx-tree-code', $('treeCode').value); mountTree(); };
+$('treeCode').addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') $('treeRun').onclick(); });
+$('treeSrc').querySelectorAll('button').forEach(b => b.onclick = () => setTreeSrc(b.dataset.v));
+
 function showPage(which) {
-  const shapes = which === 'shapes';
-  $('p-diagrams').hidden = shapes; $('p-shapes').hidden = !shapes;
-  $('tab-diagrams').setAttribute('aria-selected', String(!shapes)); $('tab-shapes').setAttribute('aria-selected', String(shapes));
+  const shapes = which === 'shapes', tree = which === 'tree';
+  $('p-diagrams').hidden = shapes || tree; $('p-shapes').hidden = !shapes; $('p-tree').hidden = !tree;
+  $('tab-diagrams').setAttribute('aria-selected', String(!shapes && !tree)); $('tab-shapes').setAttribute('aria-selected', String(shapes)); $('tab-tree').setAttribute('aria-selected', String(tree));
   store.set('gx-mmd-page', which);
+  if (tree && !treeInst) setTreeSrc(treeSrc);
   if (shapes && !RX) loadReact().then(api => { RX = api; catRoot = window.ReactDOM.createRoot($('catalog')); drawCatalog(); })
     .catch(e => { $('catalog').innerHTML = ''; const p = document.createElement('p'); p.className = 'msg err'; p.textContent = e.message + '. El catálogo necesita React desde cdnjs.'; $('catalog').appendChild(p); });
 }
 $('tab-diagrams').onclick = () => showPage('diagrams');
 $('tab-shapes').onclick = () => showPage('shapes');
-showPage(location.hash === '#formas' ? 'shapes' : store.get('gx-mmd-page', 'diagrams'));
+$('tab-tree').onclick = () => showPage('tree');
+showPage(location.hash === '#formas' ? 'shapes' : location.hash === '#arbol' ? 'tree' : store.get('gx-mmd-page', 'diagrams'));
 </script>

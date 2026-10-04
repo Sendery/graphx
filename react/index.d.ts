@@ -27,6 +27,24 @@ export interface GraphXShapeNode {
   avatar?: string;
   head?: boolean;
   abstract?: boolean;
+  /** Árbol de ficheros: ruta, extensión, su color, cambios y cuentas de una carpeta. */
+  path?: string;
+  ext?: string;
+  extColor?: string;
+  additions?: number;
+  deletions?: number;
+  renamed?: boolean;
+  metrics?: { label: string; value: string }[];
+  tree?: GraphXFolderStats;
+}
+
+/** Lo que resume una carpeta plegada: cuentas, reparto por extensión y ficheros cambiados. */
+export interface GraphXFolderStats {
+  files?: number;
+  dirs?: number;
+  exts?: { ext: string; n: number; color?: string }[];
+  changed?: { name: string; path: string; additions?: number; deletions?: number; delta?: string }[];
+  more?: number;
 }
 
 export interface GraphXShapeProps {
@@ -50,6 +68,9 @@ export interface GraphXShapeProps {
   textColor?: string;
   icons?: Record<string, string>;
   className?: string;
+  /** Tarjetas del árbol: el detalle abierto y las coincidencias de un filtro dentro de una carpeta. */
+  open?: boolean;
+  hits?: number;
   /** Devuelve un <g> en vez de un <svg>, para colocarlo dentro de otro dibujo. */
   asGroup?: boolean;
   onClick?: MouseEventHandler<SVGGElement>;
@@ -70,7 +91,35 @@ export interface GraphXInstance {
   setPresent(on: boolean): void;
   setExplore(on: boolean): void;
   resetView(): void;
+  /** Filtra por rutas: deja abiertas solo las ramas que llevan a esas piezas (ids o una función). */
+  filter(sel: string[] | ((node: GraphXShapeNode & { id: string }) => boolean), opts?: { label?: string; prune?: boolean; fit?: boolean }): Promise<void>;
+  clearFilter(): Promise<void> | void;
+  /** Abre o cierra la tarjeta de detalle de una pieza. */
+  toggleDetail(id: string, open?: boolean): Promise<void> | void;
 }
+
+/** Una entrada de un árbol de ficheros: una ruta o una ruta con sus datos. */
+export type GraphXTreeEntry = string | { path: string; size?: number; lines?: number; additions?: number; deletions?: number; status?: 'A' | 'M' | 'D' | 'R'; from?: string; summary?: string; metrics?: { label: string; value: string }[]; dir?: boolean };
+export interface GraphXTreeOptions {
+  title?: string; summary?: string; lang?: 'es' | 'en';
+  /** Nombre de la carpeta raíz; false, sin raíz. */
+  root?: string | false;
+  /** Une las cadenas de carpetas con un solo hijo (por defecto, sí). */
+  compact?: boolean;
+  /** 'changes' (por defecto si hay cambios), una lista de rutas o null. */
+  focus?: 'changes' | string[] | null;
+  prune?: boolean;
+  direction?: 'down' | 'right';
+  initialDepth?: number;
+  links?: { repo?: string; sha?: string };
+  filters?: { label: string; query?: string; paths?: string[]; delta?: string | string[]; kinds?: string[]; nodes?: string[]; prune?: boolean }[];
+}
+export declare const tree: {
+  fromPaths(entries: GraphXTreeEntry[], opts?: GraphXTreeOptions): unknown;
+  fromTreeText(text: string, opts?: GraphXTreeOptions): unknown;
+  fromGit(src: { files?: string | string[]; numstat?: string; nameStatus?: string }, opts?: GraphXTreeOptions): unknown;
+  parseTree(text: string): { entries: GraphXTreeEntry[]; root: string | null };
+};
 
 /** Nodo del árbol SVG que devuelven las formas. */
 export interface GraphXShapeTree {
