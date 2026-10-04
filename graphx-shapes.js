@@ -180,8 +180,8 @@
     text: flow({ fit: (w, h) => pad(w, h, 16, 12, 40, 280, 30), outline: (w, h) => rectD(w, h, 6), ghost: true }),
     'arrow-right': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly(PTS['arrow-right'](w, h)), box: (w, h) => ({ x: 4, y: 0, w: w - h * .5, h }) }),
     'arrow-left': flow({ fit: (w, h) => { const hh = Math.max(54, h + 32); return { w: clamp(w + hh * .5 + 36, 110, 300), h: hh }; }, outline: (w, h) => poly(PTS['arrow-left'](w, h)), box: (w, h) => ({ x: h * .5, y: 0, w: w - h * .5 - 4, h }) }),
-    'arrow-up': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-up'](w, h)), box: (w, h) => ({ x: w * .2, y: w * .45, w: w * .6, h: h - w * .45 }) }),
-    'arrow-down': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w + 44, 100, 220); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-down'](w, h)), box: (w, h) => ({ x: w * .2, y: 0, w: w * .6, h: h - w * .45 }) })
+    'arrow-up': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w / .6 + 16, 100, 240); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-up'](w, h)), box: (w, h) => ({ x: w * .2, y: w * .45, w: w * .6, h: h - w * .45 }) }),
+    'arrow-down': flow({ maxW: 110, fit: (w, h) => { const W = clamp(w / .6 + 16, 100, 240); return { w: W, h: Math.max(h + W * .5 + 24, 96) }; }, outline: (w, h) => poly(PTS['arrow-down'](w, h)), box: (w, h) => ({ x: w * .2, y: 0, w: w * .6, h: h - w * .45 }) })
   };
 
   /* ---------- nota ---------- */

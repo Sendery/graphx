@@ -94,7 +94,11 @@
   background: var(--gx-canvas); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
   background-image: radial-gradient(circle, color-mix(in srgb, var(--gx-faint) 32%, transparent) 1px, transparent 1.2px); background-size: 22px 22px; }
 .gx-stage.gx-grab { cursor: grabbing; }
-.gx-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* el lienzo del diagrama ocupa todo el escenario; una forma suelta (React, GraphXShape) va a su tamaño */
+.gx-stage > .gx-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.gx-shape-svg { display: inline-block; overflow: visible; vertical-align: middle; }
+/* GraphXScope: solo los tokens del tema, sin la maqueta del diagrama (barra, escenario) */
+.gx.gx-scope { display: block; gap: 0; font: inherit; color: inherit; }
 .gx-seq { display: none; }
 .gx-flowview .gx-svg:not(.gx-seq) { display: none; }
 .gx-flowview .gx-seq { display: block; }
@@ -712,7 +716,8 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 .gx-node.gx-shape.lit > .gx-card:not(.ghost) { stroke: var(--gx-accent); stroke-width: 1.8; }
 .gx-node.gx-shape.sel > .gx-card:not(.ghost) { stroke: var(--gx-accent); stroke-width: 2.4; }
 /* un halo del color del lienzo: el texto se lee aunque pase una línea por debajo */
-.gx-halo, .sh-sbar .gx-t, .sh-sbar .gx-st, .gx-gbt.out { paint-order: stroke; stroke: var(--gx-canvas); stroke-width: 3.5px; stroke-linejoin: round; }
+/* el reloj de arena cruza su texto: con halo se lee */
+.gx-halo, .sh-sbar .gx-t, .sh-sbar .gx-st, .gx-gbt.out, .sh-hourglass .gx-t { paint-order: stroke; stroke: var(--gx-canvas); stroke-width: 3.5px; stroke-linejoin: round; }
 /* gantt: las dependencias, discretas; se avivan al pasar o al iluminar la cadena */
 .gx-mode-gantt .gx-edge .gx-eline { opacity: .32; }
 .gx-mode-gantt .gx-edge:hover .gx-eline, .gx-mode-gantt .gx-dim .gx-edge.lit .gx-eline { opacity: 1; }

@@ -1179,7 +1179,7 @@
         const a = prevRects.get(o.anchor), b = L.rects.get(o.anchor);
         camTo = { k: S.cam.k, x: S.cam.x - (b.x - a.x) * S.cam.k, y: S.cam.y - (b.y - a.y) * S.cam.k };
       } else if (o.focus) camTo = camFor(bboxOf(o.focus.nodes, o.focus.edges) || L.bbox, o.pad);
-      else if (o.fit || prevRects.size === 0) camTo = camFor(L.bbox);
+      else if (o.fit || prevRects.size === 0) camTo = fitCam(L.bbox);
 
       const items = [];
       const next = new Map(), handled = new Set();
@@ -1392,6 +1392,15 @@
       const W = v.w - reserve, H = v.h - bottom;
       const k = clamp(Math.min((W - pad * 2) / Math.max(b.w, 1), (H - pad * 2) / Math.max(b.h, 1)), .12, maxK || 1.6);
       return { k, x: (W - b.w * k) / 2 - b.x * k, y: (H - b.h * k) / 2 - b.y * k };
+    }
+    /* Encuadre del diagrama entero. Un árbol largo, encajado entero, deja tarjetas ilegibles: si no cabe
+       a un tamaño que se lea, se encaja a lo ancho y se empieza por arriba (el resto, desplazando). */
+    function fitCam(b) {
+      if (!FLAT || !b) return camFor(b);
+      const all = camFor(b, null, null, 1.1);
+      if (all.k >= .72) return all;
+      const v = viewSize(), pad = 36, k = clamp((v.w - pad * 2) / Math.max(b.w, 1), .72, 1.05);
+      return { k, x: b.w * k < v.w - pad * 2 ? (v.w - b.w * k) / 2 - b.x * k : pad - b.x * k, y: pad - b.y * k };
     }
     function bboxOf(nodes, edges) {
       const R = [];
@@ -2002,7 +2011,7 @@
       <li><span class="gx-lg-agg">+2</span>${esc(T.edgeKinds.agg)}</li></ul><ul class="gx-lg-k">
       ${kindsUsed.map(k => `<li>${iconHTML(k)}${esc(kindLabel(k))}</li>`).join('')}</ul>`;
     bLegend.onclick = () => { legend.classList.toggle('on'); bLegend.classList.toggle('on', legend.classList.contains('on')); };
-    bFit.onclick = () => S.view === 'graph' ? animateCam(camFor(S.bbox)) : animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
+    bFit.onclick = () => S.view === 'graph' ? animateCam(fitCam(S.bbox)) : animateCam(camFor(S.seq.bbox, 30, seqSvg), 'seq');
 
     /* --- minimapa --- */
     const miniWorld = s('g', null, miniSvg), miniView = s('rect', { class: 'gx-mini-v' }, miniSvg);
@@ -2409,7 +2418,7 @@
         const w0 = stage.getBoundingClientRect().width;
         if (w0 && !lastW && !S.touched) {
           if (S.view !== 'graph' && S.seq) setSeqCam(camFor(S.seq.bbox, 30, seqSvg));
-          else if (S.bbox) setCam(camFor(S.bbox));
+          else if (S.bbox) setCam(fitCam(S.bbox));
         }
         lastW = w0; drawMiniView();
       }, 80);
