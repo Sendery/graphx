@@ -42,6 +42,7 @@ vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-layouts.js'), 'utf8'), s
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-tree.js'), 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-fx.js'), 'utf8'), sandbox);
 
 const errors = [], warns = [];
 let spec;
@@ -123,6 +124,36 @@ for (const e of spec.edges || []) {
   if (e.weight != null && (typeof e.weight !== 'number' || e.weight < 0)) errors.push(`arista ${e.id}: weight debe ser un número positivo`);
   if (e.kind && !EKINDS.has(e.kind)) warns.push(`arista ${e.id}: kind «${e.kind}» desconocido`);
   if (e.delta && !DELTAS.has(e.delta)) errors.push(`arista ${e.id}: delta «${e.delta}» inválido`);
+}
+/* --- efectos (graphx-fx.js): `fx` y los datos que dibujan (caudal, calor, series, progreso, alertas) --- */
+{
+  const FX = sandbox.GraphX.fx, KEYS = Object.keys(FX.DEFAULTS), PRESETS = Object.keys(FX.PRESETS);
+  const fx = spec.fx;
+  if (typeof fx === 'string' && !PRESETS.includes(fx) && !/^(false|off|none)$/.test(fx)) warns.push(`fx «${fx}»: preset desconocido (válidos: ${PRESETS.join(', ')})`);
+  if (fx && typeof fx === 'object') {
+    Object.keys(fx).forEach(k => { if (k !== 'preset' && !KEYS.includes(k)) warns.push(`fx.${k}: efecto desconocido (válidos: ${KEYS.join(', ')})`); });
+    if (fx.preset && !PRESETS.includes(fx.preset)) warns.push(`fx.preset «${fx.preset}» desconocido (válidos: ${PRESETS.join(', ')})`);
+    if (fx.skin && !['neon', 'blueprint', 'glass'].includes(fx.skin)) warns.push(`fx.skin «${fx.skin}» desconocida (válidas: neon, blueprint, glass)`);
+    const h = fx.heat;
+    if (h && typeof h === 'object') {
+      if (h.domain != null && !(Array.isArray(h.domain) && h.domain.length === 2 && h.domain.every(v => typeof v === 'number') && h.domain[1] > h.domain[0])) errors.push('fx.heat.domain debe ser [mínimo, máximo] con mínimo < máximo');
+      if (h.scheme != null && !(Array.isArray(h.scheme) ? h.scheme.length > 1 && h.scheme.every(c => /^#[0-9a-f]{6}$/i.test(c)) : FX.SCHEMES[h.scheme])) errors.push(`fx.heat.scheme: usa ${Object.keys(FX.SCHEMES).join(', ')} o una lista de colores #rrggbb`);
+    }
+  }
+  const ALERTS = new Set(['crit', 'warn', 'info', 'ok']);
+  for (const n of spec.nodes || []) {
+    if (n.heat != null && (typeof n.heat !== 'number' || !isFinite(n.heat))) errors.push(`nodo ${n.id}: heat debe ser un número`);
+    if (n.progress != null && (typeof n.progress !== 'number' || n.progress < 0 || n.progress > 100)) errors.push(`nodo ${n.id}: progress debe ser un número entre 0 y 1 (o 0–100)`);
+    if (n.spark != null && (!Array.isArray(n.spark) || n.spark.length < 2 || n.spark.some(v => typeof v !== 'number' || !isFinite(v)))) errors.push(`nodo ${n.id}: spark debe ser una lista de al menos dos números`);
+    if (n.alert != null && n.alert !== true && !ALERTS.has(n.alert)) warns.push(`nodo ${n.id}: alert «${n.alert}» desconocida (válidas: crit, warn, info, ok)`);
+    if (n.parts != null && (!Array.isArray(n.parts) || n.parts.some(p => !p || typeof p.value !== 'number'))) errors.push(`nodo ${n.id}: parts debe ser una lista de { label, value, color? }`);
+    if (n.thresholds != null && !(Array.isArray(n.thresholds) && n.thresholds.length === 2 && n.thresholds.every(v => typeof v === 'number'))) errors.push(`nodo ${n.id}: thresholds debe ser [aviso, crítico]`);
+    if (n.parts) n.parts.forEach((p, i) => { if (p && p.color != null && !sandbox.GraphX.safeColor(p.color)) errors.push(`nodo ${n.id}: parts[${i}].color no válido`); });
+  }
+  for (const e of spec.edges || []) {
+    if (e.rate != null && (typeof e.rate !== 'number' || e.rate < 0)) errors.push(`arista ${e.id}: rate debe ser un número positivo (el caudal)`);
+    if (e.speed != null && !(typeof e.speed === 'number' ? e.speed > 0 : ['fast', 'slow'].includes(e.speed))) warns.push(`arista ${e.id}: speed debe ser fast, slow o un número`);
+  }
 }
 /* --- enlaces relacionados (opcionales): jira · pr · notion · artifact · doc · url · node --- */
 const LKINDS = new Set(['jira', 'pr', 'notion', 'artifact', 'doc', 'url', 'node']);
@@ -265,7 +296,7 @@ else {
   const mode = opt('--mode', 'full');
   const D = f => path.join(HERE, 'dist', f);
   /* dist/ vale si su huella coincide con la de las fuentes (tools/build-dist.mjs la escribe) */
-  const srcHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(HERE, 'graphx.js'))).update(fs.readFileSync(path.join(HERE, 'graphx.css'))).update(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-shapes.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-layouts.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-tree.js'))).digest('hex');
+  const srcHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(HERE, 'graphx.js'))).update(fs.readFileSync(path.join(HERE, 'graphx.css'))).update(fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-shapes.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-layouts.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-tree.js'))).update(fs.readFileSync(path.join(HERE, 'graphx-fx.js'))).digest('hex');
   const distOK = fs.existsSync(D('SOURCE_HASH')) && fs.readFileSync(D('SOURCE_HASH'), 'utf8').trim() === srcHash;
   const fresh = f => distOK && fs.existsSync(D(f));
   let engine;
@@ -274,7 +305,7 @@ else {
   }
   if (mode === 'lite' && fresh('graphx.lite.min.js')) engine = `<script>${fs.readFileSync(D('graphx.lite.min.js'), 'utf8')}</script>`;
   else if (mode !== 'dev' && mode !== 'lite' && fresh('graphx.bundle.min.js')) engine = `<script>${fs.readFileSync(D('graphx.bundle.min.js'), 'utf8')}</script>`;
-  else engine = `<style>${fs.readFileSync(path.join(HERE, 'graphx.css'), 'utf8')}</style>\n<script>${fs.readFileSync(path.join(HERE, 'vendor', 'elk.bundled.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-shapes.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-layouts.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-tree.js'), 'utf8')}</script>\n<script>GraphX.mountAll(document);</script>`;
+  else engine = `<style>${fs.readFileSync(path.join(HERE, 'graphx.css'), 'utf8')}</style>\n<script>${fs.readFileSync(path.join(HERE, 'vendor', 'elk.bundled.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-shapes.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-layouts.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-mermaid.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-tree.js'), 'utf8')}</script>\n<script>${fs.readFileSync(path.join(HERE, 'graphx-fx.js'), 'utf8')}</script>\n<script>GraphX.mountAll(document);</script>`;
   out = `<!doctype html>
 <html lang="${spec.lang || 'es'}">
 <head>

@@ -429,6 +429,8 @@
       /* árbol: tarjetas con el detalle abierto, filtro por rutas (`focus`), carpetas que el filtro deja ver enteras, líneas */
       detail: new Set(), focus: null, unpruned: new Set(), wires: new Map(), order: null
     };
+    /* efectos (graphx-fx.js, opcional): se crea al final del montaje; hasta entonces los ganchos no hacen nada */
+    let FX = null;
     const initial = spec.initialDepth != null ? spec.initialDepth : Math.min(1, G.maxDepth);
     setDepthSet(initial);
     /* las cuentas de una carpeta (ficheros y subcarpetas), si el JSON no las trae */
@@ -537,12 +539,14 @@
       if (n._card) return n._card;
       const chipW = n.delta && n.delta !== 'unchanged' ? textW(T.deltaShort[n.delta], 9.5, 700) + 16 : 0;
       const full = textW(n.label, 13, 600), sub = n.subtitle ? textW(n.subtitle, 11, 400, true) : 0;
+      /* un micro-gráfico (sparkline de graphx-fx) pide su franja debajo del subtítulo */
+      const xh = FX ? FX.cardExtra(n) : 0;
       if (full + chipW + 6 <= CARD_MAX - PADX) {
         const w = clamp(Math.max(full + chipW + 6, Math.min(sub, CARD_MAX - PADX)) + PADX, CARD_MIN, CARD_MAX);
-        return (n._card = { w, h: 64, lines: [n.label] });
+        return (n._card = { w, h: 64 + xh, base: 64, lines: [n.label] });
       }
       const lines = wrap2(n.label, CARD_MAX - PADX - chipW, CARD_MAX - PADX);
-      return (n._card = { w: CARD_MAX, h: lines.length > 1 ? 80 : 64, lines });
+      return (n._card = { w: CARD_MAX, h: (lines.length > 1 ? 80 : 64) + xh, base: lines.length > 1 ? 80 : 64, lines });
     }
     /* `head`: el alto de la cabecera de la tarjeta, sin el detalle abierto (ahí se anclan las líneas del árbol) */
     function leafSize(n) { const c = cardLayout(n); return { w: c.w, h: c.h, head: c.lay ? SHP.headOf(n, c.lay) : c.h }; }
@@ -559,7 +563,7 @@
         if (n.span) [n.span.start, n.span.end].forEach(v => { const t = v == null ? null : toMs(v); if (t != null) { lo = Math.min(lo, t); hi = Math.max(hi, t); } });
         if (typeof n.value === 'number') maxV = Math.max(maxV, n.value);
       }
-      return { textW, dir: S.dir, span: lo < hi ? { min: lo, max: hi } : null, maxValue: maxV || 1, now: Date.now() };
+      return { textW, dir: S.dir, span: lo < hi ? { min: lo, max: hi } : null, maxValue: maxV || 1, now: Date.now(), lang };
     })();
     /* La forma que toca ahora: una carpeta abierta en el árbol cambia a su `openShape`. Lo que cambia el
        dibujo (forma, detalle abierto, coincidencias del filtro) va en la firma: si cambia, se rehace. */
@@ -794,6 +798,7 @@
       }
       g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: W, h: H }; g._side = n.labelSide;
       g._sig = sigOf(n); g._sh = sh; g._head = cl.lay ? SHP.headOf(n, cl.lay) : H;
+      if (FX) FX.leaf(g, n, null, { w: W, h: H });
       return g;
     }
     function makeLeaf(n, size) {
@@ -859,6 +864,7 @@
         parts.exp.addEventListener('click', ev => { ev.stopPropagation(); toggle(n.id); });
       }
       g._parts = parts; g._kind = 'leaf';
+      if (FX) FX.leaf(g, n, parts, cl);
       return g;
     }
     function placeLeaf(g, r, n) {
@@ -1003,7 +1009,8 @@
         if (one.tailLabel) endLab(P0[0], P0[1], one.tailLabel);
         if (one.headLabel) endLab(P0[P0.length - 1], P0[P0.length - 2], one.headLabel);
       }
-      g._line = line; g._v = v;
+      g._line = line; g._v = v; g._d = d; g._pts = path.pts || null;
+      if (FX) FX.edge(g, v, path);
       const lab = path.label && v.label ? s('g', { class: `gx-elabel d-${v.delta}`, 'data-id': v.id, transform: `translate(${path.label.x},${path.label.y})` }) : null;
       if (lab) {
         s('rect', { width: path.label.w, height: path.label.h, rx: 6 }, lab);
@@ -1135,7 +1142,9 @@
 
     /* --- render con transición --- */
     let busyTimer = null;
-    async function relayout(o) {
+    /* `S.busy`: hay un layout en marcha (los datos en vivo de graphx-fx esperan a que acabe) */
+    async function relayout(o) { S.busy = (S.busy || 0) + 1; try { return await doRelayout(o); } finally { S.busy--; } }
+    async function doRelayout(o) {
       o = o || {};
       /* solo secuencia: no hay grafo que colocar, asi que ni se carga ELK */
       if (!graphTab) { if (o.after) o.after(); return; }
@@ -1200,6 +1209,9 @@
           if (FLAT && (off || el._sig !== sigOf(n))) { morph = { old: el, from: el._r || r, same: el._sh === effShape(n) }; handled.add(el); el = null; }
           else if (!FLAT && (off || el._side !== n.labelSide)) { reshaped = el._r; el.remove(); el = null; }
         }
+        /* datos nuevos que cambian el dibujo de una tarjeta (una serie de graphx-fx): se rehace y se anima desde donde estaba */
+        if (el && n._stale && kind === 'leaf') { reshaped = el._r; el.remove(); el = null; }
+        n._stale = false;
         const fresh = !el;
         if (fresh) {
           el = kind === 'group' ? makeGroup(n) : makeLeaf(n, r);
@@ -1274,6 +1286,8 @@
         items.filter(it => it.fresh).forEach(it => { const p = it.n.parent; const i = k.get(p) || 0; k.set(p, i + 1); it.delay = Math.min(i * .045, .4); });
       }
       const camFrom = Object.assign({}, S.cam);
+      /* graphx-fx puede escalonar la entrada (cascada por rango) y alargar la transición */
+      const D = FX ? FX.beforeTween(items, prevRects.size === 0, dur) : dur;
       await tween(t0 => {
         const t = t0;
         for (const it of bandItems) {
@@ -1311,7 +1325,7 @@
         wireNext.forEach(o => drawWire(o, o.fresh ? t0 : null));
         wireOut.forEach(o => drawWire(o, 1 - t0));
         if (camTo) setCam(lerpCam(camFrom, camTo, t0));
-      }, (items.length ? dur : 0));
+      }, (items.length ? D : 0));
       items.forEach(it => { if (it.dying) it.el.remove(); else { it.el.style.opacity = ''; it.el._r = it.to; } it.el.style.clipPath = ''; });
       wireOut.forEach(o => o.el.remove());
       wireNext.forEach(o => { o.el.style.opacity = ''; o.fresh = false; });
@@ -1324,15 +1338,16 @@
         gEdges.appendChild(e.g); if (e.lab) gLabels.appendChild(e.lab);
         bindEdge(e.g, v); if (e.lab) bindEdge(e.lab, v);
         if (!reduce) {
-          e.g.classList.add('gx-in'); if (e.lab) e.lab.classList.add('gx-in');
+          e.g.classList.add('gx-in'); if (e.lab) { e.lab.classList.add('gx-in'); if (e.g._inDelay) e.lab.style.animationDelay = e.g._inDelay + 'ms'; }
           /* pathLength normaliza la longitud: el trazo se dibuja entero sea cual sea su tamaño */
           e.g._line.setAttribute('pathLength', '1');
-          setTimeout(() => { e.g.classList.remove('gx-in'); e.g._line.removeAttribute('pathLength'); if (e.lab) e.lab.classList.remove('gx-in'); }, 700);
+          setTimeout(() => { e.g.classList.remove('gx-in'); e.g._line.removeAttribute('pathLength'); if (e.lab) e.lab.classList.remove('gx-in'); }, 700 + (e.g._inDelay || 0));
         }
         S.edgeEls.push(e);
       }
       applyHighlight();
       drawMini();
+      if (FX) FX.afterLayout();
       if (focusId && (!document.activeElement || !host.contains(document.activeElement) || document.activeElement === host)) {
         const el = S.els.get(focusId) || (M.has(focusId) ? S.els.get(repOf(focusId)) : null);
         if (el && el.focus) try { el.focus({ preventScroll: true }); } catch (_) { }
@@ -1354,7 +1369,7 @@
     }
 
     /* --- cámara --- */
-    function setCam(c) { S.cam = c; world.setAttribute('transform', `translate(${c.x},${c.y}) scale(${c.k})`); drawMiniView(); drawSticky(); }
+    function setCam(c) { S.cam = c; world.setAttribute('transform', `translate(${c.x},${c.y}) scale(${c.k})`); drawMiniView(); drawSticky(); if (FX) FX.cam(c); }
     /* Cuando la cabecera real sale de la vista (zoom o desplazamiento), su nombre queda
        fijado al borde del lienzo, en el tramo de pantalla que ocupa su carril. */
     function drawSticky() {
@@ -1513,7 +1528,7 @@
         ${sum ? `<p>${sum}</p>` : ''}
         ${(n.links || []).length ? `<div class="gx-tip-f">${(n.links || []).map(l => resolveLink(l, spec)).filter(Boolean).slice(0, 4).map(l => `<span>${iconHTML(IC[l.kind] ? l.kind : 'url')} ${esc(l.kind === 'node' ? (M.get(l.target) || {}).label || l.label : l.label)}</span>`).join('')}</div>` : ''}
         <div class="gx-tip-f">${statTxt(n.stat)}${deg ? `<span>${deg.out}↗ ${deg.in}↘</span>` : ''}${n.children.length ? `<span>${esc(nItems(n.descendants))}</span>` : ''}</div>
-        ${n.path && !n.isLane ? `<code class="gx-tip-p">${esc(n.path)}</code>` : ''}
+        ${n.path && !n.isLane ? `<code class="gx-tip-p">${esc(n.path)}</code>` : ''}${FX ? FX.tip(n) : ''}
         <div class="gx-tip-k">${FLAT ? esc(n.children.length ? T.treeHint : T.leafHint) : `${esc(T.clickHint)} · ${esc(T.dblHint)}${n.children.length && !S.expanded.has(n.id) ? ' · ' + esc(T.expHint) : ''}${n.stat && n.stat.files ? ' · ± ' + esc(T.openDiff).toLowerCase() : ''}`}</div>`;
     }
     function edgeTip(v) {
@@ -1624,6 +1639,7 @@
         x.g.classList.toggle('faded', faded); if (x.lab) x.lab.classList.toggle('faded', faded);
         x.g.classList.toggle('sel', S.selected === v.id);
       }
+      if (FX) FX.highlight(set, hoverSet ? 'hover' : S.trace ? 'trace' : stepSet ? 'step' : null);
     }
     const repOf = id => { let x = id; while (x != null && !S.visible.has(x)) x = M.get(x) ? M.get(x).parent : null; return x; };
     function vedgeOf(eid) {
@@ -1654,12 +1670,14 @@
       reach.forEach(x => { const r = repOf(x); if (r) N.add(r); });
       es.forEach(eid => { const v = vedgeOf(eid); if (v) E.add(v.id); });
       S.trace = { nodes: N, edges: E, id, dir }; hoverSet = null; applyHighlight(); renderPanel();
+      if (FX) FX.trace(id, dir);
     }
 
     /* --- panel de detalle --- */
     function select(id) {
       if (S.view !== 'graph') showView('graph');
       S.selected = id; S.trace = null; hideTip(); renderPanel(); applyHighlight();
+      if (FX) FX.select(id);
     }
     function selectEdge(v) { S.selected = v.id; S.selEdge = v; S.trace = null; hideTip(); renderPanel(); applyHighlight(); }
     function clearSelection() { if (!S.selected && !S.trace) return; S.selected = null; S.selEdge = null; S.trace = null; panel.classList.remove('on'); applyHighlight(); }
@@ -2036,6 +2054,7 @@
         const n = M.get(id);
         const mr = s('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: isGroup(id) ? 14 : 8, class: `gx-mini-n ${isGroup(id) ? 'grp' : ''} d-${n.delta}${n.isLane ? ' lane' : ''}` }, miniWorld);
         paint(mr, n.cvar);
+        if (FX) FX.mini(mr, n);
       }
       drawMiniView();
     }
@@ -2373,7 +2392,7 @@
       if (S.focus && S.focus.prune) (f.nodes || []).filter(id => M.has(id) && !S.focus.keep.has(id)).forEach(id => { ancestors(M, id).forEach(a => S.unpruned.add(a)); S.unpruned.add(ROOTS); });
       (f.edges || []).forEach(eid => { const e = G.edges.find(x => x.id === eid); if (e) [e.from, e.to].forEach(x => ancestors(M, x).forEach(a => S.expanded.add(a))); });
       if (st.select) { S.selected = st.select; S.selEdge = null; } else if (!S.present) { S.selected = null; panel.classList.remove('on'); }
-      await relayout({ after: () => { if (tok !== S.tourTok) return; setFocusSet(f.nodes, f.edges); if (st.select) renderPanel(); } });
+      await relayout({ after: () => { if (tok !== S.tourTok) return; setFocusSet(f.nodes, f.edges); if (st.select) renderPanel(); if (FX) FX.step(st); } });
       if (tok !== S.tourTok) return;
       const b = bboxOf(f.nodes, f.edges);
       await animateCam(camFor(b || S.bbox, 50));
@@ -2438,6 +2457,31 @@
     }) : null;
     if (ro) ro.observe(stage);
 
+    /* --- efectos (graphx-fx.js) --- */
+    /* Rehace una pieza en su sitio, con su tamaño y su estado (datos nuevos que no mueven el layout):
+       devuelve la vieja (ya fuera del DOM) y la nueva, para que los efectos animen de una a otra. */
+    function rerender(id) {
+      const old = S.els.get(id), n = M.get(id), r = S.rects.get(id);
+      if (!old || !r || old._kind !== 'leaf' || !old.parentNode) return null;
+      if (hasShape(n)) n._card = null;
+      const el = makeLeaf(n, r);
+      old.parentNode.replaceChild(el, old);
+      bindNode(el, id); placeLeaf(el, r, n); el._r = r;
+      ['lit', 'sel', 'faded', 'hit', 'off'].forEach(c => el.classList.toggle(c, old.classList.contains(c)));
+      S.els.set(id, el);
+      if (document.activeElement === old && el.focus) try { el.focus({ preventScroll: true }); } catch (_) { }
+      return { old, el };
+    }
+    /* el módulo es opcional: sin él, o con `fx: false`, el diagrama es exactamente el de siempre */
+    const FXM = global.GraphX && global.GraphX.fx;
+    if (FXM && FXM.create) {
+      FX = FXM.create({
+        host, stage, svg, defs, world, gEdges, gNodes, gGroups, gLabels, legend, tools, bFit, I, spec, opts, T, lang, reduce, dur,
+        S, M, G, s, h, esc, btn, textW, fitText, colorVar, paint, isGroup, hasShape, repOf, descendantsOf, ancestors: id => ancestors(M, id),
+        viewSize, camFor, animateCam, relayout, select, applyHighlight, rerender, drawMini, framed,
+        refreshTheme: () => { themeEl.textContent = themeCSS(); }
+      });
+    }
     renderTour(); syncTabs(); setMinimap(S.minimap);
     /* `focus` del JSON: el diagrama se abre ya filtrado (los cambios de un diff, una búsqueda) */
     const applyInitialFocus = () => { if (spec.focus && typeof spec.focus === 'object') setFocus(resolveFilter(spec.focus), { label: spec.focus.label, key: spec.focus.key || 'initial', prune: spec.focus.prune }); };
@@ -2452,9 +2496,14 @@
       toggle, reveal, select, goStep, showView, setPresent, trace, setMinimap,
       /* árbol y filtros: `filter(ids | n => bool, { label, prune })`, `clearFilter()`, `toggleDetail(id, on?)` */
       filter, clearFilter, toggleDetail,
+      /* efectos y datos en vivo (graphx-fx.js): sin el módulo no hacen nada */
+      setData: (p, o) => FX ? FX.setData(p, o) : Promise.resolve(),
+      playFlow: o => FX ? FX.play(o) : Promise.resolve(), stopFlow: () => { if (FX) FX.stop(); },
+      fx: FX ? FX.config : null,
       /* deja el host como estaba: sin contenido, sin las clases de estado (una vista solo de secuencia
          ocultaría el grafo del siguiente montaje) y sin el id y los atributos que puso el motor */
       destroy() {
+        if (FX) FX.destroy();
         S.dead = true; S.layoutId++; clearTimeout(S.qT);
         document.removeEventListener('pointerdown', onDocDown); document.removeEventListener('fullscreenchange', onFs); ro && ro.disconnect();
         host.innerHTML = '';
@@ -2498,11 +2547,14 @@
         try { const r = global.GraphX.fromMermaid(mmd.textContent, { lang: el.dataset.lang }); spec = r.spec; if (r.warnings.length) console.warn('GraphX · Mermaid:\n  ' + r.warnings.join('\n  ')); }
         catch (e) { el.textContent = 'GraphX: Mermaid no válido — ' + e.message; return; }
       } else { try { spec = JSON.parse(src.textContent); } catch (e) { el.textContent = 'GraphX: JSON inválido — ' + e.message; return; } }
-      el._gx = mount(el, spec, { height: el.dataset.height ? +el.dataset.height : null, lang: el.dataset.lang, minimap: el.dataset.minimap });
+      /* `data-fx`: "off" (o "false") apaga los efectos; un nombre de preset ("vivid") o un JSON los configura */
+      const fxa = el.dataset.fx; let fx;
+      if (fxa != null) { if (/^(off|false|none)$/i.test(fxa)) fx = false; else if (/^\s*\{/.test(fxa)) { try { fx = JSON.parse(fxa); } catch (_) { } } else fx = fxa; }
+      el._gx = mount(el, spec, { height: el.dataset.height ? +el.dataset.height : null, lang: el.dataset.lang, minimap: el.dataset.minimap, fx });
       out.push(el._gx);
     });
     return out;
   }
 
-  global.GraphX = Object.assign(global.GraphX || {}, { mount, mountAll, buildModel, resolveLink, safeColor, THEME_KEYS, loadELK, ELK_URL, icons: ICON, version: '1.7.0' });
+  global.GraphX = Object.assign(global.GraphX || {}, { mount, mountAll, buildModel, resolveLink, safeColor, THEME_KEYS, loadELK, ELK_URL, icons: ICON, version: '1.8.0' });
 })(typeof window !== 'undefined' ? window : globalThis);

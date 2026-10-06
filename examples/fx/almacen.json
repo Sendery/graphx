@@ -1,0 +1,46 @@
+{
+  "title": "Almacén de Getafe, turno de mañana",
+  "summary": "Un proceso de negocio con datos: el tiempo en cola colorea cada etapa, las series muestran el ritmo por hora y los indicadores resumen el turno.",
+  "lang": "es",
+  "direction": "right",
+  "initialDepth": 1,
+  "fx": {
+    "particles": true,
+    "heat": { "label": "Tiempo en cola", "unit": "min", "domain": [0, 45], "scheme": "heat" },
+    "entrance": "cascade",
+    "spotlight": true,
+    "play": true
+  },
+  "lanes": [
+    { "id": "entrada", "label": "Entrada", "subtitle": "muelles 1–4" },
+    { "id": "stock", "label": "Stock", "subtitle": "pasillos A–K" },
+    { "id": "preparacion", "label": "Preparación", "subtitle": "zona de picking" },
+    { "id": "salida", "label": "Salida", "subtitle": "muelles 5–8" },
+    { "id": "turno", "label": "El turno", "subtitle": "06:00–14:00" }
+  ],
+  "nodes": [
+    { "id": "recepcion", "lane": "entrada", "label": "Recepción de camiones", "kind": "external", "heat": 12, "spark": [6, 8, 9, 7, 11, 12, 10, 12], "unit": "pal/h", "summary": "Descarga y escaneo de los palés que llegan de los proveedores." },
+    { "id": "inspeccion", "lane": "entrada", "label": "Inspección de entrada", "kind": "test", "heat": 8, "summary": "Muestreo de calidad del 5 % de los palés." },
+    { "id": "ubicacion", "lane": "stock", "label": "Ubicación", "kind": "datastore", "heat": 5, "summary": "El sistema asigna hueco y el carretillero lo coloca." },
+    { "id": "reposicion", "lane": "stock", "label": "Reposición", "kind": "job", "heat": 22, "progress": 0.7, "summary": "Baja producto de reserva a los huecos de picking. Va al 70 % del plan del turno." },
+    { "id": "picking", "lane": "preparacion", "label": "Picking", "kind": "service", "heat": 18, "spark": [140, 165, 180, 172, 190, 210, 205, 220], "unit": "líneas/h", "summary": "Los preparadores recogen cada línea de pedido con la pistola." },
+    { "id": "empaquetado", "lane": "preparacion", "label": "Empaquetado", "kind": "package", "heat": 31, "alert": "warn", "spark": [60, 64, 70, 68, 72, 75, 71, 74], "unit": "cajas/h", "summary": "Dos de las seis mesas están paradas: falta cartón del tamaño M." },
+    { "id": "calidad", "lane": "preparacion", "label": "Control de calidad", "kind": "test", "heat": 40, "alert": "crit", "summary": "Revisión de los pedidos de más de 300 €. Hoy acumula la cola más larga del almacén." },
+    { "id": "expedicion", "lane": "salida", "label": "Expedición", "kind": "route", "heat": 9, "progress": 0.48, "summary": "Clasifica las cajas por ruta y transportista. Lleva el 48 % de los envíos del turno." },
+    { "id": "transportistas", "lane": "salida", "label": "Transportistas", "kind": "external", "heat": 4, "summary": "Recogidas de las 11:00, 12:30 y 14:00." },
+    { "id": "t-envios", "lane": "turno", "label": "Pedidos enviados", "shape": "kpi", "kind": "route", "value": 1846, "change": 6.4, "spark": [120, 260, 420, 610, 840, 1090, 1370, 1846], "summary": "Pedidos que han salido por los muelles desde las 06:00." },
+    { "id": "t-precision", "lane": "turno", "label": "Precisión de picking", "shape": "gauge", "kind": "other", "value": 99.2, "min": 97, "max": 100, "unit": "%", "decimals": 1, "thresholds": [99, 98.5], "good": "high", "summary": "Líneas preparadas sin error frente al objetivo del 99 %." },
+    { "id": "t-transp", "lane": "turno", "label": "Envíos por transportista", "shape": "donut", "kind": "other", "parts": [ { "label": "SEUR", "value": 720 }, { "label": "Correos Express", "value": 540 }, { "label": "DHL", "value": 380 }, { "label": "GLS", "value": 206 } ], "summary": "Reparto de los envíos del turno entre transportistas." }
+  ],
+  "edges": [
+    { "id": "a1", "from": "recepcion", "to": "inspeccion", "kind": "data", "rate": 11, "label": "palés" },
+    { "id": "a2", "from": "inspeccion", "to": "ubicacion", "kind": "data", "rate": 10 },
+    { "id": "a3", "from": "ubicacion", "to": "reposicion", "kind": "data", "rate": 6 },
+    { "id": "a4", "from": "reposicion", "to": "picking", "kind": "data", "rate": 14, "label": "huecos llenos" },
+    { "id": "a5", "from": "picking", "to": "empaquetado", "kind": "data", "rate": 22, "emphasis": "hero", "label": "pedidos" },
+    { "id": "a6", "from": "empaquetado", "to": "calidad", "kind": "data", "rate": 5, "label": "> 300 €" },
+    { "id": "a7", "from": "empaquetado", "to": "expedicion", "kind": "data", "rate": 17 },
+    { "id": "a8", "from": "calidad", "to": "expedicion", "kind": "data", "rate": 4 },
+    { "id": "a9", "from": "expedicion", "to": "transportistas", "kind": "data", "rate": 21, "label": "recogidas" }
+  ]
+}

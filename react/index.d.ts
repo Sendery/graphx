@@ -36,6 +36,40 @@ export interface GraphXShapeNode {
   renamed?: boolean;
   metrics?: { label: string; value: string }[];
   tree?: GraphXFolderStats;
+  /** Gráficos como piezas (`kpi`, `gauge`, `donut`) y datos de los efectos (graphx-fx). */
+  unit?: string;
+  decimals?: number;
+  change?: number;
+  good?: 'up' | 'down' | 'high' | 'low';
+  min?: number;
+  max?: number;
+  thresholds?: [number, number];
+  parts?: { label: string; value: number; color?: string }[];
+  spark?: number[];
+  heat?: number;
+  progress?: number;
+  alert?: 'crit' | 'warn' | 'info' | 'ok';
+}
+
+/** Efectos de graphx-fx: un preset, un objeto con cada efecto o false (ninguno). */
+export type GraphXFxPreset = 'calm' | 'vivid' | 'neon' | 'blueprint' | 'glass' | 'present' | 'off';
+export interface GraphXFxOptions {
+  preset?: GraphXFxPreset;
+  particles?: boolean | 'data' | 'flow' | 'all' | { mode?: 'data' | 'flow' | 'all'; speed?: number; density?: number; max?: number };
+  heat?: boolean | { metric?: string; label?: string; unit?: string; domain?: [number, number]; scheme?: 'traffic' | 'heat' | 'cool' | 'viridis' | 'magma' | string[]; invert?: boolean; rollup?: 'max' | 'avg' | 'sum' | false; key?: boolean };
+  spark?: boolean; progress?: boolean; alerts?: boolean; waves?: boolean; hoverFlow?: boolean; grid?: boolean;
+  lod?: boolean | { k?: number };
+  play?: boolean | { hop?: number; loop?: boolean; from?: string | string[] };
+  spotlight?: boolean; entrance?: boolean | 'cascade'; glow?: boolean; gradient?: boolean;
+  autoColor?: boolean | 'auto' | 'lanes' | 'groups' | 'kinds';
+  skin?: 'neon' | 'blueprint' | 'glass' | null;
+  sketch?: boolean;
+}
+export type GraphXFx = false | GraphXFxPreset | GraphXFxOptions;
+/** Cambios de datos en vivo para `setData`. */
+export interface GraphXDataPatch {
+  nodes?: Record<string, Partial<GraphXShapeNode> & { summary?: string; color?: string; status?: string }>;
+  edges?: Record<string, { rate?: number; weight?: number; animated?: boolean; speed?: 'fast' | 'slow' | number; emphasis?: 'hero' | 'normal' | 'muted'; label?: string; summary?: string }>;
 }
 
 /** Lo que resume una carpeta plegada: cuentas, reparto por extensión y ficheros cambiados. */
@@ -96,6 +130,14 @@ export interface GraphXInstance {
   clearFilter(): Promise<void> | void;
   /** Abre o cierra la tarjeta de detalle de una pieza. */
   toggleDetail(id: string, open?: boolean): Promise<void> | void;
+  setMinimap(on: boolean): void;
+  /** Datos en vivo (graphx-fx): cada pieza se rehace en su sitio y se anima hasta el valor nuevo. */
+  setData(patch: GraphXDataPatch, opts?: { duration?: number }): Promise<void>;
+  /** «▶ Flujo»: una onda que sale de los orígenes (o de `from`) y recorre el grafo. */
+  playFlow(opts?: { from?: string | string[]; hop?: number; loop?: boolean }): Promise<void>;
+  stopFlow(): void;
+  /** La configuración de efectos resuelta, o null sin efectos. */
+  fx: Record<string, unknown> | null;
 }
 
 /** Una entrada de un árbol de ficheros: una ruta o una ruta con sus datos. */
@@ -136,6 +178,8 @@ export interface GraphXProps {
   mermaid?: string;
   lang?: 'es' | 'en';
   height?: number | string;
+  /** Efectos (necesita graphx-fx.js cargado): manda sobre el `fx` del JSON. */
+  fx?: GraphXFx;
   className?: string;
   style?: CSSProperties;
   onReady?: (instance: GraphXInstance) => void;

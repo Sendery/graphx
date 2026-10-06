@@ -7,9 +7,11 @@ tooltips, panel de detalle, búsqueda, trazado de dependencias, secuencias anima
 guiado con modo presentación. Funciona igual como artifact de claude.ai, fichero local o bloque
 dentro de otra página.
 
-Versión **1.7.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
-nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7), y
-desde la 1.7 dibuja sus formas y tiene componentes de **React** (§7.1).
+Versión **1.8.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
+nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7),
+desde la 1.7 dibuja sus formas y tiene componentes de **React** (§7.1), y desde la 1.8 tiene un
+módulo de **efectos** con datos en vivo: partículas por caudal, mapa de calor, gráficos como piezas,
+ondas, pieles y más, todo configurable con `fx` (§8).
 
 ```
 graphx.js           el motor (≈1 500 líneas, sin dependencias salvo ELK)
@@ -17,7 +19,8 @@ graphx.css          estilos; todo sale de tokens CSS, tema claro y oscuro
 vendor/elk.bundled.js  el layout (ELK 0.12, ≈1,6 MB, se incrusta en la página)
 graphx-build.mjs    valida el JSON (o un .mmd/.md de Mermaid), lo enriquece (opcional, con git) y emite la página
 graphx-mermaid.js   conversor de Mermaid → JSON de GraphX, sin depender de Mermaid (§7)
-graphx-shapes.js    las formas (rombos, tablas, barras de gantt…) como funciones puras (§7.1)
+graphx-shapes.js    las formas (rombos, tablas, barras de gantt, KPI, gauge, donut…) como funciones puras (§7.1)
+graphx-fx.js        los efectos y los datos en vivo (§8): opcional, sin él todo funciona igual
 react/              componentes de React sobre las mismas formas (§7.1)
 dist/               versión compacta — ver §1.1 (se regenera con tools/build-dist.mjs)
 examples/           pr-review-stack-202.json (73 piezas, 4 niveles)
@@ -25,7 +28,8 @@ examples/           pr-review-stack-202.json (73 piezas, 4 niveles)
                     warehouses-pr-radar.json (seguimiento de PRs entre repos; se genera desde datos)
                     mermaid/*.mmd            (un ejemplo por cada tipo de Mermaid admitido; shapes.mmd, todas las formas)
                     gallery/                 (la galería: Mermaid frente a GraphX y el catálogo de formas en React)
-tools/              verify.mjs (jsdom) · verify-mermaid.mjs · verify-shapes.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
+                    fx/                      (los efectos: plataforma-viva.json, almacen.json y la página de demostración)
+tools/              verify.mjs (jsdom) · verify-mermaid.mjs · verify-shapes.mjs · verify-tree.mjs · verify-fx.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
                     build-dist.mjs (compacta) · sync.sh (copia el motor a la skill y a desarrollo)
 ```
 
@@ -65,9 +69,10 @@ Para publicarlo en claude.ai: la tool `Artifact` con el `.html` generado (mismo 
 
 | Fichero | Peso (gzip) | Uso |
 |---|---|---|
-| `dist/graphx.bundle.min.js` | 1,5 MB (464 KB) | **un solo `<script>`**: ELK + motor + estilos (se inyectan solos) + monta todos los `[data-gx]` al cargar. Funciona sin red. |
-| `dist/graphx.lite.min.js` | 109 KB (35 KB) | lo mismo **sin ELK**: lo carga de jsDelivr la primera vez (admitido por la CSP de los artifacts de claude.ai). Cambia el origen con `GraphX.elkURL = '…'` antes de cargar. |
-| `dist/graphx.min.js` + `dist/graphx.min.css` | 76 KB + 33 KB | por separado, si la página ya trae ELK o gestiona sus estilos |
+| `dist/graphx.bundle.min.js` | 1,7 MB (545 KB) | **un solo `<script>`**: ELK + motor + estilos (se inyectan solos) + monta todos los `[data-gx]` al cargar. Funciona sin red. |
+| `dist/graphx.lite.min.js` | 335 KB (115 KB) | lo mismo **sin ELK**: lo carga de jsDelivr la primera vez (admitido por la CSP de los artifacts de claude.ai). Cambia el origen con `GraphX.elkURL = '…'` antes de cargar. |
+| `dist/graphx.min.js` + `dist/graphx.min.css` | 109 KB + 56 KB | por separado, si la página ya trae ELK o gestiona sus estilos |
+| `dist/graphx-fx.min.js` | 37 KB (14 KB) | los efectos sueltos (los bundles ya los llevan); trae sus estilos y los inyecta |
 
 ELK es el 95 % del peso y ya viene compilado, así que minificarlo apenas ahorra: la compactación de
 verdad es el bundle `lite`. Con cualquiera de los dos bundles, una página solo necesita:
@@ -87,10 +92,11 @@ primera vez). Los ensambladores usan `dist/` solo si es más reciente que las fu
 <script>GraphX.mountAll(document)</script>
 ```
 
-o, desde JS: `const g = GraphX.mount(elemento, spec, { height: 640, lang: 'es', minimap: false })`
-(`minimap: false` o `data-minimap="false"` abre con el minimapa oculto; manda sobre el del JSON). La instancia
-expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showView('flow:<id>')`,
-`setPresent(bool)`, `setExplore(bool)`, `setDirection('right'|'down')`, `setMinimap(bool)` y `destroy()`.
+o, desde JS: `const g = GraphX.mount(elemento, spec, { height: 640, lang: 'es', minimap: false, fx: 'vivid' })`
+(`minimap: false` o `data-minimap="false"` abre con el minimapa oculto; `fx` o `data-fx` configura los
+efectos, §8; los dos mandan sobre el JSON). La instancia expone `ready`, `expandTo(n)`, `reveal(id)`,
+`select(id)`, `goStep(i)`, `showView('flow:<id>')`, `setPresent(bool)`, `setExplore(bool)`,
+`setDirection('right'|'down')`, `setMinimap(bool)`, `setData(cambios)`, `playFlow()`, `stopFlow()` y `destroy()`.
 
 ---
 
@@ -142,6 +148,7 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order", "backEdges": "route" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs` u `order`: el motor recorre en profundidad desde lo escrito primero y solo vuelven atrás las aristas de retorno, como en dagre/Mermaid); `route`: ELK traza también las aristas que vuelven atrás (esquivan piezas) en vez de arcos |
 | | `collapsed` | ids que arrancan plegados aunque su nivel diga lo contrario |
 | | `minimap` | `false` — abre con el minimapa oculto (el botón «Minimapa» o la tecla `m` lo muestran) |
+| | `fx` | efectos: un preset (`"vivid"`, `"neon"`…), un objeto o `false` — ver §8 |
 | | `statuses` | estados propios `{ "<clave>": { "label", "color" } }` — ver §4.1 |
 | | `legend` | `{ "edges": [{ "label", "style", "color" }], "kinds": { "<kind>": "etiqueta" }, "delta": false }` — ver §4.1 |
 | | `icons` | iconos propios `{ "<kind>": "<path 16×16>" }` o `{ "path", "fill": true }` — ver §4.1 |
@@ -161,6 +168,8 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `shape` | una forma de §7.1 en vez de la tarjeta (`decision`, `table`, `bar`…) |
 | | `rows` · `span` · `score` · `value` · `badge` · `avatar` · `head` | los datos que usa su forma (§7.1) |
 | | `frame` | en un contenedor: `dashed` · `dotted` — marco discontinuo (fronteras de C4, grupos de arquitectura) |
+| | `heat` · `spark` · `unit` · `progress` · `alert` | datos que dibujan los efectos (§8): un valor para el mapa de calor, una serie, su unidad, el avance (0–1) y una alerta (`crit` `warn` `info` `ok`) |
+| | `change` · `good` · `min` · `max` · `thresholds` · `decimals` · `parts` | los de las formas de gráfico `kpi`, `gauge` y `donut` (§7.1) |
 | | `fill` · `textColor` | relleno y color de texto propios (como `color`, un color o `{ light, dark }`); el de un `classDef` de Mermaid |
 | arista | `id` `from` `to` | |
 | | `kind` | `call http rpc event queue data dependency render async other` (`event`/`queue`/`async` van discontinuas) |
@@ -172,6 +181,7 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `headLabel` · `tailLabel` | texto junto a cada extremo (cardinalidades: `1`, `0..*`) |
 | | `weight` | un número: el grosor de la arista crece con él (sankey) |
 | | `curve` | `true`: una curva suave en vez de la ruta ortogonal (las ramas de un mindmap) |
+| | `rate` · `speed` | el caudal (partículas más densas y rápidas, §8) y la velocidad de la animación: `fast`, `slow` o un factor |
 | flujo | `id` `title` `summary` `participants[]` `messages[]` | una secuencia, en su propia pestaña con «Reproducir» |
 | mensaje | `id` `from` `to` `label` `kind` | `sync async return self` (`self` exige `from === to`) · `phase`: una banda con `label` que agrupa lo que sigue, sin `from`/`to` ni número |
 | | `head` · `tail` · `activate` · `deactivate` | punta (`line` sin punta, `open`, `cross`), doble sentido, y el participante que se activa o se desactiva |
@@ -413,6 +423,12 @@ diagramas de GraphX; el bloque que no se puede convertir se queda como estaba.
 | `architecture-beta` · `block-beta` | grupos y servicios, `junction`, `{group}`; bloques anidados |
 | `requirementDiagram` · `sankey-beta` · `kanban` · `treemap-beta` | requisitos con riesgo como estado; flujos con su valor; columnas como carriles (`ticketBaseUrl`); jerarquía con totales |
 
+**Tema, look y efectos.** El tema de la cabecera (`%%{init: { "theme": "forest" }}%%` o el frontmatter
+`config: theme / themeVariables`) se traduce a tokens de GraphX en claro y en oscuro (`forest`, `neutral`,
+`dark`; con `base`, sus variables: `primaryColor`, `lineColor`…). `look: handDrawn` dibuja con trazo a mano y
+`e1@{ animation: fast }` anima la arista a esa velocidad. Los `flowchart` y `stateDiagram` convertidos traen
+«▶ Flujo»; `fromMermaid(texto, { fx: false })` quita todos los efectos y `{ fx: 'vivid' }` pone un preset.
+
 Lo que no tiene equivalente (posiciones de `block-beta`, flechas de `architecture` por lado,
 `activate`, `autonumber`…) se ignora; una línea que no se entiende se salta con un aviso con su
 número de línea, nunca en silencio. Los gráficos de datos (`pie`, `xychart`, `quadrantChart`,
@@ -438,6 +454,7 @@ la clase `gx-card`: hover, iluminado, selección, color de pieza y deltas funcio
 | iconos | `tile` (servicio de arquitectura), `actor` | el icono sale de `kind` |
 | C4 | `person c4 c4-db c4-queue` | `subtitle` ([tipo]), `summary` (descripción dentro), `color` (relleno) |
 | tarjetas con datos | `bar` (gantt), `score` (journey), `ticket` (kanban), `flowbar` (sankey), `block` (treemap) | `span: { start, end, milestone, live }`, `score` 1–5, `badge` + `avatar`, `value` |
+| gráficos | `kpi` (cifra, variación y serie), `gauge` (indicador sobre un rango), `donut` (reparto) | `value`, `unit`, `decimals`, `change` (%) + `good: "down"`, `spark`; `min`, `max`, `thresholds: [aviso, crítico]` + `good: "high"`; `parts: [{ label, value, color }]` |
 
 Las aristas acaban en el contorno de la forma (el vértice del rombo, el borde del círculo, el punto
 del commit), no en su caja. Las barras de gantt comparten una pista de fechas (el rango del diagrama entero), con la tarea en
@@ -515,13 +532,62 @@ node tools/tree-spec.mjs <dir> --base origin/main --html arbol.html   # el árbo
 
 `node tools/verify-tree.mjs` comprueba el constructor, las interacciones y que React dibuja lo mismo.
 
-## 8 · Verificar sin navegador
+## 8 · Efectos y datos en vivo (graphx-fx.js)
+
+Un módulo opcional: si está cargado (los dos bundles de `dist/` lo llevan), el motor lo engancha; si no,
+nada cambia. Sin requisitos especiales de navegador (SVG, CSS y SMIL) y 37 KB minificado (14 KB con gzip).
+Todo se configura con `fx`, en la raíz del JSON o en las opciones de montaje (`mount(el, spec, { fx })`,
+`data-fx` en la página), que mandan sobre el JSON:
+
+```json
+"fx": false                                   // nada: el diagrama exactamente como antes
+"fx": "vivid"                                 // un preset
+"fx": { "preset": "neon", "glow": false, "heat": { "label": "Latencia p95", "unit": "ms", "domain": [0, 600] } }
+```
+
+| Clave | Por defecto | Qué hace |
+|---|---|---|
+| `particles` | `"data"` | partículas que viajan por la arista; su densidad y su velocidad crecen con `rate`. `"data"`: solo las aristas con `rate`; `true`: también las `animated` y las `hero`; `"all"`: todas. `{ speed, density, max }` las ajusta |
+| `heat` | si hay datos | colorea cada pieza por `heat` (o por una métrica: `{ metric }`) y le pone su cifra; `{ label, unit, domain, scheme, invert, rollup, key }`. Escalas: `traffic` (verde → rojo), `heat`, `cool`, `viridis`, `magma` o una lista de colores. Un contenedor plegado toma el máximo de lo que lleva dentro; la escala sale en el lienzo, en la leyenda y en el minimapa |
+| `spark` | si hay datos | la serie de `spark` como sparkline en la tarjeta, con su último valor y `unit` |
+| `progress` | si hay datos | un anillo alrededor del icono (`progress` de 0 a 1, o de 0 a 100) |
+| `alerts` | si hay datos | un halo que late: `alert: "crit" \| "warn" \| "info" \| "ok"`, o un estado de `statuses` con `pulse: true` |
+| `waves` | sí | ondas que recorren el grafo salto a salto al seleccionar (un salto), al trazar dependencias (todos, a favor o a contracorriente) y en cada paso del recorrido |
+| `hoverFlow` | sí | al pasar por una pieza, sus conexiones iluminadas marchan en su sentido |
+| `grid` | sí | la retícula del fondo se mueve y se escala con la cámara |
+| `lod` | sí | zoom semántico: por debajo de `{ k: 0.4 }`, los nombres de los contenedores abiertos crecen y las etiquetas de arista se ocultan |
+| `play` | no | el botón «▶ Flujo»: una onda sale de los orígenes y recorre el grafo; lo no alcanzado espera apagado. `{ hop, loop, from }` |
+| `spotlight` | no | un foco sobre la pieza seleccionada o sobre lo que enseña cada paso del recorrido |
+| `entrance` | no | `"cascade"`: al abrir, las piezas entran en orden de lectura y las aristas detrás |
+| `glow` | no | brillo en las aristas principales e iluminadas y en la pieza seleccionada |
+| `gradient` | no | cada arista, un degradado del color de su origen al de su destino |
+| `autoColor` | no | colores de la paleta donde no los hay: `"lanes"`, `"groups"`, `"kinds"` o `"auto"` (no en un diff) |
+| `skin` | — | una piel completa: `neon`, `blueprint` (oscuras, con su propio fondo) o `glass` (clara y oscura) |
+| `sketch` | no | trazo a mano (lo enciende `look: handDrawn` de Mermaid) |
+
+Presets: `vivid` (partículas, cascada, foco, brillo, degradado, colores automáticos y «▶ Flujo»), `neon`,
+`blueprint` y `glass` (lo mismo con su piel), `present` (foco, cascada, partículas y brillo), `calm` (lo de
+por defecto) y `off`. Todo respeta `prefers-reduced-motion` y las partículas se paran fuera de pantalla.
+
+**Datos en vivo.** `g.setData({ nodes: { id: { heat, spark, progress, alert, value, change, parts, … } },
+edges: { id: { rate, weight, speed } } })` cambia los datos sin recolocar: cada pieza se rehace en su
+sitio y se anima de un dibujo al siguiente (las cifras cuentan, las series y los arcos se deslizan, el
+color de calor transita). Si el cambio mueve el layout (una etiqueta, una serie nueva), recoloca.
+`g.playFlow({ from, hop, loop })` y `g.stopFlow()` controlan «▶ Flujo» desde fuera.
+
+```bash
+node examples/fx/build.mjs /tmp/fx.html --standalone   # la demostración: datos en vivo, Mermaid, almacén, referencia
+node tools/verify-fx.mjs                               # comprueba configuración, efectos, datos en vivo y Mermaid
+```
+
+## 9 · Verificar sin navegador
 
 Chrome headless se cuelga con estas páginas. Para comprobarlas:
 
 ```bash
 npm i                                       # instala jsdom (solo para verificar)
 node tools/verify.mjs examples/pr-review-stack-202.html      # 67 comprobaciones
+node tools/verify-fx.mjs                                     # los efectos (§8)
 node tools/snap-depth.mjs <página.html> 1 /tmp/d.svg [down]  # vuelca el SVG de un nivel
 node tools/snapshot-svg.mjs /tmp/d.svg /tmp/d.png light|dark # lo rasteriza con rsvg-convert
 ```
@@ -530,7 +596,7 @@ node tools/snapshot-svg.mjs /tmp/d.svg /tmp/d.png light|dark # lo rasteriza con 
 otro diagrama. El raster usa Helvetica y un estimador de ancho de texto; en el navegador se mide
 con canvas, así que la tipografía real queda algo más compacta.
 
-## 9 · Límites conocidos
+## 10 · Límites conocidos
 
 - La página pesa ≈1,7 MB por ELK. Sin red funciona igual: todo va dentro.
 - Por encima de ~300 piezas visibles a la vez el relayout deja de ser instantáneo; plega por nivel.

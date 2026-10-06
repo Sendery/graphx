@@ -1,0 +1,70 @@
+{
+  "title": "Plataforma de pagos en vivo",
+  "summary": "Un mapa vivo: el caudal de cada conexión mueve sus partículas, la latencia colorea cada pieza y los indicadores se actualizan solos.",
+  "lang": "es",
+  "direction": "right",
+  "initialDepth": 1,
+  "fx": {
+    "particles": true,
+    "play": true,
+    "heat": { "label": "Latencia p95", "unit": "ms", "domain": [0, 600], "scheme": "traffic" },
+    "spotlight": true,
+    "entrance": "cascade",
+    "glow": true
+  },
+  "lanes": [
+    { "id": "clientes", "label": "Clientes", "subtitle": "por donde entra el tráfico" },
+    { "id": "borde", "label": "Borde", "subtitle": "CDN, pasarela y sesión" },
+    { "id": "servicios", "label": "Servicios", "subtitle": "la lógica de negocio" },
+    { "id": "datos", "label": "Datos", "subtitle": "estado y eventos" },
+    { "id": "panel", "label": "Indicadores", "subtitle": "lo que vigila la guardia" }
+  ],
+  "levels": [ { "depth": 0, "label": "Capa" }, { "depth": 1, "label": "Pieza" } ],
+  "nodes": [
+    { "id": "web", "lane": "clientes", "label": "Tienda web", "kind": "ui", "summary": "La web donde se compra. Sirve los estáticos desde la CDN y llama a la pasarela." },
+    { "id": "app", "lane": "clientes", "label": "App móvil", "kind": "app", "summary": "La app de iOS y Android. Habla directamente con la pasarela." },
+    { "id": "socios", "lane": "clientes", "label": "Socios (API)", "kind": "external", "summary": "Marketplaces que integran el pago con la API pública." },
+    { "id": "cdn", "lane": "borde", "label": "CDN", "kind": "cache", "heat": 18, "summary": "Cachea los estáticos y reenvía a la pasarela lo dinámico." },
+    { "id": "gateway", "lane": "borde", "label": "Pasarela API", "kind": "route", "heat": 42, "spark": [610, 640, 700, 690, 720, 760, 740, 780, 820, 800, 860, 880], "unit": "req/s", "summary": "Termina TLS, limita el caudal por cliente y enruta a cada servicio." },
+    { "id": "auth", "lane": "borde", "label": "Sesión y OAuth", "kind": "service", "heat": 24, "summary": "Valida tokens y sesiones. Cachea en Redis." },
+    { "id": "pedidos", "lane": "servicios", "label": "Pedidos", "kind": "service", "heat": 140, "spark": [210, 220, 260, 240, 300, 320, 310, 350, 380, 360, 400, 420], "unit": "req/s", "summary": "Crea el pedido, reserva stock y pide el cobro." },
+    { "id": "pagos", "lane": "servicios", "label": "Pagos", "kind": "service", "heat": 310, "alert": "warn", "progress": 0.64, "spark": [120, 140, 150, 170, 160, 190, 210, 230, 220, 260, 280, 300], "unit": "ms", "summary": "Cobra con el proveedor de tarjetas. Está desplegando la versión 4.2 (64 % del tráfico).", "metrics": [ { "label": "Versión", "value": "4.2 (canario)" }, { "label": "Errores", "value": "0,8 %" } ] },
+    { "id": "antifraude", "lane": "servicios", "label": "Antifraude", "kind": "service", "heat": 520, "alert": "crit", "summary": "Puntúa cada pago. Hoy va lento: el modelo nuevo tarda el doble.", "notes": [ { "tone": "warn", "text": "La latencia p95 supera el presupuesto de 400 ms desde las 10:20." } ] },
+    { "id": "catalogo", "lane": "servicios", "label": "Catálogo", "kind": "service", "heat": 48, "summary": "Productos, precios y stock. Lee casi todo de Redis." },
+    { "id": "notif", "lane": "servicios", "label": "Notificaciones", "kind": "job", "heat": 90, "progress": 1, "summary": "Envía el correo y el push de confirmación al consumir el evento de pago." },
+    { "id": "postgres", "lane": "datos", "label": "PostgreSQL", "kind": "datastore", "heat": 14, "summary": "Pedidos y pagos. Primaria con dos réplicas de lectura." },
+    { "id": "redis", "lane": "datos", "label": "Redis", "kind": "cache", "heat": 3, "summary": "Sesiones y catálogo caliente." },
+    { "id": "kafka", "lane": "datos", "label": "Kafka", "kind": "queue", "heat": 9, "summary": "El bus de eventos: pagos.completados, pedidos.creados." },
+    { "id": "dwh", "lane": "datos", "label": "Almacén analítico", "kind": "datastore", "heat": 60, "summary": "Carga los eventos para los cuadros de mando." },
+    { "id": "k-pagos", "lane": "panel", "label": "Pagos por minuto", "shape": "kpi", "kind": "service", "value": 1284, "change": 8.2, "spark": [980, 1010, 1060, 1040, 1120, 1150, 1130, 1190, 1240, 1210, 1260, 1284], "summary": "Pagos completados en el último minuto y su evolución en la última hora." },
+    { "id": "k-slo", "lane": "panel", "label": "Disponibilidad (SLO)", "shape": "gauge", "kind": "other", "value": 99.93, "min": 99, "max": 100, "unit": "%", "decimals": 2, "thresholds": [99.9, 99.5], "good": "high", "summary": "Disponibilidad de los últimos 30 días frente al objetivo del 99,9 %." },
+    { "id": "k-canal", "lane": "panel", "label": "Tráfico por canal", "shape": "donut", "kind": "other", "unit": "req/s", "parts": [ { "label": "Web", "value": 900 }, { "label": "App", "value": 620 }, { "label": "Socios", "value": 240 } ], "summary": "De dónde llegan las peticiones ahora mismo." }
+  ],
+  "edges": [
+    { "id": "e-web-cdn", "from": "web", "to": "cdn", "kind": "http", "rate": 900, "label": "HTTPS" },
+    { "id": "e-cdn-gw", "from": "cdn", "to": "gateway", "kind": "http", "rate": 380 },
+    { "id": "e-app-gw", "from": "app", "to": "gateway", "kind": "http", "rate": 620 },
+    { "id": "e-soc-gw", "from": "socios", "to": "gateway", "kind": "http", "rate": 240, "label": "API pública" },
+    { "id": "e-gw-auth", "from": "gateway", "to": "auth", "kind": "rpc", "rate": 1240 },
+    { "id": "e-gw-ped", "from": "gateway", "to": "pedidos", "kind": "http", "rate": 520, "emphasis": "hero", "label": "POST /pedidos" },
+    { "id": "e-gw-cat", "from": "gateway", "to": "catalogo", "kind": "http", "rate": 700 },
+    { "id": "e-ped-pag", "from": "pedidos", "to": "pagos", "kind": "rpc", "rate": 180, "emphasis": "hero", "label": "cobrar" },
+    { "id": "e-pag-af", "from": "pagos", "to": "antifraude", "kind": "rpc", "rate": 180, "label": "puntuar" },
+    { "id": "e-pag-kf", "from": "pagos", "to": "kafka", "kind": "event", "rate": 160, "label": "pago.completado" },
+    { "id": "e-kf-not", "from": "kafka", "to": "notif", "kind": "event", "rate": 160 },
+    { "id": "e-kf-dwh", "from": "kafka", "to": "dwh", "kind": "event", "rate": 300 },
+    { "id": "e-ped-pg", "from": "pedidos", "to": "postgres", "kind": "data", "rate": 520 },
+    { "id": "e-pag-pg", "from": "pagos", "to": "postgres", "kind": "data", "rate": 180 },
+    { "id": "e-cat-rd", "from": "catalogo", "to": "redis", "kind": "data", "rate": 640 },
+    { "id": "e-auth-rd", "from": "auth", "to": "redis", "kind": "data", "rate": 900 }
+  ],
+  "tour": {
+    "title": "Un pedido de punta a punta",
+    "steps": [
+      { "title": "Entra el tráfico", "body_html": "<p>La web, la app y los socios llegan a la <b>pasarela</b>. El grosor del chorro de partículas es el caudal.</p>", "focus": { "nodes": ["web", "app", "socios", "cdn", "gateway"], "edges": ["e-web-cdn", "e-cdn-gw", "e-app-gw", "e-soc-gw"] } },
+      { "title": "Se crea el pedido", "body_html": "<p>La pasarela valida la sesión y llama a <b>Pedidos</b>, que guarda el pedido en PostgreSQL.</p>", "focus": { "nodes": ["gateway", "auth", "pedidos", "postgres"], "edges": ["e-gw-auth", "e-gw-ped", "e-ped-pg"] } },
+      { "title": "El cobro, el punto caliente", "body_html": "<p><b>Pagos</b> pide la puntuación a <b>Antifraude</b>, que hoy va en rojo: su p95 pasa de 500 ms.</p>", "focus": { "nodes": ["pedidos", "pagos", "antifraude"], "edges": ["e-ped-pag", "e-pag-af"] }, "select": "antifraude" },
+      { "title": "El evento cierra el ciclo", "body_html": "<p>El pago completado sale por <b>Kafka</b>: lo consumen las notificaciones y el almacén analítico.</p>", "focus": { "nodes": ["pagos", "kafka", "notif", "dwh"], "edges": ["e-pag-kf", "e-kf-not", "e-kf-dwh"] } }
+    ]
+  }
+}
