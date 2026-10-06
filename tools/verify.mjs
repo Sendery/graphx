@@ -221,6 +221,30 @@ ok(!root_dim(), 'y al relayoutear bajo el puntero no se queda iluminada');
 await gx.toggle('c-kit'); await wait(900);
 function root_dim() { return !!host.querySelector('.gx-world.gx-dim'); }
 
+console.log('— minimapa —');
+const bMini = host.querySelector('.gx-mini-b');
+ok(bMini && bMini.classList.contains('on') && !host.classList.contains('gx-nomini'), 'el minimapa arranca visible y su botón marcado');
+ok(host.querySelectorAll('.gx-mini-n').length > 0, 'el minimapa pinta las piezas');
+bMini.click();
+ok(host.classList.contains('gx-nomini') && !bMini.classList.contains('on') && bMini.getAttribute('aria-pressed') === 'false', 'el botón lo oculta');
+host.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'm', bubbles: true }));
+ok(!host.classList.contains('gx-nomini') && bMini.classList.contains('on'), 'la tecla m lo vuelve a mostrar');
+gx.setMinimap(false); await gx.toggle('c-kit'); await wait(900);
+gx.setMinimap(true);
+ok(!host.classList.contains('gx-nomini') && host.querySelectorAll('.gx-mini-n').length > 0, 'setMinimap(true) lo redibuja tras un relayout con él oculto');
+await gx.toggle('c-kit'); await wait(900);
+{
+  const el = d.createElement('div'); el.style.height = '300px'; d.body.appendChild(el);
+  const g2 = w.GraphX.mount(el, { nodes: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], edges: [{ from: 'a', to: 'b' }], minimap: false });
+  await g2.ready; await wait(300);
+  ok(el.classList.contains('gx-nomini') && !el.querySelector('.gx-mini-b').classList.contains('on'), '`minimap: false` en el JSON lo abre oculto');
+  g2.destroy();
+  const g3 = w.GraphX.mount(el, { nodes: [{ id: 'a', label: 'A' }], minimap: false }, { minimap: true });
+  await g3.ready; await wait(300);
+  ok(!el.classList.contains('gx-nomini'), 'la opción de montaje manda sobre el JSON');
+  g3.destroy(); el.remove();
+}
+
 console.log('— aislamiento —');
 const ids = [...d.querySelectorAll('[id]')].map(e => e.id);
 ok(new Set(ids).size === ids.length, `sin ids duplicados (${ids.length})`);

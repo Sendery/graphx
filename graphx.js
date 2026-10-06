@@ -20,7 +20,7 @@
   const STR = {
     es: {
       graph: 'Grafo', depth: 'Profundidad', expandAll: 'Expandir todo', collapseAll: 'Plegar todo',
-      search: 'Buscar pieza…', onlyChanges: 'Solo cambios', legend: 'Leyenda', fit: 'Ajustar', present: 'Presentar',
+      search: 'Buscar pieza…', onlyChanges: 'Solo cambios', legend: 'Leyenda', minimap: 'Minimapa', fit: 'Ajustar', present: 'Presentar',
       exitPresent: 'Salir', tour: 'Recorrido guiado', step: 'Paso', of: 'de', prev: 'Anterior', next: 'Siguiente',
       close: 'Cerrar', expand: 'Expandir', collapse: 'Plegar', center: 'Centrar', upstream: 'De qué depende',
       downstream: 'Qué depende de esto', clearTrace: 'Quitar trazado', outgoing: 'Salidas', incoming: 'Entradas',
@@ -33,7 +33,7 @@
       delta: { added: 'nuevo', modified: 'modificado', removed: 'eliminado', unchanged: 'sin cambios' },
       deltaShort: { added: 'NUEVO', modified: 'MOD', removed: 'ELIM', unchanged: '' },
       edgeKinds: { sync: 'llamada', async: 'asíncrono / evento', hero: 'la conexión que importa', animated: 'flujo principal', agg: 'conexiones agrupadas' },
-      kbd: '← → pasos · Esc salir · + − zoom · 0 ajustar', lane: 'Carril', diffOpen: 'Ver diff', frames: 'Marcos',
+      kbd: '← → pasos · Esc salir · + − zoom · 0 ajustar · m minimapa', lane: 'Carril', diffOpen: 'Ver diff', frames: 'Marcos',
       bandAdd: 'nuevas', bandMod: 'modificadas', orient: 'Orientación', explore: 'Explorar', exitExplore: 'Cerrar',
       touchHint: 'Dos dedos para mover el diagrama · o pulsa ⤢ Explorar', changedFiles: 'Ficheros cambiados', allChanges: 'Todos los cambios en GitHub',
       links: 'Enlaces', related: 'Relacionado en este diagrama', linkKinds: { jira: 'Jira', pr: 'PR', notion: 'Notion', artifact: 'Artefacto', doc: 'Documento', url: 'Enlace', node: 'Pieza' },
@@ -44,7 +44,7 @@
     },
     en: {
       graph: 'Graph', depth: 'Depth', expandAll: 'Expand all', collapseAll: 'Collapse all',
-      search: 'Search…', onlyChanges: 'Changes only', legend: 'Legend', fit: 'Fit', present: 'Present',
+      search: 'Search…', onlyChanges: 'Changes only', legend: 'Legend', minimap: 'Minimap', fit: 'Fit', present: 'Present',
       exitPresent: 'Exit', tour: 'Guided tour', step: 'Step', of: 'of', prev: 'Previous', next: 'Next',
       close: 'Close', expand: 'Expand', collapse: 'Collapse', center: 'Center', upstream: 'What it depends on',
       downstream: 'What depends on it', clearTrace: 'Clear trace', outgoing: 'Outgoing', incoming: 'Incoming',
@@ -57,7 +57,7 @@
       delta: { added: 'new', modified: 'modified', removed: 'removed', unchanged: 'unchanged' },
       deltaShort: { added: 'NEW', modified: 'MOD', removed: 'DEL', unchanged: '' },
       edgeKinds: { sync: 'call', async: 'async / event', hero: 'the connection that matters', animated: 'main flow', agg: 'grouped connections' },
-      kbd: '← → steps · Esc exit · + − zoom · 0 fit', lane: 'Lane', diffOpen: 'Open diff', frames: 'Frames',
+      kbd: '← → steps · Esc exit · + − zoom · 0 fit · m minimap', lane: 'Lane', diffOpen: 'Open diff', frames: 'Frames',
       bandAdd: 'new', bandMod: 'modified', orient: 'Orientation', explore: 'Explore', exitExplore: 'Close',
       touchHint: 'Two fingers to move the diagram · or tap ⤢ Explore', changedFiles: 'Changed files', allChanges: 'All changes on GitHub',
       links: 'Links', related: 'Related in this diagram', linkKinds: { jira: 'Jira', pr: 'PR', notion: 'Notion', artifact: 'Artifact', doc: 'Doc', url: 'Link', node: 'Part' },
@@ -345,6 +345,7 @@
     const filterSeg = h('div', 'gx-seg gx-filters gx-graphonly', null, tools);
     const bFrames = btn(tools, T.frames, T.frames, 'gx-toggle gx-graphonly');
     const bLegend = btn(tools, T.legend, T.legend, 'gx-toggle');
+    const bMini = btn(tools, T.minimap, T.minimap, 'gx-toggle gx-graphonly gx-mini-b');
     const bDir = btn(tools, '↦', T.orient, 'gx-graphonly');
     const bFiles = btn(tools, T.filesBtn, T.changedFiles, 'gx-graphonly');
     const bFit = btn(tools, '◎', T.fit);
@@ -2016,8 +2017,18 @@
 
     /* --- minimapa --- */
     const miniWorld = s('g', null, miniSvg), miniView = s('rect', { class: 'gx-mini-v' }, miniSvg);
+    /* visible salvo `minimap: false` en las opciones de montaje o en el JSON; oculto no se redibuja */
+    const miniOpt = opts.minimap != null ? opts.minimap : spec.minimap;
+    S.minimap = !(miniOpt === false || miniOpt === 'false');
+    function setMinimap(on) {
+      S.minimap = !!on;
+      host.classList.toggle('gx-nomini', !S.minimap);
+      bMini.classList.toggle('on', S.minimap); bMini.setAttribute('aria-pressed', S.minimap);
+      if (S.minimap) drawMini();
+    }
+    bMini.onclick = () => setMinimap(!S.minimap);
     function drawMini() {
-      if (!S.bbox) return;
+      if (!S.bbox || !S.minimap) return;
       miniWorld.innerHTML = '';
       const b = S.bbox; miniSvg.setAttribute('viewBox', `${b.x} ${b.y} ${b.w} ${b.h}`);
       S.bands.forEach(bd => s('rect', { x: bd.x, y: bd.y, width: bd.w, height: bd.h, class: 'gx-mini-band' + (bd.i % 2 ? ' alt' : '') }, miniWorld));
@@ -2029,7 +2040,7 @@
       drawMiniView();
     }
     function drawMiniView() {
-      if (!S.bbox) return;
+      if (!S.bbox || !S.minimap) return;
       const v = viewSize(), c = S.cam;
       miniView.setAttribute('x', -c.x / c.k); miniView.setAttribute('y', -c.y / c.k);
       miniView.setAttribute('width', v.w / c.k); miniView.setAttribute('height', v.h / c.k);
@@ -2409,6 +2420,7 @@
       else if (k === '-') { const v = viewSize(activeSvg()); zoomAt(1 / 1.2, v.w / 2, v.h / 2, which()); }
       else if (k === '0') bFit.onclick();
       else if (k === '/') { ev.preventDefault(); searchIn.focus(); }
+      else if ((k === 'm' || k === 'M') && !ev.metaKey && !ev.ctrlKey && !ev.altKey && S.view === 'graph') setMinimap(!S.minimap);
     });
 
     let roT = null;
@@ -2426,7 +2438,7 @@
     }) : null;
     if (ro) ro.observe(stage);
 
-    renderTour(); syncTabs();
+    renderTour(); syncTabs(); setMinimap(S.minimap);
     /* `focus` del JSON: el diagrama se abre ya filtrado (los cambios de un diff, una búsqueda) */
     const applyInitialFocus = () => { if (spec.focus && typeof spec.focus === 'object') setFocus(resolveFilter(spec.focus), { label: spec.focus.label, key: spec.focus.key || 'initial', prune: spec.focus.prune }); };
     applyInitialFocus();
@@ -2437,7 +2449,7 @@
       ready, diffReady, model: G, state: S, setExplore, resetView, focusNode,
       setDirection: d => { S.dir = d === 'down' ? 'down' : 'right'; syncDir(); S.frameBox = null; return relayout({ fit: true }); },
       expandTo: d => { dropFocus(); setDepthSet(d); return relayout({ fit: true }); },
-      toggle, reveal, select, goStep, showView, setPresent, trace,
+      toggle, reveal, select, goStep, showView, setPresent, trace, setMinimap,
       /* árbol y filtros: `filter(ids | n => bool, { label, prune })`, `clearFilter()`, `toggleDetail(id, on?)` */
       filter, clearFilter, toggleDetail,
       /* deja el host como estaba: sin contenido, sin las clases de estado (una vista solo de secuencia
@@ -2486,7 +2498,7 @@
         try { const r = global.GraphX.fromMermaid(mmd.textContent, { lang: el.dataset.lang }); spec = r.spec; if (r.warnings.length) console.warn('GraphX · Mermaid:\n  ' + r.warnings.join('\n  ')); }
         catch (e) { el.textContent = 'GraphX: Mermaid no válido — ' + e.message; return; }
       } else { try { spec = JSON.parse(src.textContent); } catch (e) { el.textContent = 'GraphX: JSON inválido — ' + e.message; return; } }
-      el._gx = mount(el, spec, { height: el.dataset.height ? +el.dataset.height : null, lang: el.dataset.lang });
+      el._gx = mount(el, spec, { height: el.dataset.height ? +el.dataset.height : null, lang: el.dataset.lang, minimap: el.dataset.minimap });
       out.push(el._gx);
     });
     return out;

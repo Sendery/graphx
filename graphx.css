@@ -88,6 +88,7 @@
 .gx-search-list small { display: block; color: var(--gx-muted); font-size: 11px; }
 .gx-nomatch { padding: 8px; color: var(--gx-muted); font-size: 12.5px; }
 .gx-flowview .gx-graphonly, .gx-flowview .gx-mini { display: none !important; }
+.gx-nomini .gx-mini { display: none !important; }
 
 /* ---------- escenario ---------- */
 .gx-stage { position: relative; height: var(--gx-h); border: 1px solid var(--gx-line); border-radius: 14px; overflow: hidden;
@@ -450,7 +451,7 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
   .gx-files li { grid-template-columns: 1fr auto; } .gx-files .gx-flinks { grid-column: 1 / -1; }
   .gx-diffb, .gx-flinks a { padding: 6px 10px; }
   .gx-xlink { min-height: 44px; }
-  .gx-mini { display: none; }
+  .gx-mini, .gx-mini-b { display: none !important; }
   .gx-legend { left: 8px; right: 8px; min-width: 0; }
   .gx.gx-present .gx-tour { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 42%; }
   .gx-hint { top: auto; bottom: 12px; white-space: normal; text-align: center; max-width: calc(100% - 24px); }

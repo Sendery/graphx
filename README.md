@@ -87,9 +87,10 @@ primera vez). Los ensambladores usan `dist/` solo si es más reciente que las fu
 <script>GraphX.mountAll(document)</script>
 ```
 
-o, desde JS: `const g = GraphX.mount(elemento, spec, { height: 640, lang: 'es' })`. La instancia
+o, desde JS: `const g = GraphX.mount(elemento, spec, { height: 640, lang: 'es', minimap: false })`
+(`minimap: false` o `data-minimap="false"` abre con el minimapa oculto; manda sobre el del JSON). La instancia
 expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showView('flow:<id>')`,
-`setPresent(bool)`, `setExplore(bool)`, `setDirection('right'|'down')` y `destroy()`.
+`setPresent(bool)`, `setExplore(bool)`, `setDirection('right'|'down')`, `setMinimap(bool)` y `destroy()`.
 
 ---
 
@@ -140,6 +141,7 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
 | | `graphTab` | `false` — solo secuencia: sin vista de grafo; las piezas son solo participantes y pulsarlas ilumina sus mensajes |
 | | `layout` | `{ "lanes": "strict" \| "flow", "frames": true \| false, "cycles": "dfs" \| "order", "backEdges": "route" }` — orden de carriles fijo o libre; marcos de fondo; cómo se rompen los ciclos (`dfs` u `order`: el motor recorre en profundidad desde lo escrito primero y solo vuelven atrás las aristas de retorno, como en dagre/Mermaid); `route`: ELK traza también las aristas que vuelven atrás (esquivan piezas) en vez de arcos |
 | | `collapsed` | ids que arrancan plegados aunque su nivel diga lo contrario |
+| | `minimap` | `false` — abre con el minimapa oculto (el botón «Minimapa» o la tecla `m` lo muestran) |
 | | `statuses` | estados propios `{ "<clave>": { "label", "color" } }` — ver §4.1 |
 | | `legend` | `{ "edges": [{ "label", "style", "color" }], "kinds": { "<kind>": "etiqueta" }, "delta": false }` — ver §4.1 |
 | | `icons` | iconos propios `{ "<kind>": "<path 16×16>" }` o `{ "path", "fill": true }` — ver §4.1 |
@@ -201,7 +203,8 @@ expone `ready`, `expandTo(n)`, `reveal(id)`, `select(id)`, `goStep(i)`, `showVie
   llevan el icono de cada tipo de enlace que hay en su detalle (GitHub, Jira, Notion, Claude…).
 - **Búsqueda** (tecla `/`), sin tildes; **trazado** de «de qué depende» / «qué depende de esto».
 - **Marcos** por carril con cabecera que queda fija al borde al acercarse; **↦/↧** cambia la orientación.
-- **Minimapa**, **leyenda**, «Solo cambios», zoom con rueda (o ⌘/Ctrl + rueda) y arrastre.
+- **Minimapa** (se oculta y se muestra con su botón o la tecla `m`; `minimap: false` lo abre oculto),
+  **leyenda**, «Solo cambios», zoom con rueda (o ⌘/Ctrl + rueda) y arrastre.
 - **Secuencias** por flujo con reproducción animada.
 - **Presentación**: pantalla completa, `← → espacio`, `Esc`. El recorrido también funciona en línea.
   **■ Detener** (o `Esc`) sale del recorrido y devuelve el diagrama al estado con el que se abrió.
