@@ -106,11 +106,13 @@
      entrada. Los errores de conversión de Mermaid llegan por `onError`. */
   function GraphX(p) {
     const ref = useRef(null);
-    const { spec, mermaid, lang, height } = p;
+    const { spec, mermaid, lang, height, fx } = p;
     const cb = useLatest({ onReady: p.onReady, onError: p.onError, onWarnings: p.onWarnings });
     /* un spec escrito en línea es un objeto nuevo en cada render: se compara por contenido para no
        volver a montar el motor si no ha cambiado */
     const specKey = useMemo(() => (spec == null ? null : JSON.stringify(spec)), [spec]);
+    /* `fx`: los efectos de graphx-fx (un preset, un objeto o false); se comparan por contenido */
+    const fxKey = useMemo(() => (fx == null ? null : JSON.stringify(fx)), [fx]);
     useEffect(() => {
       const { onReady, onError, onWarnings } = cb.current;
       const GX = getGX(), host = ref.current;
@@ -125,11 +127,11 @@
           if (r.warnings.length && onWarnings) onWarnings(r.warnings);
         }
         if (!s) return undefined;
-        inst = GX.mount(host, s, { lang, height });
+        inst = GX.mount(host, s, { lang, height, fx });
         if (onReady) onReady(inst);
       } catch (e) { if (onError) onError(e); else if (typeof console !== 'undefined') console.error(e); }
       return () => { if (inst) inst.destroy(); };
-    }, [specKey, mermaid, lang, height]);
+    }, [specKey, mermaid, lang, height, fxKey]);
     return h('div', { ref, className: 'gx-host' + (p.className ? ' ' + p.className : ''), style: p.style });
   }
 

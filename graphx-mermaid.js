@@ -272,14 +272,15 @@
   /* ---------- líneas: frontmatter, directivas, comentarios, accesibilidad ---------- */
   function prep(text) {
     let src = String(text == null ? '' : text).replace(/\r\n?/g, '\n').replace(/\t/g, '    ').replace(/^\uFEFF/, '');
-    const meta = { title: null, descr: null, config: '' };
+    const meta = { title: null, descr: null, config: '', init: [] };
     const fm = /^\s*---\n([\s\S]*?)\n---[ \t]*(\n|$)/.exec(src);
     if (fm) {
       meta.config = fm[1];
       const t = /^title:\s*(.+)$/m.exec(fm[1]); if (t) meta.title = clean(t[1]);
       src = fm[0].replace(/[^\n]/g, '') + src.slice(fm[0].length);
     }
-    src = src.replace(/%%\{[\s\S]*?\}%%/g, m => m.replace(/[^\n]/g, ''));
+    /* las directivas `%%{init: …}%%` no son líneas del diagrama: se guardan (tema, look) y se quitan */
+    src = src.replace(/%%\{[\s\S]*?\}%%/g, m => { meta.init.push(m.slice(3, -3)); return m.replace(/[^\n]/g, ''); });
     const lines = []; let inDescr = false, descr = [];
     src.split('\n').forEach((raw, i) => {
       let t = raw;
@@ -583,7 +584,8 @@
       if (block && /^space$/.test(nd.raw) && nd.label == null) { place(null, nd.gspan || 1); return null; }
       if (nd.meta && edgeById.has(nd.raw) && nd.label == null) {
         const e = edgeById.get(nd.raw);
-        if (/^(true|fast|slow)$/i.test(nd.meta.animate || nd.meta.animation || '')) e.animated = true;
+        const am = String(nd.meta.animate || nd.meta.animation || '');
+        if (/^(true|fast|slow)$/i.test(am)) { e.animated = true; if (/^(fast|slow)$/i.test(am)) e.speed = am.toLowerCase(); }
         return null;
       }
       const props = {};
@@ -1571,6 +1573,70 @@
     const first = P.lines[0];
     return { P, first, keyword: first ? first.t.split(/[\s:;]/)[0] : null };
   }
+  /* ---------- tema y look de Mermaid → tema y efectos de GraphX ---------- */
+  /* `%%{init: { "theme": "forest", "themeVariables": {…} }}%%` o, en el frontmatter, `config: theme / look /
+     themeVariables`. Los temas con nombre se traducen a tokens de GraphX (en claro y en oscuro); las
+     variables de `base`, a los tokens equivalentes; `look: handDrawn` enciende el trazo a mano. */
+  const HEX = /^(#[0-9a-f]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/+-]+\))$/i;
+  const MM_THEMES = {
+    forest: { light: { card: '#e8f5d0', 'card-line': '#13540c', accent: '#13540c', 'accent-soft': 'rgba(19,84,12,.12)', neu: '#3f7a3a', group: 'rgba(205,255,178,.45)', 'group-line': '#6eaa49', 'glyph-bg': '#d4ecb1' },
+      dark: { card: '#15261a', 'card-line': '#4f8f45', accent: '#7bc96f', 'accent-soft': 'rgba(123,201,111,.16)', neu: '#5f9a57', group: 'rgba(40,70,35,.4)', 'group-line': '#3f6f39', 'glyph-bg': '#1f3a22' } },
+    neutral: { light: { card: '#f5f5f5', 'card-line': '#9a9a9a', accent: '#4d4d4d', 'accent-soft': 'rgba(77,77,77,.1)', neu: '#7a7a7a', group: 'rgba(240,240,240,.6)', 'group-line': '#bdbdbd', 'glyph-bg': '#e6e6e6' },
+      dark: { card: '#1f1f1f', 'card-line': '#6b6b6b', accent: '#c9c9c9', 'accent-soft': 'rgba(201,201,201,.12)', neu: '#8a8a8a', group: 'rgba(40,40,40,.5)', 'group-line': '#555', 'glyph-bg': '#2b2b2b' } },
+    dark: (() => { const d = { bg: '#161b22', canvas: '#0d1117', ink: '#e6edf3', muted: '#9198a1', faint: '#6e7681', line: '#30363d', card: '#161b22', 'card-line': '#3d444d', 'glyph-bg': '#21262d', lane: 'rgba(33,38,45,.45)', 'lane-line': '#262c34', group: 'rgba(22,27,34,.72)', 'group-line': '#3d444d', accent: '#4493f8', 'accent-soft': 'rgba(68,147,248,.16)', neu: '#6e7681', 'band-a': '#11161d', 'band-b': '#151b23', 'band-head': '#161b22', frame: '#3d444d', 'band-div': '#262c34' }; return { light: d, dark: d }; })()
+  };
+  const VAR_TOKENS = { primaryColor: 'card', mainBkg: 'card', primaryBorderColor: 'card-line', nodeBorder: 'card-line', primaryTextColor: 'ink', textColor: 'ink', lineColor: 'neu', secondaryColor: 'glyph-bg', tertiaryColor: 'group', clusterBkg: 'group', clusterBorder: 'group-line', background: 'canvas' };
+  function parseLoose(txt) {
+    /* JSON a la manera de Mermaid: comillas simples, claves sin comillas, comas al final */
+    try {
+      return JSON.parse(String(txt).trim().replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_$][\w$-]*)\s*:/g, '$1"$2":').replace(/,\s*([}\]])/g, '$1'));
+    } catch (_) { return null; }
+  }
+  function lookOf(meta) {
+    let theme = null, look = null; const vars = {};
+    const fm = meta.config || '';
+    let m;
+    if ((m = /^\s*theme:\s*["']?([\w-]+)/m.exec(fm))) theme = m[1];
+    if ((m = /^\s*look:\s*["']?([\w-]+)/m.exec(fm))) look = m[1];
+    const tv = /^(\s*)themeVariables:\s*$/m.exec(fm);
+    if (tv) {
+      const rest = fm.slice(tv.index + tv[0].length).split('\n');
+      for (const line of rest) {
+        if (!line.trim()) continue;
+        const ind = line.length - line.replace(/^\s+/, '').length; if (ind <= tv[1].length) break;
+        const kv = /^\s*([\w-]+):\s*["']?([^"'#\n][^"'\n]*|#[0-9a-fA-F]{3,8})["']?\s*$/.exec(line); if (kv) vars[kv[1]] = kv[2].trim();
+      }
+    }
+    for (const d of meta.init || []) {
+      const body = String(d).replace(/^\s*(init|initialize|config)\s*:\s*/, '');
+      const o = parseLoose(body.trim().startsWith('{') ? body : '{' + body + '}');
+      if (!o) { if ((m = /theme['"]?\s*:\s*['"](\w+)/.exec(d))) theme = m[1]; continue; }
+      if (o.theme) theme = o.theme;
+      if (o.look) look = o.look;
+      Object.assign(vars, o.themeVariables || {});
+    }
+    const out = {};
+    const named = MM_THEMES[String(theme || '').toLowerCase()];
+    if (named) out.theme = { light: Object.assign({}, named.light), dark: Object.assign({}, named.dark) };
+    const own = {};
+    Object.keys(VAR_TOKENS).forEach(k => { if (typeof vars[k] === 'string' && HEX.test(vars[k].trim())) own[VAR_TOKENS[k]] = vars[k].trim(); });
+    if (Object.keys(own).length) {
+      /* sin color de texto propio, se elige el que se lee sobre el relleno de las piezas */
+      if (own.card && !own.ink && /^#[0-9a-f]{6}$/i.test(own.card)) {
+        const [r, g, b] = [1, 3, 5].map(i => parseInt(own.card.slice(i, i + 2), 16) / 255);
+        own.ink = .2126 * r + .7152 * g + .0722 * b > .55 ? '#1f2328' : '#f0f3f6';
+        own.muted = own.ink === '#1f2328' ? '#4a525c' : '#c2c9d1';
+      }
+      if (own['card-line'] && !own.accent) own.accent = own['card-line'];
+      out.theme = { light: Object.assign((out.theme && out.theme.light) || {}, own), dark: Object.assign((out.theme && out.theme.dark) || {}, own) };
+    }
+    if (look === 'handDrawn') out.fx = { sketch: true };
+    else if (look === 'neo') out.fx = { glow: true, gradient: true };
+    return out;
+  }
+  /* efectos que se encienden por defecto en lo convertido: en un flujo o en una máquina de estados,
+     «▶ Flujo» recorre el diagrama desde sus orígenes. `fromMermaid(t, { fx: false })` los quita todos. */
+  const FX_BY_TYPE = { flowchart: { play: true }, stateDiagram: { play: true } };
   function fromMermaid(text, opts) {
     opts = opts || {};
     const lang = opts.lang === 'en' ? 'en' : 'es';
@@ -1588,6 +1654,14 @@
     if (!b.nodes.size) throw new MermaidError(`${sub}: no hay ninguna pieza que dibujar`);
     const spec = b.finish(sub, P.meta, extra);
     if (opts.title) spec.title = opts.title;
+    const look = lookOf(P.meta);
+    if (look.theme) spec.theme = look.theme;
+    if (opts.fx === false || opts.fx === 'off') spec.fx = false;
+    else {
+      const fx = Object.assign({}, FX_BY_TYPE[type] || {}, look.fx || {});
+      if (typeof opts.fx === 'string') fx.preset = opts.fx; else if (opts.fx && typeof opts.fx === 'object') Object.assign(fx, opts.fx);
+      if (Object.keys(fx).length) spec.fx = fx;
+    }
     return { spec, type: sub, warnings: b.warnings };
   }
 

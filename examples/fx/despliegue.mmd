@@ -1,0 +1,15 @@
+---
+title: Despliegue continuo
+config:
+  theme: forest
+  look: handDrawn
+---
+flowchart LR
+  commit([Commit]) --> ci[Tests y build]
+  ci --> rev{¿Revisión aprobada?}
+  rev -->|sí| stg[Staging]
+  rev -->|no| commit
+  stg e1@==> prod[(Producción)]
+  e1@{ animation: fast }
+  stg -.-> obs[Observabilidad]
+  prod --> obs

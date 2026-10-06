@@ -678,6 +678,103 @@
   SHAPES.folder = folderShape(false);
   SHAPES['folder-open'] = folderShape(true);
 
+  /* ---------- gráficos: KPI, gauge y donut ---------- */
+  /* Piezas que son un dato: una cifra con su tendencia, un indicador sobre un rango o un reparto.
+     Lo que cambia con los datos lleva `data-m` (una clave estable) y las cifras `data-num`: con
+     datos en vivo (graphx-fx, `setData`) el motor anima de un dibujo al siguiente en vez de saltar. */
+  const r3 = v => Math.round(v * 1000) / 1000;
+  /* cifras compactas con la coma o el punto del idioma: 1234 → 1,2k · 0.456 → 0,46 */
+  function fmtNum(v, o) {
+    o = o || {};
+    if (typeof v !== 'number' || !isFinite(v)) return '—';
+    const a = Math.abs(v), dec = typeof o.dec === 'number' ? o.dec : null;
+    let s, suf = '';
+    if (dec == null && a >= 1e6) { s = (v / 1e6).toFixed(a >= 1e7 ? 0 : 1); suf = 'M'; }
+    else if (dec == null && a >= 1e4) { s = (v / 1e3).toFixed(0); suf = 'k'; }
+    else if (dec == null && a >= 1e3) { s = (v / 1e3).toFixed(1); suf = 'k'; }
+    else s = v.toFixed(dec != null ? dec : a >= 100 || Number.isInteger(v) ? 0 : a >= 10 ? 1 : 2);
+    if (dec == null && s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, '');
+    if (o.lang !== 'en') s = s.replace('.', ',');
+    return s + suf + (o.unit ? (/^[%°‰]/.test(o.unit) ? '' : ' ') + o.unit : '');
+  }
+  const nums = a => (Array.isArray(a) ? a.filter(v => typeof v === 'number' && isFinite(v)) : []);
+  const sparkPts = (vals, x0, x1, y0, y1) => {
+    const lo = Math.min(...vals), hi = Math.max(...vals), k = hi - lo || 1;
+    return vals.map((v, i) => [x0 + (x1 - x0) * i / (vals.length - 1), hi === lo ? (y0 + y1) / 2 : y1 - (y1 - y0) * (v - lo) / k]);
+  };
+  const sparkD = pts => 'M' + pts.map(p => `${r1(p[0])},${r1(p[1])}`).join('L');
+  /* la cifra lleva su valor y su formato: así se puede contar de un valor al siguiente */
+  const numText = (x, y, v, n, ctx, cls, anchor) => T(x, y, fmtNum(v, { unit: n.unit, dec: n.decimals, lang: ctx.lang }), cls, anchor,
+    { 'data-m': 'v', 'data-num': typeof v === 'number' ? v : '', 'data-unit': n.unit || '', 'data-dec': typeof n.decimals === 'number' ? n.decimals : '' });
+  /* una cifra con su variación (▲ 12 %) y, si trae `spark`, la serie debajo */
+  SHAPES.kpi = {
+    family: 'chart',
+    measure: n => ({ w: 212, h: nums(n.spark).length > 1 ? 122 : 90 }),
+    render(n, w, h, ctx) {
+      const sp = nums(n.spark), v = typeof n.value === 'number' ? n.value : (sp.length ? sp[sp.length - 1] : null);
+      const kids = [P(rectD(w, h, 12), 'gx-card'), E('glyph', { kind: n.kind || 'other', x: w - 38, y: 12, size: 24 }),
+        T(16, 28, fit(ctx, n.label, w - 62, 12, 600), 'gx-kpi-l', 'start'), numText(16, 64, v, n, ctx, 'gx-kpi-v', 'start')];
+      if (typeof n.change === 'number') {
+        const up = n.change > 0, tone = n.change === 0 ? '' : up === (n.good !== 'down') ? ' good' : ' bad';
+        kids.push(T(w - 14, 64, (up ? '▲ ' : n.change < 0 ? '▼ ' : '') + fmtNum(Math.abs(n.change), { unit: '%', dec: Math.abs(n.change) < 10 ? 1 : 0, lang: ctx.lang }), 'gx-kpi-c' + tone, 'end', { 'data-m': 'c' }));
+      }
+      if (n.subtitle) kids.push(T(16, 82, fit(ctx, n.subtitle, w - 32, 11, 400, true), 'gx-st', 'start'));
+      if (sp.length > 1) {
+        const pts = sparkPts(sp, 14, w - 14, h - 34, h - 12), d = sparkD(pts), last = pts[pts.length - 1];
+        kids.push(P(`${d}L${w - 14},${h - 6}L14,${h - 6}Z`, 'gx-sp-a', { 'data-m': 'sa' }), P(d, 'gx-sp-l', { 'data-m': 'sl' }),
+          E('circle', { class: 'gx-sp-d', cx: r1(last[0]), cy: r1(last[1]), r: 3.2, 'data-m': 'sd' }));
+      }
+      return { children: kids, chrome: sp.length > 1 ? { x: w - 44, y: 24 } : { x: w - 8, y: h - 10 } };
+    }
+  };
+  /* un indicador sobre un rango (`min`–`max`, por defecto 0–100); `thresholds: [aviso, crítico]` lo colorea
+     (`good: "high"` si lo bueno es lo alto) */
+  SHAPES.gauge = {
+    family: 'chart',
+    measure: () => ({ w: 188, h: 146 }),
+    render(n, w, h, ctx) {
+      const lo = typeof n.min === 'number' ? n.min : 0, hi = typeof n.max === 'number' ? n.max : 100;
+      const v = typeof n.value === 'number' ? n.value : lo, f = clamp((v - lo) / ((hi - lo) || 1), 0, 1);
+      const cx = w / 2, cy = 96, r = 58, arc = `M${cx - r},${cy}A${r},${r} 0 0 1 ${cx + r},${cy}`;
+      const th = nums(n.thresholds), hiGood = n.good === 'high';
+      const lvl = th.length === 2 ? (hiGood ? (v <= th[1] ? 'crit' : v <= th[0] ? 'warn' : 'ok') : (v >= th[1] ? 'crit' : v >= th[0] ? 'warn' : 'ok')) : '';
+      const kids = [P(rectD(w, h, 12), 'gx-card'), T(cx, 24, fit(ctx, n.label, w - 24, 12, 600), 'gx-kpi-l'),
+        P(arc, 'gx-g-tr', { pathLength: 1 }),
+        P(arc, 'gx-g-v' + (lvl ? ' l-' + lvl : ''), { pathLength: 1, 'data-m': 'ga', style: `stroke-dasharray:${r3(f)} 2` }),
+        E('g', { class: 'gx-g-n', transform: `rotate(${r1(-90 + 180 * f)},${cx},${cy})`, 'data-m': 'gn' }, [P(`M${cx - 3},${cy}L${cx},${cy - r + 15}L${cx + 3},${cy}Z`, 'gx-g-nd')]),
+        P(circleD(cx, cy, 5.5), 'gx-g-hub'),
+        T(cx - r, cy + 17, fmtNum(lo, { lang: ctx.lang }), 'gx-g-mm'), T(cx + r, cy + 17, fmtNum(hi, { lang: ctx.lang }), 'gx-g-mm'),
+        numText(cx, cy + 38, v, n, ctx, 'gx-kpi-v gx-g-val' + (lvl ? ' l-' + lvl : ''), 'middle')];
+      return { children: kids, chrome: { x: w - 8, y: h - 10 } };
+    }
+  };
+  /* un reparto: `parts: [{ label, value, color? }]`, el total en el centro y la leyenda al lado */
+  SHAPES.donut = {
+    family: 'chart',
+    measure(n) { const k = Math.min((Array.isArray(n.parts) ? n.parts.length : 0), 5); return { w: 248, h: Math.max(132, 58 + k * 19) }; },
+    render(n, w, h, ctx) {
+      let parts = (Array.isArray(n.parts) ? n.parts : []).filter(p => p && typeof p.value === 'number' && p.value > 0);
+      if (parts.length > 5) parts = parts.slice(0, 4).concat({ label: ctx.lang === 'en' ? 'Other' : 'Otros', value: parts.slice(4).reduce((a, p) => a + p.value, 0) });
+      const total = parts.reduce((a, p) => a + p.value, 0), cx = 66, cy = h / 2 + 12, r = 40;
+      const ring = `M${cx},${cy - r}A${r},${r} 0 1 1 ${cx},${cy + r}A${r},${r} 0 1 1 ${cx},${cy - r}`;
+      const kids = [P(rectD(w, h, 12), 'gx-card'), T(16, 26, fit(ctx, n.label, w - 32, 12, 600), 'gx-kpi-l', 'start'), P(ring, 'gx-dn-tr')];
+      let acc = 0;
+      const y0 = cy - (parts.length - 1) * 9.5;
+      parts.forEach((p, i) => {
+        const f = total ? p.value / total : 0, col = safeColor(p.color), y = y0 + i * 19;
+        kids.push(P(ring, 'gx-dn-s c' + (i % 8), { pathLength: 1, 'data-m': 'seg' + i, style: `stroke-dasharray:${r3(Math.max(f - .008, .001))} 2;stroke-dashoffset:${r3(-acc)}` + (col ? `;stroke:${col}` : '') }));
+        kids.push(P(circleD(128, y - 4, 4.5), 'gx-dn-dot c' + (i % 8), col ? { style: `fill:${col}` } : null),
+          T(139, y, fit(ctx, p.label, w - 196, 11.5, 500), 'gx-dn-lt', 'start'),
+          T(w - 14, y, fmtNum(f * 100, { unit: '%', dec: 0, lang: ctx.lang }), 'gx-dn-pc', 'end', { 'data-m': 'pc' + i }));
+        acc += f;
+      });
+      /* el total en el hueco; la unidad, debajo y pequeña (no cabe al lado) */
+      kids.push(T(cx, cy + (n.unit ? 2 : 6), fmtNum(total, { lang: ctx.lang }), 'gx-dn-t', 'middle', { 'data-m': 'v', 'data-num': total, 'data-unit': '', 'data-dec': '' }));
+      if (n.unit) kids.push(T(cx, cy + 16, fit(ctx, n.unit, 52, 9.5, 500, true), 'gx-dn-u'));
+      return { children: kids, chrome: { x: w - 8, y: h - 10 } };
+    }
+  };
+
   /* ---------- API ---------- */
   const names = Object.keys(SHAPES);
   function measure(n, ctx) { const sh = SHAPES[n.shape]; return sh ? sh.measure(n, ctx || {}) : null; }
@@ -753,5 +850,5 @@
     open: { d: 'M4,4 L19,10 L4,16', fill: 'line', w: 20 }
   };
 
-  return { has: n => !!SHAPES[n], names, measure, render, outlineOf, headOf, safeColor, hull, hit, markers: MARKERS, wrap, fit, estW, families: names.reduce((o, k) => (o[k] = SHAPES[k].family, o), {}) };
+  return { has: n => !!SHAPES[n], names, measure, render, outlineOf, headOf, safeColor, hull, hit, markers: MARKERS, wrap, fit, estW, fmt: fmtNum, sparkPts, sparkD, families: names.reduce((o, k) => (o[k] = SHAPES[k].family, o), {}) };
 });

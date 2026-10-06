@@ -25,6 +25,8 @@
   --gx-shadow: 0 1px 2px rgba(31, 35, 40, .06), 0 4px 14px rgba(31, 35, 40, .06);
   --gx-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --gx-note: #fff8c5; --gx-note-line: #e3c664;
+  /* paleta categórica: segmentos de un donut, colores automáticos por grupo (graphx-fx) */
+  --gx-p0: #0969da; --gx-p1: #0f7b6c; --gx-p2: #8250df; --gx-p3: #bc4c00; --gx-p4: #bf3989; --gx-p5: #1a7f37; --gx-p6: #9a6700; --gx-p7: #cf222e;
   position: relative; display: flex; flex-direction: column; gap: 10px;
   color: var(--gx-ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
   outline: none;
@@ -43,6 +45,7 @@
     --gx-del: #f85149; --gx-del-soft: rgba(248, 81, 73, .15); --gx-neu: #6e7681; --gx-warn: #db6d28;
     --gx-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 6px 18px rgba(0, 0, 0, .3);
     --gx-note: #2a2617; --gx-note-line: #7a6624;
+    --gx-p0: #4493f8; --gx-p1: #2fbfa8; --gx-p2: #a371f7; --gx-p3: #f0883e; --gx-p4: #f778ba; --gx-p5: #3fb950; --gx-p6: #d29922; --gx-p7: #f85149;
   }
 }
 :root[data-theme="dark"] .gx {
@@ -55,6 +58,7 @@
   --gx-del: #f85149; --gx-del-soft: rgba(248, 81, 73, .15); --gx-neu: #6e7681; --gx-warn: #db6d28;
   --gx-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 6px 18px rgba(0, 0, 0, .3);
   --gx-note: #2a2617; --gx-note-line: #7a6624;
+  --gx-p0: #4493f8; --gx-p1: #2fbfa8; --gx-p2: #a371f7; --gx-p3: #f0883e; --gx-p4: #f778ba; --gx-p5: #3fb950; --gx-p6: #d29922; --gx-p7: #f85149;
 }
 
 /* ---------- barra ---------- */
@@ -437,6 +441,8 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
   .gx-tour-h { gap: 8px; }
   .gx-tour-c { width: 100%; margin-left: 0; }
   .gx-tour-c .gx-btn { flex: 1; min-height: 46px; font-size: 16px; }
+  /* «◀» no necesita media fila: el botón de avanzar se queda con el sitio y no recorta su texto */
+  .gx-tour-c .gx-btn[data-t="prev"] { flex: 0 0 56px; }
   .gx-tour h3 { font-size: 15.5px; }
   .gx-tour-b { font-size: 14px; }
   .gx-dots { gap: 8px; }
@@ -844,3 +850,34 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
   .gx-node.det .gx-dfill, .gx-node.det .gx-dbar-a, .gx-node.det .gx-dbar-d, .gx-node.gx-ping { animation: none; }
   .gx-node.fam-tree > .gx-stack { transition: none; }
 }
+
+/* ---------- gráficos como piezas: KPI, gauge y donut ---------- */
+.gx-kpi-l { font-size: 12px; font-weight: 600; fill: var(--gx-muted); }
+.gx-kpi-v { font-size: 27px; font-weight: 700; fill: var(--gx-ink); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.gx-g-val { font-size: 22px; }
+.gx-kpi-c { font-size: 12px; font-weight: 700; fill: var(--gx-muted); font-variant-numeric: tabular-nums; }
+.gx-kpi-c.good { fill: var(--gx-add); } .gx-kpi-c.bad { fill: var(--gx-del); }
+.gx-sp-l { fill: none; stroke: var(--gx-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.gx-sp-a { fill: var(--gx-accent); fill-opacity: .13; stroke: none; }
+.gx-sp-d { fill: var(--gx-accent); stroke: var(--gx-card); stroke-width: 2; }
+.gx-node.has-c .gx-sp-l { stroke: var(--gx-c); } .gx-node.has-c .gx-sp-a, .gx-node.has-c .gx-sp-d { fill: var(--gx-c); }
+.gx-g-tr { fill: none; stroke: var(--gx-glyph-bg); stroke-width: 12; stroke-linecap: round; }
+.gx-g-v { fill: none; stroke: var(--gx-accent); stroke-width: 12; stroke-linecap: round; transition: stroke-dasharray .8s cubic-bezier(.2, .8, .2, 1), stroke .4s; }
+.gx-node.has-c .gx-g-v { stroke: var(--gx-c); }
+/* el umbral manda sobre el color de la pieza: es lo que el indicador quiere decir */
+.gx-node .gx-g-v.l-ok { stroke: var(--gx-add); } .gx-node .gx-g-v.l-warn { stroke: var(--gx-mod); } .gx-node .gx-g-v.l-crit { stroke: var(--gx-del); }
+.gx-g-val.l-warn { fill: var(--gx-mod); } .gx-g-val.l-crit { fill: var(--gx-del); }
+.gx-g-nd { fill: var(--gx-ink); }
+.gx-g-hub { fill: var(--gx-ink); stroke: var(--gx-card); stroke-width: 2.5; }
+.gx-g-mm { font: 10px var(--gx-mono); fill: var(--gx-faint); }
+.gx-dn-tr { fill: none; stroke: var(--gx-glyph-bg); stroke-width: 15; }
+.gx-dn-s { fill: none; stroke-width: 15; transition: stroke-dasharray .8s cubic-bezier(.2, .8, .2, 1), stroke-dashoffset .8s cubic-bezier(.2, .8, .2, 1); }
+.gx-dn-t { font-size: 17px; font-weight: 700; fill: var(--gx-ink); font-variant-numeric: tabular-nums; }
+.gx-dn-lt { font-size: 11.5px; font-weight: 500; fill: var(--gx-ink); }
+.gx-dn-u { font: 9.5px var(--gx-mono); fill: var(--gx-muted); }
+.gx-dn-pc { font: 600 11px var(--gx-mono); fill: var(--gx-muted); }
+.gx-dn-s.c0 { stroke: var(--gx-p0); } .gx-dn-s.c1 { stroke: var(--gx-p1); } .gx-dn-s.c2 { stroke: var(--gx-p2); } .gx-dn-s.c3 { stroke: var(--gx-p3); }
+.gx-dn-s.c4 { stroke: var(--gx-p4); } .gx-dn-s.c5 { stroke: var(--gx-p5); } .gx-dn-s.c6 { stroke: var(--gx-p6); } .gx-dn-s.c7 { stroke: var(--gx-p7); }
+.gx-dn-dot.c0 { fill: var(--gx-p0); } .gx-dn-dot.c1 { fill: var(--gx-p1); } .gx-dn-dot.c2 { fill: var(--gx-p2); } .gx-dn-dot.c3 { fill: var(--gx-p3); }
+.gx-dn-dot.c4 { fill: var(--gx-p4); } .gx-dn-dot.c5 { fill: var(--gx-p5); } .gx-dn-dot.c6 { fill: var(--gx-p6); } .gx-dn-dot.c7 { fill: var(--gx-p7); }
+@media (prefers-reduced-motion: reduce) { .gx-g-v, .gx-dn-s { transition: none; } }
