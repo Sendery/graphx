@@ -40,6 +40,7 @@ async function mount(spec, attrs) {
     w.matchMedia = q => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} });
     w.HTMLCanvasElement.prototype.getContext = () => null;
     w.Element.prototype.setPointerCapture = function () {};
+    if (!w.PointerEvent) w.PointerEvent = class PointerEvent extends w.MouseEvent { constructor(t, o = {}) { super(t, o); this.pointerId = o.pointerId || 1; this.pointerType = o.pointerType || 'mouse'; } };
     w.console.error = (...a) => { process.stderr.write('[page] ' + a.join(' ') + '\n'); };
   } });
   const w = dom.window; await new Promise(r => w.addEventListener('load', r));
@@ -153,6 +154,116 @@ console.log('— Mermaid —');
   const sk = await mount(G.fromMermaid('---\nconfig:\n  look: handDrawn\n---\nflowchart LR\n  A --> B').spec);
   ok(!!sk.host.querySelector('filter feDisplacementMap') && sk.host.classList.contains('gx-fx-sketch'), 'look: handDrawn dibuja con el filtro de trazo a mano');
   sk.gx.destroy();
+}
+
+
+/* 5 · bloques ricos y tablas, sin motor */
+console.log('— bloques y tablas —');
+{
+  const html = FX.renderBlocks([
+    { type: 'text', text: '**negrita** <script>alert(1)</script> [web](https://example.com) [mal](javascript:alert(1))' },
+    { type: 'callout', tone: 'warn', title: 'Aviso', text: 'texto' }, { type: 'code', lang: 'js', code: 'const x = "a"; // nota' },
+    { type: 'table', columns: ['a', 'n'], rows: [['x', 1], ['y', { v: 2, tone: 'crit' }]] }, { type: 'chart', kind: 'bar', labels: ['a', 'b'], series: [{ label: 's', values: [1, 2] }] },
+    { type: 'chart', kind: 'line', series: [{ values: [1, 3, 2] }] }, { type: 'bars', items: [{ label: 'a', value: 3 }] }, { type: 'checklist', items: [{ text: 'a', done: true }, { text: 'b' }] },
+    { type: 'stats', items: [{ label: 'p95', value: 1200, change: 12.345 }] }, { type: 'heatstrip', values: [1, 2, 3] }, { type: 'steps', items: [{ label: 'a', state: 'done' }] },
+    { type: 'image', src: 'javascript:alert(1)' }, { type: 'nada' }
+  ], { lang: 'es' });
+  ok(/<b>negrita<\/b>/.test(html) && !/<script>/.test(html) && /&lt;script&gt;/.test(html), 'el texto admite formato y escapa el HTML');
+  ok(/href="https:\/\/example.com"/.test(html) && !/href="javascript/.test(html), 'solo enlaces http(s)');
+  ok(/gx-bk-call t-warn/.test(html) && /<span class="k">const<\/span>/.test(html) && /<span class="s">&quot;a&quot;<\/span>/.test(html) && /<span class="c">\/\/ nota<\/span>/.test(html), 'aviso con su tono y código resaltado');
+  ok(/class="num t-crit"/.test(html) && (html.match(/class="bar"/g) || []).length === 2 && /class="ln gx-bk-draw"/.test(html), 'tabla con números y tono, barras y líneas');
+  ok(/1\/2|1\/<\/span>|<span>1\/2<\/span>/.test(html) && /▲ 12%/.test(html) && /1,2k/.test(html), 'checklist con su avance y cifras con su variación');
+  ok(!/<img/.test(html) && !/nada/.test(html), 'una imagen con un esquema no permitido o un tipo desconocido no se pinta');
+  const tsv = FX.parseTable('time\ta.heat\tb\n08:00\t1,5\t2\n09:00\t3\t4');
+  ok(tsv.columns.length === 3 && tsv.rows[0]['a.heat'] === 1.5 && tsv.rows[1].b === 4, 'TSV: tabulador y coma decimal');
+  const csv = FX.parseTable('time,label,value\n1,"hola, mundo",2.5');
+  ok(csv.rows[0].label === 'hola, mundo' && csv.rows[0].value === 2.5, 'CSV con comillas');
+}
+
+/* 6 · software: equipos, impacto, bloques, línea de tiempo */
+console.log('— software: equipos, impacto, bloques y línea de tiempo —');
+{
+  const sw = JSON.parse(R('examples/fx/software.json'));
+  const { w, host, gx, q } = await mount(sw);
+  const node = id => host.querySelector(`.gx-node[data-id="${id}"]`);
+  ok(q('.gx-ob').length >= 10 && node('pagos').querySelector('.gx-ob text').textContent === 'PG' && node('gateway').querySelector('.gx-ob text').textContent === 'PL', 'las iniciales del equipo en cada tarjeta (también heredado del carril)');
+  host.querySelector('.gx-fx-own').click(); await wait(50);
+  const pop = host.querySelector('.gx-own-pop');
+  ok(pop.classList.contains('on') && pop.querySelectorAll('.gx-own-r').length === 6, 'Equipos abre la lista con los cinco equipos y «Sin equipo»');
+  pop.querySelector('[data-o="pagos"]').click(); await wait(50);
+  const world = host.querySelector('.gx-world');
+  ok(world.classList.contains('gx-ownf') && node('pagos').classList.contains('gx-own-on') && node('antifraude').classList.contains('gx-own-on') && !node('checkout').classList.contains('gx-own-on'), 'filtrar por un equipo deja a la vista solo lo suyo');
+  ok(host.querySelector('.gx-edge[data-id="v:checkout>pagos"]').classList.contains('gx-own-half'), 'las dependencias con otros equipos quedan a media luz');
+  pop.querySelector('[data-c]').click(); await wait(30);
+  ok(world.classList.contains('gx-ownc'), 'y se puede colorear por equipo');
+  pop.querySelector('[data-x]').click(); await wait(30);
+  ok(!world.classList.contains('gx-ownf') && !world.classList.contains('gx-ownc'), 'Limpiar lo quita todo');
+  /* impacto */
+  gx.select('antifraude'); await wait(60);
+  host.querySelector('.gx-panel [data-act="blast"]').click(); await wait(120);
+  const d = id => [0, 1, 2, 3].find(k => node(id).classList.contains('gx-bl-d' + k));
+  ok(world.classList.contains('gx-blasting') && d('antifraude') === 0 && d('pagos') === 1 && d('checkout') === 2 && d('kafka') === 2 && d('notif') === 3 && d('gateway') === 3, 'impacto: el fallo sube por las llamadas y baja por los eventos, salto a salto');
+  ok(d('postgres') == null && d('stock') == null, 'lo que no depende del origen no se toca');
+  ok(q('.gx-ring').length === 4 && /1 salto · 1/.test(host.querySelector('.gx-blastl').textContent), 'un anillo por salto, con su recuento');
+  ok(!!host.querySelector('.gx-panel .gx-bk-blast') && /Equipo Checkout/.test(host.querySelector('.gx-bk-blast').textContent), 'el panel resume las piezas, los saltos y los equipos afectados');
+  gx.select('postgres'); await wait(60);
+  ok(!world.classList.contains('gx-blasting') && !q('.gx-ring').length, 'seleccionar otra pieza quita el impacto');
+  /* bloques */
+  const P = () => host.querySelector('.gx-panel');
+  ok(!!P().querySelector('.gx-bk-shape .sh-gauge') && !!P().querySelector('.gx-bk-heat .cells i') && !!P().querySelector('.gx-bk-own'), 'PostgreSQL: gauge, tira de actividad y su equipo en el panel');
+  gx.select('pagos'); await wait(60);
+  ok(['.gx-bk-call.t-warn', '.gx-bk-stats', 'svg.gx-bk-chart', '.gx-bk-table', '.gx-bk-code', '.gx-bk-check', '.gx-bk-tl'].every(sel => P().querySelector(sel)), 'Pagos: aviso, cifras, gráfico, tabla, código, runbook y cambios');
+  ok(!!P().querySelector('svg.gx-ego') && P().querySelectorAll('.gx-ego-c').length === 4, 'sus vecinos, en el mini-grafo');
+  gx.select('checkout'); await wait(60);
+  ok(!!P().querySelector('.gx-bk-steps li.s-active') && !!P().querySelector('.gx-bk-bars') && !!P().querySelector('.gx-bk-shape .sh-donut'), 'Checkout: pasos de la saga, ranking de endpoints y donut');
+  /* línea de tiempo */
+  const tl = gx.timeline;
+  ok(!!host.querySelector('.gx-tml') && tl.length === 24 && tl.index === 23, 'línea de tiempo de 24 filas, abierta en la última');
+  const rows = FX.parseTable(sw.timeline.data).rows;
+  ok(node('antifraude').querySelector('.gx-hb text').textContent === Math.round(rows[23]['antifraude.heat']) + ' ms', 'el diagrama nace con los datos de esa fila');
+  ok(q('.gx-tml-row').length === 8 && q('.gx-tml-ev').length === 3, 'una tira de calor por servicio y los eventos marcados');
+  tl.seek(12); await wait(300);
+  tl.seek('13:00'); await wait(900);
+  const hot = parseFloat(node('antifraude').querySelector('.gx-hb text').textContent);
+  ok(tl.index === 13 && hot > 600, `ir a las 13:00 aplica esa fila (Antifraude a ${hot} ms)`);
+  ok(host.querySelector('.gx-tml-toast').classList.contains('on') && /700 ms/.test(host.querySelector('.gx-tml-toast').textContent), 'cruzar un evento lo anuncia');
+  ok(host.querySelector('.sh-kpi .gx-kpi-v').getAttribute('data-num') === String(rows[13]['k-pedidos.value']), 'el KPI toma su valor de la tabla');
+  host.querySelector('.gx-tml-play').click(); await wait(2600);
+  ok(tl.index > 13, `reproducir avanza fila a fila (va por la ${tl.index + 1})`);
+  tl.pause();
+  void w;
+  gx.destroy();
+}
+
+/* 7 · formas de Mermaid con datos */
+console.log('— formas de Mermaid con datos —');
+{
+  const { w } = await mount({ nodes: [{ id: 'x', label: 'x' }] });
+  const r = w.GraphX.fromMermaid(R('examples/fx/arquitectura.mmd'));
+  const n = id => r.spec.nodes.find(x => x.id === id);
+  ok(n('buscador').heat === 85 && n('buscador').spark.length === 8 && n('buscador').owner === 'busqueda' && r.spec.edges.find(e => e.id === 'e2').rate === 900 && r.spec.edges.find(e => e.id === 'e2').speed === 'fast', '@{ heat, spark, owner } y e2@{ rate, speed } llegan a GraphX');
+  ok(r.spec.owners && r.spec.owners.busqueda && r.spec.fx.particles === true && r.spec.fx.play === true && n('indice').blocks.length === 2, '%% @gx en la raíz (equipos, efectos) y en una pieza (bloques)');
+  const m = await mount(r.spec);
+  ok(m.q('.gx-att').length >= 3 && !!m.host.querySelector('.gx-node[data-id="indice"] .gx-att-f'), 'las formas llevan su serie y su progreso en una franja');
+  const rr = m.gx.state.rects.get('indice');
+  ok(rr.h > 70 && !!m.host.querySelector('.gx-node[data-id="indice"] .gx-ob'), 'la franja tiene su sitio en el layout y el equipo su marca');
+  m.gx.destroy();
+}
+
+/* 8 · minimapa plegable */
+console.log('— minimapa plegable —');
+{
+  const { w, host, gx } = await mount(Object.assign({}, viva, { minimap: false }));
+  const mini = host.querySelector('.gx-mini');
+  ok(host.classList.contains('gx-nomini') && !!mini.querySelector('.gx-mini-tab') && !host.querySelectorAll('.gx-mini-n').length, 'plegado: una pestaña en el borde, sin dibujar');
+  mini.dispatchEvent(new w.PointerEvent('pointerenter', { pointerType: 'mouse' })); await wait(30);
+  ok(mini.classList.contains('peek') && host.querySelectorAll('.gx-mini-n').length > 0, 'al pasar se despliega y se dibuja');
+  mini.querySelector('.gx-mini-pin').click(); await wait(30);
+  ok(!host.classList.contains('gx-nomini') && gx.state.minimap && mini.querySelector('.gx-mini-pin').classList.contains('on'), 'la chincheta lo deja fijo');
+  mini.querySelector('.gx-mini-pin').click(); await wait(30);
+  mini.dispatchEvent(new w.PointerEvent('pointerleave', { pointerType: 'mouse' }));
+  ok(host.classList.contains('gx-nomini') && !mini.classList.contains('peek'), 'y la chincheta otra vez lo devuelve al borde');
+  gx.destroy();
 }
 
 console.log('\n' + (fail.length ? `FALLOS (${fail.length}):\n - ` + fail.join('\n - ') : '✅ Sin fallos'));

@@ -1,6 +1,6 @@
 {
   "name": "graphx",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": true,
   "description": "Motor de diagramas navegables para artifacts: un JSON → layout ELK jerárquico, niveles plegables, tooltips, panel, secuencias y recorrido guiado.",
   "type": "module",

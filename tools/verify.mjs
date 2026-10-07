@@ -77,7 +77,8 @@ ok(/\+\d+/.test(panel.querySelector('.gx-files').textContent), 'con las stats +N
 ok(!!panel.querySelector('.gx-files a[href*="pull/103/files#diff-"]'), 'y el enlace al diff de la PR');
 ok(/Salidas/.test(panel.textContent) && /Entradas/.test(panel.textContent), 'y sus conexiones de entrada y salida');
 ok(panel.querySelectorAll('.gx-stepn').length > 0 && !/Pasos que lo explican/.test(panel.querySelector('.gx-pbody').textContent), 'los pasos que lo nombran van como números, sin el título grande');
-ok(panel.querySelectorAll('details.gx-fold').length === 2 && [...panel.querySelectorAll('details.gx-fold')].every(d => !d.open), 'entradas y salidas plegables, plegadas por defecto');
+ok(!!panel.querySelector('svg.gx-ego .gx-ego-me') && panel.querySelectorAll('.gx-ego-c[data-go]').length >= 2, 'entradas y salidas como mini-grafo de vecinos, cada una navegable');
+ok(panel.querySelectorAll('details.gx-fold').length === 1 && !panel.querySelector('details.gx-fold').open, 'la lista con las etiquetas, plegada en una sola línea');
 const cssTxt = [...d.querySelectorAll('style')].map(x => x.textContent).join('');
 ok(!!panel.querySelector('.gx-pact') && /\.gx-pact\s*\{[^}]*flex-wrap:\s*nowrap/.test(cssTxt), 'acciones del panel en una sola línea');
 

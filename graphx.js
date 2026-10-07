@@ -21,6 +21,7 @@
     es: {
       graph: 'Grafo', depth: 'Profundidad', expandAll: 'Expandir todo', collapseAll: 'Plegar todo',
       search: 'Buscar pieza…', onlyChanges: 'Solo cambios', legend: 'Leyenda', minimap: 'Minimapa', fit: 'Ajustar', present: 'Presentar',
+      miniPin: 'Dejar el minimapa fijo', miniUnpin: 'Plegar el minimapa al borde', egoList: 'Ver la lista', inputs: 'entradas', outputs: 'salidas',
       exitPresent: 'Salir', tour: 'Recorrido guiado', step: 'Paso', of: 'de', prev: 'Anterior', next: 'Siguiente',
       close: 'Cerrar', expand: 'Expandir', collapse: 'Plegar', center: 'Centrar', upstream: 'De qué depende',
       downstream: 'Qué depende de esto', clearTrace: 'Quitar trazado', outgoing: 'Salidas', incoming: 'Entradas',
@@ -45,6 +46,7 @@
     en: {
       graph: 'Graph', depth: 'Depth', expandAll: 'Expand all', collapseAll: 'Collapse all',
       search: 'Search…', onlyChanges: 'Changes only', legend: 'Legend', minimap: 'Minimap', fit: 'Fit', present: 'Present',
+      miniPin: 'Pin the minimap', miniUnpin: 'Fold the minimap to the edge', egoList: 'Show the list', inputs: 'inputs', outputs: 'outputs',
       exitPresent: 'Exit', tour: 'Guided tour', step: 'Step', of: 'of', prev: 'Previous', next: 'Next',
       close: 'Close', expand: 'Expand', collapse: 'Collapse', center: 'Center', upstream: 'What it depends on',
       downstream: 'What depends on it', clearTrace: 'Clear trace', outgoing: 'Outgoing', incoming: 'Incoming',
@@ -90,6 +92,23 @@
     file: 'M4 2h5l3 3v9H4zM9 2v3h3',
     folder: 'M2 4.5a1 1 0 0 1 1-1h3.2l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1zM2 7h12',
     other: 'M8 3a5 5 0 1 0 0 10A5 5 0 0 0 8 3z',
+    /* tipos habituales en un mapa de software (1.9) */
+    user: 'M8 2.5a2.75 2.75 0 1 0 0 5.5 2.75 2.75 0 0 0 0-5.5zM3 13.5c.6-2.6 2.6-4 5-4s4.4 1.4 5 4',
+    mobile: 'M5 1.5h6a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1zM7 12.2h2',
+    cloud: 'M4.6 12.5a3 3 0 0 1-.4-6 4 4 0 0 1 7.6-.9 3.2 3.2 0 0 1 .6 6.9z',
+    lock: 'M4 7.5h8v6H4zM5.5 7.5V5.5a2.5 2.5 0 0 1 5 0v2M8 10v1.5',
+    key: 'M5 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM7.2 8.2l6.3 6.3M11 12l1.5-1.5M12.8 13.8L14 12.6',
+    shield: 'M8 1.8l5 1.9v4c0 3.1-2.1 5.4-5 6.5-2.9-1.1-5-3.4-5-6.5v-4zM5.8 8l1.6 1.6 3.1-3.1',
+    card: 'M2 4h12v8H2zM2 6.5h12M4 10h3',
+    cart: 'M1.5 2.5h2l1.6 7.5h7l1.4-5.5H4.3M6 13a.8.8 0 1 0 0 .01M11.5 13a.8.8 0 1 0 0 .01',
+    search: 'M7 2.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM10.3 10.3L14 14',
+    mail: 'M2 3.5h12v9H2zM2 4l6 5 6-5',
+    bell: 'M4 11V7.5a4 4 0 0 1 8 0V11l1 1.5H3zM6.5 14h3',
+    cpu: 'M4.5 4.5h7v7h-7zM6.5 6.5h3v3h-3zM6 2v2.5M10 2v2.5M6 11.5V14M10 11.5V14M2 6h2.5M2 10h2.5M11.5 6H14M11.5 10H14',
+    bug: 'M5.5 6a2.5 2.5 0 0 1 5 0v4.5a2.5 2.5 0 0 1-5 0zM5.5 8.5h-3M13.5 8.5h-3M3 5l2.5 1.5M13 5l-2.5 1.5M3 12.5l2.5-1.5M13 12.5l-2.5-1.5M6.5 3.6L5.5 2M9.5 3.6l1-1.6',
+    branch: 'M5 4v8M5 13.5a1.5 1.5 0 1 0 0-.01M5 2.5a1.5 1.5 0 1 0 0 .01M11 5.5a1.5 1.5 0 1 0 0-.01M11 7c0 2.6-6 2.2-6 4.5',
+    chart: 'M2.5 13.5h11M4 11V8.5M7 11V5.5M10 11V7.5M13 11V3.5',
+    gauge: 'M2.5 11a5.5 5.5 0 1 1 11 0M8 11l2.6-3.4M8 11a.6.6 0 1 0 0 .01',
     link: 'M6.5 9.5l3-3M7 4.5l1-1a2.5 2.5 0 0 1 3.5 3.5l-1 1M9 11.5l-1 1A2.5 2.5 0 0 1 4.5 9l1-1',
     jira: 'M8 2l6 6-6 6-6-6zM8 5.5L10.5 8 8 10.5 5.5 8z',
     pr: 'M4.5 3.5v9M4.5 3.5a1.5 1.5 0 1 0 0-.01M11.5 12.5a1.5 1.5 0 1 0 0 .01M11.5 11V6.5c0-1-.5-1.5-1.5-1.5H7.5M9 3.5L7.5 5 9 6.5',
@@ -381,6 +400,10 @@
     const panel = h('aside', 'gx-panel', null, stage);
     const mini = h('div', 'gx-mini', null, stage);
     const miniSvg = s('svg', { class: 'gx-mini-svg' }, mini);
+    /* plegado, el minimapa es una pestaña en el borde: al pasar se despliega y la chincheta lo deja fijo */
+    const miniTab = h('div', 'gx-mini-tab', '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4l4-1.5 4 1.5 4-1.5v9.5l-4 1.5-4-1.5-4 1.5zM6 2.5v9.5M10 4v9.5"/></svg>', mini);
+    const miniPin = h('button', 'gx-mini-pin', '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5l4 4-2 1-2.5 2.5.5 2.5-1 1-3-3-3.5 3.5M7.5 7.5l-3-3 1-1 2.5.5L10.5 1.5"/></svg>', mini);
+    miniPin.type = 'button';
     const hint = h('div', 'gx-hint', esc(T.zoomHint), stage);
     const busy = h('div', 'gx-busy', esc(T.layouting), stage);
     const progress = h('div', 'gx-progress', '<i></i>', stage);
@@ -575,7 +598,9 @@
       const key = sigOf(n);
       if (n._card && n._card.key === key) return n._card;
       const lay = SHP.measure(shapeNode(n), shapeCtx);
-      return (n._card = { w: lay.w, h: lay.h, lines: [n.label], lay, dir: S.dir, key });
+      /* los extras de graphx-fx (sparkline, barra de progreso) van en una franja debajo de la forma */
+      const xh = FX ? FX.shapeExtra(n, lay) : 0;
+      return (n._card = { w: lay.w, h: lay.h + xh, xh, lines: [n.label], lay, dir: S.dir, key });
     }
 
     /* --- layout con ELK --- */
@@ -599,7 +624,8 @@
         const n = M.get(id), r = rects.get(id);
         if (!r) return;
         const open = exp.has(id) && n.children.some(c => vis.has(c));
-        const hl = (!open && hasShape(n) && SHP.hull(n, r.w, r.h)) || { poly: [[0, 0], [r.w, 0], [r.w, r.h], [0, r.h]] };
+        const xh = (n._card && n._card.xh) || 0;
+        const hl = (!open && hasShape(n) && SHP.hull(n, r.w, r.h - xh)) || { poly: [[0, 0], [r.w, 0], [r.w, r.h - xh], [0, r.h - xh]] };
         const q = SHP.hit(hl, { x: pts[j].x - r.x, y: pts[j].y - r.y }, { x: pts[i].x - r.x, y: pts[i].y - r.y });
         if (q) pts[i] = { x: q.x + r.x, y: q.y + r.y };
       };
@@ -755,9 +781,9 @@
     /* Una pieza con forma se construye una vez, con su tamaño final; al animar (nacer de su
        contenedor, plegarse) se escala el grupo entero en vez de rehacer el dibujo en cada fotograma. */
     function makeShapeLeaf(n, size) {
-      const cl = shapeLayout(n), W = size ? size.w : cl.w, H = size ? size.h : cl.h, sh = effShape(n);
+      const cl = shapeLayout(n), W = size ? size.w : cl.w, H = size ? size.h : cl.h, sh = effShape(n), xh = cl.xh || 0;
       const open = FLAT && n.children.length > 0 && S.expanded.has(n.id);
-      const tree = SHP.render(shapeNode(n), W, H, shapeCtx, cl.lay);
+      const tree = SHP.render(shapeNode(n), W, H - xh, shapeCtx, cl.lay);
       const g = s('g', { class: `gx-node gx-leaf gx-shape fam-${tree.family} sh-${sh} d-${n.delta}${n._open ? ' det' : ''}`, 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label}${n.delta !== 'unchanged' ? ' — ' + (T.delta[n.delta] || '') : ''}`, 'aria-expanded': n.children.length && FLAT ? String(open) : null });
       paint(g, n.cvar || (n.laneId && !n.isLane && M.get(n.laneId).cvar && spec.layout && spec.layout.inheritLaneColor ? M.get(n.laneId).cvar : null));
       if (n.status) g.classList.add('st-' + String(n.status).replace(/[^\w-]/g, ''));
@@ -798,7 +824,7 @@
       }
       g._parts = parts; g._kind = 'leaf'; g._shape = true; g._sz = { w: W, h: H }; g._side = n.labelSide;
       g._sig = sigOf(n); g._sh = sh; g._head = cl.lay ? SHP.headOf(n, cl.lay) : H;
-      if (FX) FX.leaf(g, n, null, { w: W, h: H });
+      if (FX) FX.leaf(g, n, null, { w: W, h: H, xh });
       return g;
     }
     function makeLeaf(n, size) {
@@ -1745,10 +1771,31 @@
       const inside = new Set([id, ...descendantsOf(id)]);
       const out = [], inn = [];
       for (const e of G.edges) { const a = inside.has(e.from), b = inside.has(e.to); if (a && !b) out.push(e); else if (b && !a) inn.push(e); }
+      if (!out.length && !inn.length) return '';
       const li = (e, other) => `<li><button type="button" class="gx-link" data-go="${esc(other)}">${iconHTML(M.get(other).kind)}${esc(M.get(other).label)}</button>${e.label ? `<span>${esc(e.label)}</span>` : ''}${e.delta !== 'unchanged' ? `<span class="gx-pill d-${e.delta}">${esc(T.delta[e.delta])}</span>` : ''}</li>`;
-      /* plegadas por defecto: con muchas conexiones empujaban el resto del panel fuera de la vista */
-      const fold = (t, list, f) => `<details class="gx-fold"><summary>${esc(t)} <b>${list.length}</b></summary><ul class="gx-conn">${list.map(f).join('')}</ul></details>`;
-      return (out.length ? fold(T.outgoing, out, e => li(e, e.to)) : '') + (inn.length ? fold(T.incoming, inn, e => li(e, e.from)) : '');
+      /* La vecindad de un vistazo: entradas a la izquierda, la pieza en medio y salidas a la derecha (cinco por
+         lado como mucho; el resto, «+N»). La lista con las etiquetas queda plegada debajo, una sola línea. */
+      const group = (list, end) => { const m = new Map(); list.forEach(e => { const k = e[end]; if (!m.has(k)) m.set(k, []); m.get(k).push(e); }); return [...m.entries()]; };
+      const L = group(inn, 'from'), R = group(out, 'to'), MAX = 5;
+      const rows = Math.max(Math.min(L.length, MAX + 1), Math.min(R.length, MAX + 1), 2), RH = 25, H = rows * RH + 22, W = 320, cy = (H - 16) / 2;
+      const col = (list, left) => {
+        const shown = list.length > MAX + 1 ? list.slice(0, MAX) : list, more = list.length - shown.length, n = shown.length + (more ? 1 : 0), y0 = cy - (n * RH) / 2 + 3;
+        const x = left ? 0 : W - 116;
+        const chips = shown.map(([oid, es], i) => {
+          const o = M.get(oid), y = y0 + i * RH, tip = es.map(e => e.label || e.kind).filter(Boolean).join(' · ');
+          const dashed = es.every(e => DASHED_KINDS[e.kind]), d = left ? `M${x + 116},${y + 10} C${x + 140},${y + 10} ${W / 2 - 40},${cy} ${W / 2 - 27},${cy}` : `M${W / 2 + 27},${cy} C${W / 2 + 40},${cy} ${x - 24},${y + 10} ${x},${y + 10}`;
+          return `<path class="gx-ego-e${dashed ? ' dashed' : ''}${es.some(e => e.delta !== 'unchanged') ? ' d-' + es[0].delta : ''}" d="${d}"/>`
+            + `<g class="gx-ego-c" data-go="${esc(oid)}" role="button" tabindex="0" transform="translate(${x},${y})"><title>${esc(o.label)}${tip ? ' — ' + esc(tip) : ''}</title><rect width="116" height="20" rx="6"/>`
+            + `<path class="gx-ego-i" transform="translate(5,3) scale(.84)" d="${IC[o.kind] || IC.other}"/><text x="24" y="14">${esc(fitText(o.label, 86, 11.5, 500))}</text>${es.length > 1 ? `<text class="gx-ego-n" x="110" y="14">×${es.length}</text>` : ''}</g>`;
+        }).join('');
+        return chips + (more ? `<text class="gx-ego-more" x="${left ? x + 58 : x + 58}" y="${y0 + shown.length * RH + 14}">+${more}</text>` : '');
+      };
+      const me = M.get(id);
+      const svgE = `<svg class="gx-ego" viewBox="0 0 ${W} ${H}" role="group" aria-label="${esc(T.connections)}">${col(L, true)}${col(R, false)}`
+        + `<g class="gx-ego-me" transform="translate(${W / 2 - 26},${cy - 22})"><rect width="52" height="44" rx="11"/><path class="gx-ego-i" transform="translate(16,12) scale(1.25)" d="${IC[me.kind] || IC.other}"/></g>`
+        + `<text class="gx-ego-k" x="2" y="${H - 1}">${inn.length ? '↘ ' + inn.length + ' ' + esc(T.inputs) : ''}</text><text class="gx-ego-k" x="${W - 2}" y="${H - 1}" text-anchor="end">${out.length ? esc(T.outputs) + ' ' + out.length + ' ↗' : ''}</text></svg>`;
+      const list = (out.length ? `<h5>${esc(T.outgoing)}</h5><ul class="gx-conn">${out.map(e => li(e, e.to)).join('')}</ul>` : '') + (inn.length ? `<h5>${esc(T.incoming)}</h5><ul class="gx-conn">${inn.map(e => li(e, e.from)).join('')}</ul>` : '');
+      return `<div class="gx-egow">${svgE}<details class="gx-fold gx-fold-s"><summary>${esc(T.egoList)} <b>${inn.length} · ${out.length}</b></summary>${list}</details></div>`;
     }
     /* los pasos que nombran la pieza: solo el número, con el título en el tooltip */
     function stepsHTML(list) {
@@ -1787,9 +1834,9 @@
             <button type="button" class="gx-btn" data-act="center" title="${esc(T.center)}">◎ ${esc(T.center)}</button>
             <button type="button" class="gx-btn${tr && S.trace.dir === 'up' ? ' on' : ''}" data-act="up" title="${esc(T.upstream)}">⟵ ${esc(T.upShort)}</button>
             <button type="button" class="gx-btn${tr && S.trace.dir === 'down' ? ' on' : ''}" data-act="down" title="${esc(T.downstream)}">${esc(T.downShort)} ⟶</button>
-            ${tr ? `<button type="button" class="gx-btn" data-act="untrace" title="${esc(T.clearTrace)}">✕</button>` : ''}
+            ${tr ? `<button type="button" class="gx-btn" data-act="untrace" title="${esc(T.clearTrace)}">✕</button>` : ''}${FX ? FX.panelActs(n) : ''}
           </div>
-          ${n.summary ? `<p class="gx-psum">${esc(n.summary)}</p>` : ''}${n.details_html || ''}${metrics}${notes}
+          ${n.summary ? `<p class="gx-psum">${esc(n.summary)}</p>` : ''}${FX ? FX.panelTop(n) : ''}${n.details_html || ''}${metrics}${notes}
           ${linksHTML(n.links)}${filesHTML(n.children.length ? filesUnder(id) : (n.files || []), { owners: n.children.length > 0, prLink: false })}${stepsHTML(G.nodeSteps.get(id))}${connList(id)}${kids}`;
       }
       panel.innerHTML = `<button type="button" class="gx-x" aria-label="${esc(T.close)}">×</button><div class="gx-pbody">${html}</div>`;
@@ -1808,7 +1855,10 @@
         if (a === 'center') animateCam(camFor(bboxOf([id]) || S.bbox, 60));
         if (a === 'up' || a === 'down') trace(id, a);
         if (a === 'untrace') { S.trace = null; applyHighlight(); renderPanel(); }
+        if (FX) FX.panelAct(a, id);
       });
+      panel.querySelectorAll('.gx-ego-c').forEach(c => c.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); reveal(c.dataset.go); } }));
+      if (FX) FX.panelMount(panel, M.get(id) || null);
     }
 
     /* --- navegación --- */
@@ -2042,11 +2092,19 @@
       S.minimap = !!on;
       host.classList.toggle('gx-nomini', !S.minimap);
       bMini.classList.toggle('on', S.minimap); bMini.setAttribute('aria-pressed', S.minimap);
+      miniPin.classList.toggle('on', S.minimap);
+      miniPin.title = miniPin.ariaLabel = S.minimap ? T.miniUnpin : T.miniPin;
+      miniPin.setAttribute('aria-label', miniPin.title);
       if (S.minimap) drawMini();
     }
     bMini.onclick = () => setMinimap(!S.minimap);
+    miniPin.addEventListener('click', ev => { ev.stopPropagation(); setMinimap(!S.minimap); S.miniPeek = false; mini.classList.remove('peek'); });
+    miniPin.addEventListener('pointerdown', ev => ev.stopPropagation());
+    /* asomarse: plegado, pasar por encima lo despliega (y lo dibuja) hasta que el puntero se va */
+    mini.addEventListener('pointerenter', ev => { if (S.minimap || ev.pointerType === 'touch') return; S.miniPeek = true; mini.classList.add('peek'); drawMini(); });
+    mini.addEventListener('pointerleave', () => { if (!S.miniPeek) return; S.miniPeek = false; mini.classList.remove('peek'); });
     function drawMini() {
-      if (!S.bbox || !S.minimap) return;
+      if (!S.bbox || !(S.minimap || S.miniPeek)) return;
       miniWorld.innerHTML = '';
       const b = S.bbox; miniSvg.setAttribute('viewBox', `${b.x} ${b.y} ${b.w} ${b.h}`);
       S.bands.forEach(bd => s('rect', { x: bd.x, y: bd.y, width: bd.w, height: bd.h, class: 'gx-mini-band' + (bd.i % 2 ? ' alt' : '') }, miniWorld));
@@ -2059,13 +2117,14 @@
       drawMiniView();
     }
     function drawMiniView() {
-      if (!S.bbox || !S.minimap) return;
+      if (!S.bbox || !(S.minimap || S.miniPeek)) return;
       const v = viewSize(), c = S.cam;
       miniView.setAttribute('x', -c.x / c.k); miniView.setAttribute('y', -c.y / c.k);
       miniView.setAttribute('width', v.w / c.k); miniView.setAttribute('height', v.h / c.k);
       miniView.setAttribute('stroke-width', Math.max(S.bbox.w, S.bbox.h) / 90);
     }
     mini.addEventListener('pointerdown', ev => {
+      if (!S.minimap && !S.miniPeek) return;
       const go = e2 => {
         const r = miniSvg.getBoundingClientRect(), b = S.bbox, v = viewSize();
         const sc = Math.max(b.w / r.width, b.h / r.height);
@@ -2478,7 +2537,8 @@
       FX = FXM.create({
         host, stage, svg, defs, world, gEdges, gNodes, gGroups, gLabels, legend, tools, bFit, I, spec, opts, T, lang, reduce, dur,
         S, M, G, s, h, esc, btn, textW, fitText, colorVar, paint, isGroup, hasShape, repOf, descendantsOf, ancestors: id => ancestors(M, id),
-        viewSize, camFor, animateCam, relayout, select, applyHighlight, rerender, drawMini, framed,
+        viewSize, camFor, animateCam, relayout, select, applyHighlight, rerender, drawMini, framed, renderPanel, toSVG, reveal, iconHTML,
+        clearSelection: () => clearSelection(), panel, mini,
         refreshTheme: () => { themeEl.textContent = themeCSS(); }
       });
     }
@@ -2500,6 +2560,10 @@
       setData: (p, o) => FX ? FX.setData(p, o) : Promise.resolve(),
       playFlow: o => FX ? FX.play(o) : Promise.resolve(), stopFlow: () => { if (FX) FX.stop(); },
       fx: FX ? FX.config : null,
+      /* línea de tiempo, radio de impacto y equipos (graphx-fx) */
+      timeline: FX ? FX.timeline : null,
+      blast: id => (FX ? FX.blast(id) : null), clearBlast: () => { if (FX) FX.clearBlast(); },
+      filterOwners: ids => { if (FX) FX.filterOwners(ids); }, colorOwners: on => { if (FX) FX.colorOwners(on); },
       /* deja el host como estaba: sin contenido, sin las clases de estado (una vista solo de secuencia
          ocultaría el grafo del siguiente montaje) y sin el id y los atributos que puso el motor */
       destroy() {
@@ -2556,5 +2620,5 @@
     return out;
   }
 
-  global.GraphX = Object.assign(global.GraphX || {}, { mount, mountAll, buildModel, resolveLink, safeColor, THEME_KEYS, loadELK, ELK_URL, icons: ICON, version: '1.8.0' });
+  global.GraphX = Object.assign(global.GraphX || {}, { mount, mountAll, buildModel, resolveLink, safeColor, THEME_KEYS, loadELK, ELK_URL, icons: ICON, version: '1.9.0' });
 })(typeof window !== 'undefined' ? window : globalThis);

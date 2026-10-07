@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Una sala de control: la demo en vivo abre la página; debajo, cada caso de uso en su franja y la referencia al final.
+/* Una sala de control con pestañas: software, galería, en vivo, Mermaid y referencia. Cada pestaña se monta al abrirla.
    Neutros con un sesgo verde azulado (el del osciloscopio) y un acento turquesa que también es el acento de GraphX. */
 :root {
   --bg: #f3f6f6; --surface-2: #e9efef; --panel: #ffffff; --ink: #142120; --muted: #4f605e; --hairline: #d3dcdb;
@@ -127,122 +127,237 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
 @media (prefers-reduced-motion: reduce) { .live i { animation: none; } }
 /* va al final: el atajo `font` de las reglas de arriba devolvería las ligaduras */
 .src textarea, pre, code, .cfg code { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+
+/* pestañas */
+.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-block: 10px; margin-block: -10px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: none; font: 600 14.5px var(--f-body); padding: 9px 16px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.tabs button small { font: 500 11px var(--f-mono); color: var(--muted); opacity: .8; }
+.tabs button:hover { color: var(--ink); background: var(--surface-2); }
+.tabs button[aria-selected="true"] { color: var(--panel); background: var(--ink); }
+.tabs button[aria-selected="true"] small { color: var(--panel); }
+.tabpanel { display: flex; flex-direction: column; gap: 56px; }
+.tabpanel[hidden] { display: none; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Mermaid enriquecido: el código al lado del dibujo */
+.split { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+.split pre { max-height: 520px; font-size: 11.5px; line-height: 1.55; white-space: pre; }
+.split pre .g { color: var(--accent-ink); }
+.split .gx-host { --gx-h: 520px; }
+/* galería de bloques */
+.bkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 14px; align-items: start; }
+.bkcard { border: 1px solid var(--hairline); border-radius: 14px; background: var(--panel); padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.bkcard header { display: flex; align-items: baseline; gap: 8px; justify-content: space-between; }
+.bkcard header code { font: 600 12px var(--f-mono); color: var(--accent-ink); background: var(--accent-wash); padding: 2px 7px; border-radius: 6px; }
+.bkcard header span { font-size: 12.5px; color: var(--muted); text-align: right; }
+.bkcard .gx { font-size: 13px; }
+.bkcard .gx-bk { margin-top: 0; }
+/* iconos */
+.icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.icon { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px 10px; border-radius: 12px; border: 1px solid var(--hairline); background: var(--panel); }
+.icon svg { width: 34px; height: 34px; fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.icon svg.fill { fill: var(--ink); stroke: none; }
+.icon span { font: 500 11.5px var(--f-mono); color: var(--muted); }
+.icon:hover { border-color: var(--accent-ink); } .icon:hover svg { stroke: var(--accent-ink); }
+.icon:hover svg path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: icdraw .9s cubic-bezier(.2, .8, .2, 1) forwards; }
+@keyframes icdraw { to { stroke-dashoffset: 0; } }
+.gal-host { --gx-h: min(78vh, 860px); }
+.soft-host { --gx-h: min(66vh, 620px); }
+@media (max-width: 980px) { .split { grid-template-columns: minmax(0, 1fr); } .split pre { max-height: 260px; } }
+@media (prefers-reduced-motion: reduce) { .icon:hover svg path { animation: none; } }
 </style>
 
 <div class="wrap">
   <header class="hero">
     <div>
-      <div class="eyebrow">GraphX 1.8 · módulo de efectos</div>
+      <div class="eyebrow">GraphX 1.9 · efectos, datos en vivo y piezas ricas</div>
       <h1>Diagramas que se mueven <em>con sus datos</em></h1>
     </div>
     <div>
-      <p class="lede">Partículas que fluyen según el caudal, latencias que colorean cada pieza, indicadores que se actualizan solos y ondas que recorren el grafo al trazar una dependencia. Todo sale del mismo JSON, y cada efecto se enciende o se apaga con <code>fx</code>.</p>
+      <p class="lede">Un mapa de servicios con su día de tráfico, equipos, radio de impacto y paneles con gráficos; una galería con cada clase de pieza; Mermaid igual de rico. Todo sale del mismo JSON y cada efecto se enciende o se apaga con <code>fx</code>.</p>
       <ul class="facts">
-        <li><b>37 KB</b><span>minificado · 14 KB con gzip</span></li>
+        <li><b>__FXKB__ KB</b><span>los efectos, minificados · __FXGZ__ KB con gzip</span></li>
         <li><b>0</b><span>dependencias nuevas</span></li>
         <li><b>fx: false</b><span>el diagrama de siempre</span></li>
       </ul>
     </div>
   </header>
 
-  <section id="vivo" aria-labelledby="h-vivo">
-    <div class="sh">
-      <div><span class="kicker">Datos en vivo</span><h2 id="h-vivo">Una plataforma de pagos, minuto a minuto</h2></div>
-      <p>Cada segundo y medio la página llama a <code>setData</code> con cifras nuevas: las partículas aceleran o frenan con el caudal, los colores cambian con la latencia p95 y los indicadores cuentan hasta su valor. Provoca un incidente para ver cómo lo cuenta el mapa.</p>
-    </div>
-    <div class="console">
-      <div class="ctl">
-        <div class="grp"><span class="lab" id="l-preset">Preset</span><div class="seg" role="group" aria-labelledby="l-preset" id="presets"></div></div>
-        <div class="grp" style="flex:1 1 380px"><span class="lab" id="l-fx">Efectos</span><div class="chips" role="group" aria-labelledby="l-fx" id="chips"></div></div>
-        <div class="grp"><span class="lab">Simulación</span>
-          <div class="chips"><button type="button" class="btn" id="b-pause">Pausar</button><button type="button" class="btn alarm" id="b-incident" aria-pressed="false">Provocar un incidente</button></div>
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button type="button" role="tab" id="t-software" aria-controls="p-software" aria-selected="true">Software <small>servicios · tiempo · impacto</small></button>
+    <button type="button" role="tab" id="t-galeria" aria-controls="p-galeria" aria-selected="false">Galería <small>piezas · bloques · iconos</small></button>
+    <button type="button" role="tab" id="t-vivo" aria-controls="p-vivo" aria-selected="false">En vivo <small>efectos y presets</small></button>
+    <button type="button" role="tab" id="t-mermaid" aria-controls="p-mermaid" aria-selected="false">Mermaid</button>
+    <button type="button" role="tab" id="t-referencia" aria-controls="p-referencia" aria-selected="false">Referencia</button>
+  </nav>
+
+  <!-- ===================== SOFTWARE ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-software" aria-labelledby="t-software">
+    <section aria-labelledby="h-soft">
+      <div class="sh">
+        <div><span class="kicker">Un día de tráfico</span><h2 id="h-soft">El checkout de una tienda, hora a hora</h2></div>
+        <p>Servicios, equipos y dependencias, con la latencia p95 como calor y el caudal como partículas. Debajo, la línea de tiempo sale de una tabla TSV de 24 filas, generada por un script como saldría de una consulta. Muévete por el día y verás el despliegue de las 09:00 y el incidente de Antifraude de las 13:00.</p>
+      </div>
+      <div class="row">
+        <button type="button" class="btn" id="s-play">▶ Reproducir el día</button>
+        <button type="button" class="btn" id="s-incident">Ir a las 13:00</button>
+        <button type="button" class="btn alarm" id="s-blast">✺ Impacto de Antifraude</button>
+        <button type="button" class="btn" id="s-team">Solo el equipo de Pagos</button>
+        <button type="button" class="btn" id="s-reset">Volver a empezar</button>
+      </div>
+      <div class="soft-host" id="g-soft"></div>
+      <ul class="how">
+        <li><b>Pulsa una pieza:</b> su panel trae gráficos, tablas, runbooks y su vecindad como un mini-grafo.</li>
+        <li><b>✺ Impacto</b> en el panel dibuja qué deja de funcionar si esa pieza falla, salto a salto.</li>
+        <li><b>Equipos</b> filtra y colorea por dueño; <b>⇄ Un pago</b> enseña la secuencia.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="h-arq">
+      <div class="sh">
+        <div><span class="kicker">Desde Mermaid</span><h2 id="h-arq">Mermaid, igual de rico</h2></div>
+        <p>Este diagrama es Mermaid válido. Los datos de GraphX van en las claves de <code>@{…}</code> que Mermaid no conoce y en comentarios <code>%% @gx</code>, que Mermaid ignora: calor, series, progreso, equipos, caudales y bloques para el panel. Las formas de Mermaid llevan los mismos extras que una tarjeta.</p>
+      </div>
+      <div class="split">
+        <pre id="arq-src" aria-label="Código de Mermaid"></pre>
+        <div class="gx-host" id="g-arq"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== GALERÍA ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-galeria" aria-labelledby="t-galeria" hidden>
+    <section aria-labelledby="h-gal">
+      <div class="sh">
+        <div><span class="kicker">Piezas</span><h2 id="h-gal">Cada clase de pieza, con sus datos</h2></div>
+        <p>Tarjetas con calor, series, progreso, alertas y equipo; gráficos que son piezas; las formas de Mermaid con los mismos extras; marcas, tickets y barras. Las cifras se actualizan solas. Pulsa una pieza: su panel lleva un tipo de bloque distinto.</p>
+      </div>
+      <div class="gal-host" id="g-gal"></div>
+    </section>
+    <section aria-labelledby="h-blk">
+      <div class="sh">
+        <div><span class="kicker">Bloques del panel</span><h2 id="h-blk">Otras formas de explicar una pieza</h2></div>
+        <p>Lo que puede llevar <code>blocks</code> en cualquier pieza: texto con formato, avisos, citas, código resaltado, tablas, cifras con su variación, gráficos de líneas, áreas y barras, rankings, gauge, donut, checklist, pasos, una línea de eventos y una tira de actividad. También sirven fuera de un diagrama con <code>GraphX.fx.renderBlocks</code>.</p>
+      </div>
+      <div class="bkgrid" id="bk-grid"></div>
+    </section>
+    <section aria-labelledby="h-ic">
+      <div class="sh">
+        <div><span class="kicker">Iconos</span><h2 id="h-ic">Un icono por tipo de pieza</h2></div>
+        <p>El <code>kind</code> de cada pieza elige su icono; <code>icons</code> en el JSON añade los tuyos. Pasa por encima de uno para verlo dibujarse.</p>
+      </div>
+      <div class="icons" id="icons"></div>
+    </section>
+  </div>
+
+  <!-- ===================== EN VIVO ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-vivo" aria-labelledby="t-vivo" hidden>
+    <section aria-labelledby="h-vivo">
+      <div class="sh">
+        <div><span class="kicker">Datos en vivo</span><h2 id="h-vivo">Una plataforma de pagos, minuto a minuto</h2></div>
+        <p>Cada segundo y medio la página llama a <code>setData</code> con cifras nuevas: las partículas aceleran o frenan con el caudal, los colores cambian con la latencia p95 y los indicadores cuentan hasta su valor. Provoca un incidente para ver cómo lo cuenta el mapa.</p>
+      </div>
+      <div class="console">
+        <div class="ctl">
+          <div class="grp"><span class="lab" id="l-preset">Preset</span><div class="seg" role="group" aria-labelledby="l-preset" id="presets"></div></div>
+          <div class="grp" style="flex:1 1 380px"><span class="lab" id="l-fx">Efectos</span><div class="chips" role="group" aria-labelledby="l-fx" id="chips"></div></div>
+          <div class="grp"><span class="lab">Simulación</span>
+            <div class="chips"><button type="button" class="btn" id="b-pause">Pausar</button><button type="button" class="btn alarm" id="b-incident" aria-pressed="false">Provocar un incidente</button></div>
+          </div>
+        </div>
+        <div class="cfg"><code id="cfg"></code><span class="live" id="live"><i></i><span id="clock">en vivo</span></span></div>
+        <div class="stage-host" id="g-viva"></div>
+      </div>
+    </section>
+    <section aria-labelledby="h-alm">
+      <div class="sh">
+        <div><span class="kicker">Gráficos como piezas</span><h2 id="h-alm">Un almacén, del camión al transportista</h2></div>
+        <p>Un proceso de negocio con las mismas herramientas: el tiempo en cola de cada etapa como mapa de calor, el ritmo por hora en cada tarjeta, el avance del plan como anillo y tres piezas que son gráficos.</p>
+      </div>
+      <div class="stage-host short" id="g-almacen"></div>
+    </section>
+    <section aria-labelledby="h-big">
+      <div class="sh">
+        <div><span class="kicker">Mejoras para todos los diagramas</span><h2 id="h-big">73 piezas y un zoom que se lee</h2></div>
+        <p>La revisión de una PR real con el preset <code>vivid</code>. Al alejarte, los nombres de los grupos crecen y lo pequeño se calla; al pasar por una pieza, sus conexiones marchan en su sentido; el minimapa se pliega al borde y se despliega al pasar.</p>
+      </div>
+      <div class="stage-host" id="g-grande"></div>
+    </section>
+  </div>
+
+  <!-- ===================== MERMAID ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-mermaid" aria-labelledby="t-mermaid" hidden>
+    <section aria-labelledby="h-mmd">
+      <div class="sh">
+        <div><span class="kicker">Desde Mermaid</span><h2 id="h-mmd">El mismo Mermaid, con y sin efectos</h2></div>
+        <p>El conversor lee el tema de la cabecera, dibuja a mano con <code>look: handDrawn</code>, respeta la velocidad de <code>animation: fast</code> y acepta datos ricos en <code>@{…}</code> y <code>%% @gx</code>. Edita el código: los dos lados se rehacen.</p>
+      </div>
+      <div class="mmd">
+        <div class="src">
+          <label class="kicker" for="mmd-pick" style="margin:0">Ejemplo</label>
+          <select id="mmd-pick"></select>
+          <textarea id="mmd-src" spellcheck="false" aria-label="Código de Mermaid"></textarea>
+          <div class="err" id="mmd-err" role="status"></div>
+        </div>
+        <div class="panes">
+          <div class="pane"><h3>Sin efectos <small>fx: false</small></h3><div class="gx-host" id="g-mmd-off"></div></div>
+          <div class="pane"><h3>Con efectos <small id="mmd-fx">fx: "neon"</small><span class="seg" role="group" aria-label="Preset del panel con efectos" id="mmd-presets" style="margin-left:auto"></span></h3><div class="gx-host" id="g-mmd-on"></div></div>
         </div>
       </div>
-      <div class="cfg"><code id="cfg"></code><span class="live" id="live"><i></i><span id="clock">en vivo</span></span></div>
-      <div class="stage-host" id="g-viva"></div>
-    </div>
-    <ul class="how">
-      <li><b>▶ Flujo</b> lanza una onda desde los clientes que sigue cada conexión.</li>
-      <li><b>Pulsa una pieza</b> y luego «⟵ Depende de»: la onda recorre lo que necesita, salto a salto.</li>
-      <li><b>▶ Presentar</b> recorre la historia del pedido con el foco puesto en cada paso.</li>
-    </ul>
-  </section>
+    </section>
+  </div>
 
-  <section id="mermaid" aria-labelledby="h-mmd">
-    <div class="sh">
-      <div><span class="kicker">Desde Mermaid</span><h2 id="h-mmd">El mismo Mermaid, con y sin efectos</h2></div>
-      <p>El conversor ahora lee el tema de la cabecera (<code>%%{init}%%</code> o el frontmatter), dibuja a mano con <code>look: handDrawn</code> y respeta la velocidad de <code>animation: fast</code>. Los flujos y las máquinas de estados traen «▶ Flujo». Edita el código: los dos lados se rehacen.</p>
-    </div>
-    <div class="mmd">
-      <div class="src">
-        <label class="kicker" for="mmd-pick" style="margin:0">Ejemplo</label>
-        <select id="mmd-pick"></select>
-        <textarea id="mmd-src" spellcheck="false" aria-label="Código de Mermaid"></textarea>
-        <div class="err" id="mmd-err" role="status"></div>
+  <!-- ===================== REFERENCIA ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-referencia" aria-labelledby="t-referencia" hidden>
+    <section aria-labelledby="h-ref">
+      <div class="sh">
+        <div><span class="kicker">Referencia</span><h2 id="h-ref">Qué se puede configurar</h2></div>
+        <p><code>fx</code> va en la raíz del JSON o en las opciones de montaje, que mandan. Puede ser un preset, un objeto o <code>false</code>. Sin <code>fx</code> solo se encienden las mejoras discretas y lo que piden los propios datos.</p>
       </div>
-      <div class="panes">
-        <div class="pane"><h3>Sin efectos <small>fx: false</small></h3><div class="gx-host" id="g-mmd-off"></div></div>
-        <div class="pane"><h3>Con efectos <small id="mmd-fx">fx: "neon"</small><span class="seg" role="group" aria-label="Preset del panel con efectos" id="mmd-presets" style="margin-left:auto"></span></h3><div class="gx-host" id="g-mmd-on"></div></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="almacen" aria-labelledby="h-alm">
-    <div class="sh">
-      <div><span class="kicker">Gráficos como piezas</span><h2 id="h-alm">Un almacén, del camión al transportista</h2></div>
-      <p>Un proceso de negocio con las mismas herramientas: el tiempo en cola de cada etapa como mapa de calor, el ritmo por hora en cada tarjeta, el avance del plan como anillo y tres piezas que son gráficos (<code>kpi</code>, <code>gauge</code>, <code>donut</code>) que también se animan con datos nuevos.</p>
-    </div>
-    <div class="stage-host short" id="g-almacen"></div>
-  </section>
-
-  <section id="grande" aria-labelledby="h-big">
-    <div class="sh">
-      <div><span class="kicker">Mejoras para todos los diagramas</span><h2 id="h-big">73 piezas, cuatro niveles y un zoom que se lee</h2></div>
-      <p>La revisión de una PR real con el preset <code>vivid</code>. Al alejarte, los nombres de los grupos crecen y lo pequeño se calla; la retícula se mueve con la cámara; al pasar por una pieza, sus conexiones marchan en su sentido. Pulsa una pieza y traza «⟵ Depende de».</p>
-    </div>
-    <div class="stage-host" id="g-grande"></div>
-  </section>
-
-  <section id="referencia" aria-labelledby="h-ref">
-    <div class="sh">
-      <div><span class="kicker">Referencia</span><h2 id="h-ref">Qué se puede configurar</h2></div>
-      <p><code>fx</code> va en la raíz del JSON o en las opciones de montaje, que mandan. Puede ser un preset, un objeto o <code>false</code>. Sin <code>fx</code> solo se encienden las mejoras discretas y lo que piden los propios datos.</p>
-    </div>
-    <div class="ref">
-      <div class="tbl">
-        <table>
-          <thead><tr><th>Clave</th><th>Por defecto</th><th>Qué hace</th></tr></thead>
-          <tbody id="ref-rows"></tbody>
-        </table>
-      </div>
-      <div class="side">
-        <div><h3>Presets</h3>
-          <dl class="presets">
-            <dt>vivid</dt><dd>partículas, cascada, foco, brillo, degradado, colores automáticos y «▶ Flujo»</dd>
-            <dt>neon · blueprint · glass</dt><dd>lo mismo, con una piel completa</dd>
-            <dt>present</dt><dd>foco, cascada, partículas y brillo, para presentar</dd>
-            <dt>calm</dt><dd>lo de por defecto</dd>
-            <dt>off · false</dt><dd>nada: el diagrama exactamente como antes</dd>
-          </dl>
+      <div class="ref">
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Clave</th><th>Por defecto</th><th>Qué hace</th></tr></thead>
+            <tbody id="ref-rows"></tbody>
+          </table>
         </div>
-        <div><h3>Datos que se dibujan</h3>
-<pre>{ "id": "pagos", "heat": 310, "spark": [120, 140, 190, 300],
-  "unit": "ms", "progress": 0.64, "alert": "warn" }
-{ "id": "e1", "from": "pedidos", "to": "pagos",
-  "rate": 180, "speed": "fast" }
-{ "id": "k", "shape": "kpi", "value": 1284, "change": 8.2 }</pre></div>
-        <div><h3>En vivo</h3>
+        <div class="side">
+          <div><h3>Presets</h3>
+            <dl class="presets">
+              <dt>vivid</dt><dd>partículas, cascada, foco, brillo, degradado, colores automáticos y «▶ Flujo»</dd>
+              <dt>neon · blueprint · glass</dt><dd>lo mismo, con una piel completa</dd>
+              <dt>present</dt><dd>foco, cascada, partículas y brillo, para presentar</dd>
+              <dt>calm</dt><dd>lo de por defecto</dd>
+              <dt>off · false</dt><dd>nada: el diagrama exactamente como antes</dd>
+            </dl>
+          </div>
+          <div><h3>Equipos y bloques</h3>
+<pre>"owners": { "pagos": { "label": "Equipo Pagos", "contact": "#pagos" } },
+"nodes": [{ "id": "pagos", "owner": "pagos", "heat": 310,
+  "blocks": [
+    { "type": "callout", "tone": "warn", "text": "**4.2** en canario" },
+    { "type": "chart", "kind": "area", "series": [{ "values": [1, 3, 2] }] }
+  ] }]</pre></div>
+          <div><h3>Línea de tiempo (TSV)</h3>
+<pre>"timeline": {
+  "data": "time\tpagos.heat\te-co-pay\tevent\n09:00\t180\t120\tDespliegue\n…",
+  "events": [{ "time": "13:00", "label": "Incidente", "tone": "crit" }]
+}</pre></div>
+          <div><h3>Mermaid con datos</h3>
+<pre>api@{ shape: hex, heat: 85, spark: "40 52 61", owner: busqueda }
+e1@{ rate: 900, speed: fast }
+%% @gx api { "blocks": [ { "type": "text", "text": "…" } ] }</pre></div>
+          <div><h3>En vivo</h3>
 <pre>const g = GraphX.mount(el, spec, { fx: 'vivid' });
-g.setData({
-  nodes: { pagos: { heat: 180, progress: .9 } },
-  edges: { e1: { rate: 240 } }
-});
-g.playFlow();</pre></div>
+g.setData({ nodes: { pagos: { heat: 180 } }, edges: { e1: { rate: 240 } } });
+g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre></div>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
-  <footer>GraphX 1.8 · motor de diagramas navegables. Todo el código de esta página, el motor y ELK van dentro: funciona sin red.</footer>
+  <footer>GraphX 1.9 · motor de diagramas navegables. Todo el código de esta página, el motor y ELK van dentro: funciona sin red.</footer>
 </div>
 
 <script>__ENGINE__</script>
@@ -252,190 +367,226 @@ g.playFlow();</pre></div>
   var DATA = __DATA__;
   var GX = window.GraphX;
   if (GX.injectCSS) GX.injectCSS();
+  if (GX.fx && GX.fx.injectCSS) GX.fx.injectCSS();
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
   var $ = function (id) { return document.getElementById(id); };
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var visible = function (id) { return !$(id).hidden && !document.hidden; };
 
-  /* ---------- sala de control ---------- */
-  var EFFECTS = [
-    ['particles', 'Partículas'], ['heat', 'Calor'], ['spark', 'Series'], ['progress', 'Progreso'], ['alerts', 'Alertas'],
-    ['waves', 'Ondas'], ['spotlight', 'Foco'], ['glow', 'Brillo'], ['gradient', 'Degradado'], ['autoColor', 'Colores'],
-    ['entrance', 'Cascada'], ['grid', 'Retícula'], ['lod', 'Zoom semántico'], ['hoverFlow', 'Marcha al pasar'], ['play', '▶ Flujo']
-  ];
-  var PRESETS = [['calm', 'Por defecto'], ['vivid', 'Vivid'], ['neon', 'Neon'], ['blueprint', 'Blueprint'], ['glass', 'Glass'], ['off', 'Apagado']];
-  var spec = clone(DATA.viva), specFx = spec.fx || {};
-  var state = { preset: 'calm', over: {} };
-  var g = null, host = $('g-viva');
-  function fxOpt() {
-    if (state.preset === 'off') return false;
-    var o = { preset: state.preset }; Object.keys(state.over).forEach(function (k) { o[k] = state.over[k]; }); return o;
+  /* ---------- pestañas: cada una se monta la primera vez que se abre ---------- */
+  var TABS = ['software', 'galeria', 'vivo', 'mermaid', 'referencia'], inited = {};
+  var INIT = { software: initSoftware, galeria: initGaleria, vivo: initVivo, mermaid: initMermaid, referencia: initRef };
+  function show(name, focus) {
+    if (TABS.indexOf(name) < 0) name = 'software';
+    TABS.forEach(function (t) { var on = t === name; $('t-' + t).setAttribute('aria-selected', String(on)); $('t-' + t).tabIndex = on ? 0 : -1; $('p-' + t).hidden = !on; });
+    if (!inited[name]) { inited[name] = true; INIT[name](); }
+    if (focus) $('t-' + name).focus();
+    try { history.replaceState(null, '', '#' + name); } catch (_) { }
   }
-  function resolved() { return GX.fx.resolve(spec.fx, fxOpt()) || {}; }
-  function renderCtl() {
-    $('presets').innerHTML = PRESETS.map(function (p) { return '<button type="button" data-p="' + p[0] + '" aria-pressed="' + (state.preset === p[0]) + '">' + p[1] + '</button>'; }).join('');
-    var r = resolved();
-    $('chips').innerHTML = EFFECTS.map(function (e) { return '<button type="button" class="chip" data-k="' + e[0] + '" aria-pressed="' + !!r[e[0]] + '"' + (state.preset === 'off' ? ' disabled' : '') + '>' + e[1] + '</button>'; }).join('');
-    var shown = state.preset === 'off' ? 'false' : JSON.stringify(fxOpt()).replace(/,/g, ', ').replace(/:/g, ': ');
-    $('cfg').textContent = 'GraphX.mount(el, spec, { fx: ' + shown + ' })';
-  }
-  function remount() {
-    if (g) g.destroy();
-    host.innerHTML = '';
-    g = GX.mount(host, clone(sim.spec()), { fx: fxOpt() });
-    renderCtl();
-  }
-  $('presets').addEventListener('click', function (ev) {
-    var b = ev.target.closest('button'); if (!b) return;
-    state.preset = b.dataset.p; state.over = {}; remount();
-  });
-  $('chips').addEventListener('click', function (ev) {
-    var b = ev.target.closest('button'); if (!b || b.disabled) return;
-    var k = b.dataset.k, on = b.getAttribute('aria-pressed') !== 'true';
-    state.over[k] = on ? (specFx[k] && typeof specFx[k] === 'object' ? specFx[k] : k === 'entrance' ? 'cascade' : k === 'autoColor' ? 'auto' : true) : false;
-    remount();
+  TABS.forEach(function (t, i) {
+    var b = $('t-' + t);
+    b.onclick = function () { show(t); };
+    b.onkeydown = function (ev) { var k = ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowLeft' ? -1 : 0; if (k) { ev.preventDefault(); show(TABS[(i + k + TABS.length) % TABS.length], true); } };
   });
 
-  /* ---------- simulación: cifras que derivan con suavidad y un incidente a demanda ---------- */
-  var sim = (function () {
-    var base = clone(DATA.viva), t = 0, incident = 0;
-    var rates = {}; base.edges.forEach(function (e) { if (e.rate) rates[e.id] = e.rate; });
-    var heat = {}; base.nodes.forEach(function (n) { if (typeof n.heat === 'number') heat[n.id] = n.heat; });
-    var sparks = {}, mean = {};
-    base.nodes.forEach(function (n) { if (n.spark) { sparks[n.id] = n.spark.slice(); mean[n.id] = n.spark.slice(-4).reduce(function (a, v) { return a + v; }, 0) / 4; } });
-    /* cada cifra tiende a su media (más baja durante el incidente) con un poco de ruido: sube y baja, y se recupera */
-    var toward = function (last, target, noise) { return last + (target - last) * .3 + (Math.random() - .5) * noise; };
-    var nodeOf = function (id) { return base.nodes.filter(function (n) { return n.id === id; })[0]; };
-    var cur = { nodes: {}, edges: {} };
-    var wobble = function (v, k, ph) { return v * (1 + k * Math.sin(t / 2.3 + ph) + (Math.random() - .5) * k * .6); };
-    var progress = .64;
-    function step() {
-      t += 1;
-      var hit = incident > 0; if (hit) incident -= 1;
-      var nodes = {}, edges = {};
-      Object.keys(rates).forEach(function (id, i) {
-        var r = wobble(rates[id], .22, i * 1.7);
-        if (hit && /ped|pag|af|kf|not/.test(id)) r *= .35;
-        edges[id] = { rate: Math.max(4, Math.round(r)) };
-      });
-      Object.keys(heat).forEach(function (id, i) {
-        var h = wobble(heat[id], .18, i * 2.1);
-        if (hit && id === 'antifraude') h = 860 + Math.random() * 60;
-        if (hit && id === 'pagos') h = 470 + Math.random() * 40;
-        if (hit && id === 'pedidos') h = 260 + Math.random() * 30;
-        h = Math.max(1, Math.round(h));
-        nodes[id] = { heat: h };
-        if (id === 'antifraude' || id === 'pagos') nodes[id].alert = h > 400 ? 'crit' : h > 250 ? 'warn' : null;
-      });
-      Object.keys(sparks).forEach(function (id) {
-        var s = sparks[id], last = s[s.length - 1];
-        var nx = id === 'pagos' ? nodes.pagos.heat : Math.round(toward(last, mean[id] * (hit ? .6 : 1) * (1 + .06 * Math.sin(t / 2)), mean[id] * .08));
-        s.push(Math.max(1, nx)); s.shift();
-        nodes[id] = Object.assign(nodes[id] || {}, { spark: s.slice() });
-      });
-      progress = progress >= 1 ? (t % 6 === 0 ? .12 : 1) : Math.min(1, progress + .04);
-      nodes.pagos.progress = progress;
-      var kp = sparks['k-pagos'], v = Math.round(toward(kp[kp.length - 1], (hit ? .7 : 1) * mean['k-pagos'] * (1 + .04 * Math.sin(t / 3)), 60));
-      kp.push(Math.max(300, v)); kp.shift();
-      nodes['k-pagos'] = { value: kp[kp.length - 1], change: Math.round((kp[kp.length - 1] / kp[0] - 1) * 1000) / 10, spark: kp.slice() };
-      nodes['k-slo'] = { value: hit ? 99.55 + Math.random() * .1 : 99.9 + Math.random() * .08 };
-      var ch = { web: edges['e-web-cdn'].rate, app: edges['e-app-gw'].rate, soc: edges['e-soc-gw'].rate };
-      nodes['k-canal'] = { parts: [{ label: 'Web', value: ch.web }, { label: 'App', value: ch.app }, { label: 'Socios', value: ch.soc }] };
-      cur = { nodes: nodes, edges: edges };
-      return cur;
+  /* ---------- SOFTWARE ---------- */
+  function initSoftware() {
+    var g = GX.mount($('g-soft'), clone(DATA.software), {});
+    $('s-play').onclick = function () { g.timeline.seek(0); setTimeout(function () { g.timeline.play(); }, 400); };
+    $('s-incident').onclick = function () { g.timeline.pause(); g.timeline.seek('12:00'); setTimeout(function () { g.timeline.seek('13:00'); }, 700); };
+    $('s-blast').onclick = function () { g.select('antifraude'); setTimeout(function () { g.blast('antifraude'); }, 250); };
+    var team = false;
+    $('s-team').onclick = function () { team = !team; g.filterOwners(team ? ['pagos'] : []); this.textContent = team ? 'Todos los equipos' : 'Solo el equipo de Pagos'; };
+    $('s-reset').onclick = function () { team = false; g.filterOwners([]); $('s-team').textContent = 'Solo el equipo de Pagos'; g.clearBlast(); g.timeline.pause(); g.resetView(); g.timeline.seek(g.timeline.length - 1); };
+    /* el Mermaid enriquecido, con su código al lado (los datos de GraphX resaltados) */
+    var src = DATA.arquitectura;
+    $('arq-src').innerHTML = src.split('\n').map(function (l) { return /%% @gx|@\{[^}]*(heat|spark|owner|rate|progress)/.test(l) ? '<span class="g">' + esc(l) + '</span>' : esc(l); }).join('\n');
+    try { GX.mountMermaid($('g-arq'), src, { lang: 'es', minimap: false }); } catch (e) { $('g-arq').textContent = e.message; }
+  }
+
+  /* ---------- GALERÍA ---------- */
+  function initGaleria() {
+    var g = GX.mount($('g-gal'), clone(DATA.galeria), {});
+    var k = 0, sp = { 'c-spark': null, 's-dec': null, 's-hex': null, 's-tile': null, 'k-kpi': null };
+    DATA.galeria.nodes.forEach(function (n) { if (n.id in sp) sp[n.id] = (n.spark || []).slice(); });
+    var push = function (id, v) { sp[id].push(Math.round(v)); sp[id].shift(); return sp[id].slice(); };
+    setInterval(function () {
+      if (!visible('p-galeria') || reduce) return;
+      k++;
+      var w = function (a, b, ph) { return a + b * (Math.sin(k / 2.2 + ph) + 1) / 2 + (Math.random() - .5) * b * .3; };
+      g.setData({ nodes: {
+        'c-heat': { heat: Math.round(w(150, 330, 0)) }, 'c-spark': { spark: push('c-spark', w(40, 110, 1)) }, 'c-prog': { progress: ((k * .04) % 1.04) },
+        'k-kpi': { value: Math.round(sp['k-kpi'][sp['k-kpi'].length - 1] + w(-20, 80, 2)), spark: push('k-kpi', sp['k-kpi'][sp['k-kpi'].length - 1] + w(-20, 80, 2)), change: Math.round(w(-3, 18, 3) * 10) / 10 },
+        'k-kpi2': { value: Math.round(w(160, 120, 4)), change: Math.round(w(-12, 14, 4) * 10) / 10 }, 'k-gauge': { value: Math.round(w(40, 58, 5)) },
+        'k-donut': { parts: [{ label: 'Chrome', value: Math.round(w(50, 14, 6)) }, { label: 'Safari', value: Math.round(w(20, 10, 7)) }, { label: 'Firefox', value: 9 }, { label: 'Edge', value: 6 }, { label: 'Otros', value: 3 }] },
+        's-dec': { spark: push('s-dec', w(70, 25, 8)), heat: Math.round(w(30, 90, 8)) }, 's-db': { progress: ((k * .05 + .3) % 1.05) }, 's-hex': { spark: push('s-hex', w(20, 40, 9)), progress: ((k * .03 + .2) % 1.03) },
+        's-circ': { heat: Math.round(w(5, 60, 10)) }, 's-tile': { spark: push('s-tile', w(55, 30, 11)) }
+      } });
+    }, 2000);
+    /* los bloques, cada uno en su tarjeta */
+    var B = DATA.blocks;
+    $('bk-grid').innerHTML = B.map(function (c) { return '<article class="bkcard"><header><code>' + esc(c.type) + '</code><span>' + esc(c.what) + '</span></header><div class="gx gx-scope">' + GX.fx.renderBlocks(c.blocks, { lang: 'es' }) + '</div></article>'; }).join('');
+    /* los iconos */
+    var IC = GX.icons || {};
+    $('icons').innerHTML = Object.keys(IC).filter(function (k) { return k !== 'claude'; }).map(function (k) { return '<div class="icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path pathLength="1" d="' + IC[k] + '"/></svg><span>' + esc(k) + '</span></div>'; }).join('');
+  }
+
+  /* ---------- EN VIVO ---------- */
+  function initVivo() {
+    var EFFECTS = [
+      ['particles', 'Partículas'], ['heat', 'Calor'], ['spark', 'Series'], ['progress', 'Progreso'], ['alerts', 'Alertas'],
+      ['waves', 'Ondas'], ['spotlight', 'Foco'], ['glow', 'Brillo'], ['gradient', 'Degradado'], ['autoColor', 'Colores'],
+      ['entrance', 'Cascada'], ['grid', 'Retícula'], ['lod', 'Zoom semántico'], ['hoverFlow', 'Marcha al pasar'], ['play', '▶ Flujo'], ['blast', 'Impacto']
+    ];
+    var PRESETS = [['calm', 'Por defecto'], ['vivid', 'Vivid'], ['neon', 'Neon'], ['blueprint', 'Blueprint'], ['glass', 'Glass'], ['off', 'Apagado']];
+    var spec = clone(DATA.viva), specFx = spec.fx || {};
+    var state = { preset: 'calm', over: {} };
+    var g = null, host = $('g-viva');
+    function fxOpt() { if (state.preset === 'off') return false; var o = { preset: state.preset }; Object.keys(state.over).forEach(function (k) { o[k] = state.over[k]; }); return o; }
+    function resolved() { return GX.fx.resolve(spec.fx, fxOpt()) || {}; }
+    function renderCtl() {
+      $('presets').innerHTML = PRESETS.map(function (p) { return '<button type="button" data-p="' + p[0] + '" aria-pressed="' + (state.preset === p[0]) + '">' + p[1] + '</button>'; }).join('');
+      var r = resolved();
+      $('chips').innerHTML = EFFECTS.map(function (e) { return '<button type="button" class="chip" data-k="' + e[0] + '" aria-pressed="' + !!r[e[0]] + '"' + (state.preset === 'off' ? ' disabled' : '') + '>' + e[1] + '</button>'; }).join('');
+      var shown = state.preset === 'off' ? 'false' : JSON.stringify(fxOpt()).replace(/,/g, ', ').replace(/:/g, ': ');
+      $('cfg').textContent = 'GraphX.mount(el, spec, { fx: ' + shown + ' })';
     }
-    /* el JSON de partida con las cifras de ahora: al cambiar de efectos, el mapa sigue donde iba */
-    function spec() {
-      var s = clone(base);
-      s.nodes.forEach(function (n) { var d = cur.nodes[n.id]; if (d) Object.keys(d).forEach(function (k) { if (d[k] == null) delete n[k]; else n[k] = d[k]; }); });
-      s.edges.forEach(function (e) { var d = cur.edges[e.id]; if (d) e.rate = d.rate; });
-      return s;
+    function remount() { if (g) g.destroy(); host.innerHTML = ''; g = GX.mount(host, clone(sim.spec()), { fx: fxOpt() }); renderCtl(); }
+    $('presets').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; state.preset = b.dataset.p; state.over = {}; remount(); });
+    $('chips').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b || b.disabled) return;
+      var k = b.dataset.k, on = b.getAttribute('aria-pressed') !== 'true';
+      state.over[k] = on ? (specFx[k] && typeof specFx[k] === 'object' ? specFx[k] : k === 'entrance' ? 'cascade' : k === 'autoColor' ? 'auto' : true) : false;
+      remount();
+    });
+    var sim = (function () {
+      var base = clone(DATA.viva), t = 0, incident = 0;
+      var rates = {}; base.edges.forEach(function (e) { if (e.rate) rates[e.id] = e.rate; });
+      var heat = {}; base.nodes.forEach(function (n) { if (typeof n.heat === 'number') heat[n.id] = n.heat; });
+      var sparks = {}, mean = {};
+      base.nodes.forEach(function (n) { if (n.spark) { sparks[n.id] = n.spark.slice(); mean[n.id] = n.spark.slice(-4).reduce(function (a, v) { return a + v; }, 0) / 4; } });
+      var toward = function (last, target, noise) { return last + (target - last) * .3 + (Math.random() - .5) * noise; };
+      var cur = { nodes: {}, edges: {} };
+      var wobble = function (v, k, ph) { return v * (1 + k * Math.sin(t / 2.3 + ph) + (Math.random() - .5) * k * .6); };
+      var progress = .64;
+      function step() {
+        t += 1;
+        var hit = incident > 0; if (hit) incident -= 1;
+        var nodes = {}, edges = {};
+        Object.keys(rates).forEach(function (id, i) { var r = wobble(rates[id], .22, i * 1.7); if (hit && /ped|pag|af|kf|not/.test(id)) r *= .35; edges[id] = { rate: Math.max(4, Math.round(r)) }; });
+        Object.keys(heat).forEach(function (id, i) {
+          var h = wobble(heat[id], .18, i * 2.1);
+          if (hit && id === 'antifraude') h = 860 + Math.random() * 60;
+          if (hit && id === 'pagos') h = 470 + Math.random() * 40;
+          if (hit && id === 'pedidos') h = 260 + Math.random() * 30;
+          h = Math.max(1, Math.round(h)); nodes[id] = { heat: h };
+          if (id === 'antifraude' || id === 'pagos') nodes[id].alert = h > 400 ? 'crit' : h > 250 ? 'warn' : null;
+        });
+        Object.keys(sparks).forEach(function (id) {
+          var s = sparks[id], last = s[s.length - 1];
+          var nx = id === 'pagos' ? nodes.pagos.heat : Math.round(toward(last, mean[id] * (hit ? .6 : 1) * (1 + .06 * Math.sin(t / 2)), mean[id] * .08));
+          s.push(Math.max(1, nx)); s.shift(); nodes[id] = Object.assign(nodes[id] || {}, { spark: s.slice() });
+        });
+        progress = progress >= 1 ? (t % 6 === 0 ? .12 : 1) : Math.min(1, progress + .04);
+        nodes.pagos.progress = progress;
+        var kp = sparks['k-pagos'], v = Math.round(toward(kp[kp.length - 1], (hit ? .7 : 1) * mean['k-pagos'] * (1 + .04 * Math.sin(t / 3)), 60));
+        kp.push(Math.max(300, v)); kp.shift();
+        nodes['k-pagos'] = { value: kp[kp.length - 1], change: Math.round((kp[kp.length - 1] / kp[0] - 1) * 1000) / 10, spark: kp.slice() };
+        nodes['k-slo'] = { value: hit ? 99.55 + Math.random() * .1 : 99.9 + Math.random() * .08 };
+        nodes['k-canal'] = { parts: [{ label: 'Web', value: edges['e-web-cdn'].rate }, { label: 'App', value: edges['e-app-gw'].rate }, { label: 'Socios', value: edges['e-soc-gw'].rate }] };
+        cur = { nodes: nodes, edges: edges };
+        return cur;
+      }
+      function spec() {
+        var s = clone(base);
+        s.nodes.forEach(function (n) { var d = cur.nodes[n.id]; if (d) Object.keys(d).forEach(function (k) { if (d[k] == null) delete n[k]; else n[k] = d[k]; }); });
+        s.edges.forEach(function (e) { var d = cur.edges[e.id]; if (d) e.rate = d.rate; });
+        return s;
+      }
+      return { step: step, spec: spec, incident: function (on) { incident = on ? 9 : 0; }, active: function () { return incident > 0; } };
+    })();
+    var running = !reduce, ticks = 0;
+    function tick() {
+      if (!running || !g || !visible('p-vivo')) return;
+      var d = sim.step(); ticks++; g.setData(d);
+      var b = $('b-incident');
+      if (b.getAttribute('aria-pressed') === 'true' && !sim.active()) { b.setAttribute('aria-pressed', 'false'); b.textContent = 'Provocar un incidente'; }
+      $('clock').textContent = 'en vivo · ' + ticks + ' actualizaciones';
     }
-    return { step: step, spec: spec, incident: function (on) { incident = on ? 9 : 0; }, active: function () { return incident > 0; } };
-  })();
-
-  var running = !reduce, visible = true, timer = null, ticks = 0;
-  function tick() {
-    if (!running || !visible || !g || document.hidden) return;
-    var d = sim.step(); ticks++;
-    g.setData(d);
-    var b = $('b-incident');
-    if (b.getAttribute('aria-pressed') === 'true' && !sim.active()) { b.setAttribute('aria-pressed', 'false'); b.textContent = 'Provocar un incidente'; }
-    $('clock').textContent = 'en vivo · ' + ticks + ' actualizaciones';
+    function syncRun() { $('live').classList.toggle('off', !running); $('b-pause').textContent = running ? 'Pausar' : 'Reanudar'; if (!running) $('clock').textContent = 'en pausa'; }
+    $('b-pause').onclick = function () { running = !running; syncRun(); };
+    $('b-incident').onclick = function () {
+      var on = this.getAttribute('aria-pressed') !== 'true';
+      this.setAttribute('aria-pressed', String(on)); this.textContent = on ? 'Incidente en curso' : 'Provocar un incidente';
+      sim.incident(on);
+      if (on) { if (!running) { running = true; syncRun(); } tick(); setTimeout(function () { if (g) g.trace('antifraude', 'down'); }, 500); }
+    };
+    remount(); syncRun();
+    setInterval(tick, 1500);
+    var alm = GX.mount($('g-almacen'), clone(DATA.almacen), {}), shift = 0;
+    setInterval(function () {
+      if (!running || !visible('p-vivo')) return;
+      shift++;
+      alm.setData({ nodes: {
+        't-envios': { value: 1846 + shift * 37 + Math.round(Math.random() * 20), change: Math.round((6.4 + Math.sin(shift / 3)) * 10) / 10 },
+        't-precision': { value: Math.round((99.1 + Math.sin(shift / 2) * .35) * 10) / 10 },
+        calidad: { heat: Math.round(36 + Math.sin(shift / 2.5) * 9) }, empaquetado: { heat: Math.round(28 + Math.cos(shift / 3) * 7) }
+      }, edges: { a5: { rate: Math.round(22 + Math.sin(shift / 2) * 6) }, a9: { rate: Math.round(21 + Math.cos(shift / 2) * 5) } } });
+    }, 2200);
+    var big = clone(DATA.grande); big.initialDepth = 2; big.minimap = false;
+    GX.mount($('g-grande'), big, { fx: 'vivid', lang: 'es' });
   }
-  function syncRun() { $('live').classList.toggle('off', !running); $('b-pause').textContent = running ? 'Pausar' : 'Reanudar'; if (!running) $('clock').textContent = 'en pausa'; }
-  $('b-pause').onclick = function () { running = !running; syncRun(); };
-  $('b-incident').onclick = function () {
-    var on = this.getAttribute('aria-pressed') !== 'true';
-    this.setAttribute('aria-pressed', String(on)); this.textContent = on ? 'Incidente en curso' : 'Provocar un incidente';
-    sim.incident(on);
-    if (on) { if (!running) { running = true; syncRun(); } tick(); setTimeout(function () { if (g) g.trace('antifraude', 'down'); }, 500); }
-  };
-  if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }).observe(host);
-  remount(); syncRun();
-  timer = setInterval(tick, 1500);
 
-  /* ---------- Mermaid, con y sin efectos ---------- */
-  var MM = DATA.mermaid, mOff = null, mOn = null, mT = null, mPreset = 'neon';
-  function mmdPresets() {
-    $('mmd-presets').innerHTML = ['vivid', 'neon', 'blueprint', 'glass'].map(function (p) { return '<button type="button" data-p="' + p + '" aria-pressed="' + (p === mPreset) + '">' + p + '</button>'; }).join('');
-    $('mmd-fx').textContent = 'fx: "' + mPreset + '"';
+  /* ---------- MERMAID ---------- */
+  function initMermaid() {
+    var MM = DATA.mermaid, mOff = null, mOn = null, mT = null, mPreset = 'neon';
+    function mmdPresets() {
+      $('mmd-presets').innerHTML = ['vivid', 'neon', 'blueprint', 'glass'].map(function (p) { return '<button type="button" data-p="' + p + '" aria-pressed="' + (p === mPreset) + '">' + p + '</button>'; }).join('');
+      $('mmd-fx').textContent = 'fx: "' + mPreset + '"';
+    }
+    $('mmd-presets').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mPreset = b.dataset.p; mmdPresets(); draw(); });
+    mmdPresets();
+    $('mmd-pick').innerHTML = MM.map(function (m, i) { return '<option value="' + i + '">' + esc(m.name) + '</option>'; }).join('');
+    function draw() {
+      var txt = $('mmd-src').value;
+      try {
+        var a = GX.fromMermaid(txt, { fx: false }), b = GX.fromMermaid(txt, { fx: mPreset });
+        if (mOff) mOff.destroy(); if (mOn) mOn.destroy();
+        $('g-mmd-off').innerHTML = ''; $('g-mmd-on').innerHTML = '';
+        mOff = GX.mount($('g-mmd-off'), a.spec, { minimap: false });
+        mOn = GX.mount($('g-mmd-on'), b.spec, { minimap: false });
+        $('mmd-err').textContent = a.warnings.length ? a.warnings.length + ' líneas sin equivalente (se ignoran)' : '';
+      } catch (e) { $('mmd-err').textContent = e.message; }
+    }
+    $('mmd-pick').onchange = function () { $('mmd-src').value = MM[+this.value].code; draw(); };
+    $('mmd-src').addEventListener('input', function () { clearTimeout(mT); mT = setTimeout(draw, 650); });
+    $('mmd-src').value = MM[0].code; draw();
   }
-  $('mmd-presets').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mPreset = b.dataset.p; mmdPresets(); drawMermaid(); });
-  mmdPresets();
-  $('mmd-pick').innerHTML = MM.map(function (m, i) { return '<option value="' + i + '">' + m.name + '</option>'; }).join('');
-  function drawMermaid() {
-    var txt = $('mmd-src').value;
-    try {
-      var a = GX.fromMermaid(txt, { fx: false }), b = GX.fromMermaid(txt, { fx: mPreset });
-      if (mOff) mOff.destroy(); if (mOn) mOn.destroy();
-      $('g-mmd-off').innerHTML = ''; $('g-mmd-on').innerHTML = '';
-      mOff = GX.mount($('g-mmd-off'), a.spec, { minimap: false });
-      mOn = GX.mount($('g-mmd-on'), b.spec, { minimap: false });
-      $('mmd-err').textContent = a.warnings.length ? a.warnings.length + ' líneas sin equivalente (se ignoran)' : '';
-    } catch (e) { $('mmd-err').textContent = e.message; }
+
+  /* ---------- REFERENCIA ---------- */
+  function initRef() {
+    var REF = [
+      ['particles', 'aristas con rate', 'Partículas que viajan por la arista; su densidad y su velocidad crecen con <code>rate</code>. <code>true</code> las añade a las animadas y las principales; <code>"all"</code>, a todas.'],
+      ['heat', 'si hay datos', 'Colorea cada pieza por <code>heat</code> (o por una métrica) con <code>{ label, unit, domain, scheme }</code>. Un contenedor plegado toma el máximo de lo que lleva.'],
+      ['spark · progress', 'si hay datos', 'La serie de <code>spark</code> como sparkline y <code>progress</code> (0–1) como anillo; en una forma de Mermaid, en una franja debajo.'],
+      ['alerts', 'si hay datos', 'Un halo que late en las piezas con <code>alert</code>: <code>crit</code>, <code>warn</code>, <code>info</code>, <code>ok</code>.'],
+      ['owners', 'si hay datos', 'Equipos: <code>owners</code> en la raíz y <code>owner</code> en cada pieza (lo heredan sus hijos). Iniciales en la tarjeta, filtro y color por equipo en la barra.'],
+      ['blast', 'sí', '«✺ Impacto» en el panel: qué deja de funcionar si la pieza falla. Las llamadas propagan hacia quien llama y los eventos hacia quien consume; <code>{ mode }</code> lo cambia.'],
+      ['blocks', 'si hay datos', 'Bloques ricos en el panel: texto, avisos, código, tablas, cifras, gráficos, barras, gauge, donut, checklist, pasos, eventos y tiras de actividad.'],
+      ['timeline', 'si hay datos', 'Una línea de tiempo desde una tabla TSV/CSV o filas: reproduce el día fila a fila, con eventos y una tira de calor por pieza.'],
+      ['attach', 'sí', 'Los extras (serie, progreso) en las formas de Mermaid, en una franja con su sitio en el layout.'],
+      ['waves', 'sí', 'Ondas al seleccionar, al trazar dependencias y en cada paso del recorrido.'],
+      ['hoverFlow · grid · lod', 'sí', 'Las conexiones marchan al pasar; la retícula sigue a la cámara; lejos, los nombres de los grupos crecen.'],
+      ['play', 'no (sí en Mermaid)', 'El botón «▶ Flujo»: una onda que sale de los orígenes y recorre el grafo.'],
+      ['spotlight · entrance · glow · gradient', 'no', 'Foco sobre la selección, entrada en cascada, brillo y aristas en degradado.'],
+      ['autoColor', 'no', 'Colores automáticos por carril, grupo o tipo (<code>"auto"</code>), solo donde no hay color.'],
+      ['skin · sketch', '—', '<code>neon</code>, <code>blueprint</code> o <code>glass</code>; trazo a mano (lo enciende <code>look: handDrawn</code>).']
+    ];
+    $('ref-rows').innerHTML = REF.map(function (r) { return '<tr><td><code>' + r[0] + '</code></td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>'; }).join('');
   }
-  $('mmd-pick').onchange = function () { $('mmd-src').value = MM[+this.value].code; drawMermaid(); };
-  $('mmd-src').addEventListener('input', function () { clearTimeout(mT); mT = setTimeout(drawMermaid, 650); });
-  $('mmd-src').value = MM[0].code; drawMermaid();
 
-  /* ---------- almacén y diagrama grande ---------- */
-  var alm = GX.mount($('g-almacen'), clone(DATA.almacen), {});
-  var shift = 0;
-  setInterval(function () {
-    if (!running || document.hidden) return;
-    shift++;
-    var env = 1846 + shift * 37 + Math.round(Math.random() * 20);
-    alm.setData({ nodes: {
-      't-envios': { value: env, change: Math.round((6.4 + Math.sin(shift / 3)) * 10) / 10 },
-      't-precision': { value: Math.round((99.1 + Math.sin(shift / 2) * .35) * 10) / 10 },
-      calidad: { heat: Math.round(36 + Math.sin(shift / 2.5) * 9) },
-      empaquetado: { heat: Math.round(28 + Math.cos(shift / 3) * 7) }
-    }, edges: { a5: { rate: Math.round(22 + Math.sin(shift / 2) * 6) }, a9: { rate: Math.round(21 + Math.cos(shift / 2) * 5) } } });
-  }, 2200);
-  /* abierto al nivel «Clase»: hay contenedores abiertos y, lejos, sus nombres se leen */
-  var big = clone(DATA.grande); big.initialDepth = 2;
-  GX.mount($('g-grande'), big, { fx: 'vivid', lang: 'es' });
-
-  /* ---------- referencia ---------- */
-  var D = GX.fx.DEFAULTS, REF = [
-    ['particles', 'aristas con rate', 'Partículas que viajan por la arista; su densidad y su velocidad crecen con <code>rate</code>. <code>true</code> las añade también a las animadas y las principales; <code>"all"</code>, a todas.'],
-    ['heat', 'si hay datos', 'Colorea cada pieza por <code>heat</code> (o por una métrica: <code>{ metric }</code>) con <code>{ label, unit, domain, scheme }</code>. Un contenedor plegado toma el máximo de lo que lleva dentro.'],
-    ['spark', 'si hay datos', 'La serie de <code>spark</code> como sparkline en la tarjeta, con su último valor.'],
-    ['progress', 'si hay datos', 'Un anillo alrededor del icono con <code>progress</code> (0–1).'],
-    ['alerts', 'si hay datos', 'Un halo que late en las piezas con <code>alert</code>: <code>crit</code>, <code>warn</code>, <code>info</code>, <code>ok</code>.'],
-    ['waves', 'sí', 'Ondas al seleccionar, al trazar dependencias y en cada paso del recorrido, salto a salto.'],
-    ['hoverFlow', 'sí', 'Al pasar por una pieza, sus conexiones marchan en su sentido.'],
-    ['grid', 'sí', 'La retícula del fondo se mueve y se escala con la cámara.'],
-    ['lod', 'sí', 'Zoom semántico: lejos, los nombres de los grupos crecen y las etiquetas pequeñas se ocultan.'],
-    ['play', 'no (sí en Mermaid)', 'El botón «▶ Flujo»: una onda que sale de los orígenes y recorre el grafo.'],
-    ['spotlight', 'no', 'Un foco sobre la pieza seleccionada o sobre lo que enseña cada paso.'],
-    ['entrance', 'no', '<code>"cascade"</code>: las piezas entran en orden de lectura y las aristas detrás.'],
-    ['glow', 'no', 'Brillo en las conexiones principales, iluminadas y seleccionadas.'],
-    ['gradient', 'no', 'Cada arista con un degradado del color de su origen al de su destino.'],
-    ['autoColor', 'no', 'Colores automáticos por carril, grupo o tipo (<code>"auto"</code>), solo donde no hay color.'],
-    ['skin', '—', '<code>neon</code>, <code>blueprint</code> o <code>glass</code>: una piel completa.'],
-    ['sketch', 'no', 'Trazo a mano; lo enciende <code>look: handDrawn</code> de Mermaid.']
-  ];
-  $('ref-rows').innerHTML = REF.map(function (r) { void D; return '<tr><td><code>' + r[0] + '</code></td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>'; }).join('');
+  var start = (location.hash || '').replace('#', '');
+  show(TABS.indexOf(start) >= 0 ? start : 'software');
 })();
 </script>

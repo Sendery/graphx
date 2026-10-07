@@ -1,0 +1,22 @@
+---
+title: Búsqueda de productos
+---
+flowchart LR
+  %% Esto es Mermaid válido: los datos de GraphX van en @{…} y en comentarios %% @gx, que Mermaid ignora.
+  %% @gx { "owners": { "busqueda": { "label": "Equipo Búsqueda", "short": "BQ", "contact": "#search" }, "datos": { "label": "Datos", "short": "DT" } } }
+  %% @gx { "fx": { "particles": true, "heat": { "label": "Latencia p95", "unit": "ms", "domain": [0, 400] } } }
+  usuario([Usuario]) e1@--> buscador{{API de búsqueda}}
+  buscador@{ heat: 85, spark: "40 52 61 58 70 84 79 85", unit: "ms", owner: busqueda }
+  buscador e2@--> decide{¿En caché?}
+  decide -->|sí| cache((Redis))
+  decide -->|no| indice[(Elasticsearch)]
+  indice@{ heat: 240, progress: 0.82, owner: datos, alert: warn }
+  cache@{ heat: 4, owner: datos }
+  indice e3@--> ranking[/Ranking ML/]
+  ranking@{ heat: 130, spark: "90 110 105 130 128 140 133 130", unit: "ms", owner: busqueda }
+  ranking --> resultado[Resultados]
+  e1@{ rate: 900 }
+  e2@{ rate: 900, speed: fast }
+  e3@{ rate: 300 }
+  %% @gx indice { "summary": "El índice de productos: 4,2 M documentos en 12 shards.", "blocks": [ { "type": "stats", "items": [ { "label": "Documentos", "value": 4200000 }, { "label": "Shards", "value": 12 }, { "label": "Reindexado", "value": "82", "unit": "%" } ] }, { "type": "callout", "tone": "warn", "title": "Reindexado en curso", "text": "Mientras dura, el p95 sube a ~240 ms." } ] }
+  %% @gx ranking { "blocks": [ { "type": "chart", "kind": "bar", "title": "Clics por posición", "labels": ["1", "2", "3", "4", "5", "6"], "series": [ { "label": "CTR %", "values": [31, 17, 11, 8, 6, 4] } ] } ] }
