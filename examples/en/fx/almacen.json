@@ -1,0 +1,46 @@
+{
+  "title": "Getafe warehouse, morning shift",
+  "summary": "A business process with data: queue time colors each stage, the series show the hourly pace and the indicators sum up the shift.",
+  "lang": "en",
+  "direction": "right",
+  "initialDepth": 1,
+  "fx": {
+    "particles": true,
+    "heat": { "label": "Queue time", "unit": "min", "domain": [0, 45], "scheme": "heat" },
+    "entrance": "cascade",
+    "spotlight": true,
+    "play": true
+  },
+  "lanes": [
+    { "id": "entrada", "label": "Inbound", "subtitle": "docks 1–4" },
+    { "id": "stock", "label": "Stock", "subtitle": "aisles A–K" },
+    { "id": "preparacion", "label": "Fulfillment", "subtitle": "picking area" },
+    { "id": "salida", "label": "Outbound", "subtitle": "docks 5–8" },
+    { "id": "turno", "label": "The shift", "subtitle": "06:00–14:00" }
+  ],
+  "nodes": [
+    { "id": "recepcion", "lane": "entrada", "label": "Truck receiving", "kind": "external", "heat": 12, "spark": [6, 8, 9, 7, 11, 12, 10, 12], "unit": "pal/h", "summary": "Unloading and scanning of the pallets arriving from suppliers." },
+    { "id": "inspeccion", "lane": "entrada", "label": "Inbound inspection", "kind": "test", "heat": 8, "summary": "Quality sampling of 5% of the pallets." },
+    { "id": "ubicacion", "lane": "stock", "label": "Putaway", "kind": "datastore", "heat": 5, "summary": "The system assigns a slot and the forklift driver places the pallet." },
+    { "id": "reposicion", "lane": "stock", "label": "Replenishment", "kind": "job", "heat": 22, "progress": 0.7, "summary": "Brings product down from reserve to the picking slots. It is at 70% of the shift plan." },
+    { "id": "picking", "lane": "preparacion", "label": "Picking", "kind": "service", "heat": 18, "spark": [140, 165, 180, 172, 190, 210, 205, 220], "unit": "lines/h", "summary": "Pickers collect each order line with the scanner." },
+    { "id": "empaquetado", "lane": "preparacion", "label": "Packing", "kind": "package", "heat": 31, "alert": "warn", "spark": [60, 64, 70, 68, 72, 75, 71, 74], "unit": "boxes/h", "summary": "Two of the six stations are idle: they ran out of size M cardboard." },
+    { "id": "calidad", "lane": "preparacion", "label": "Quality control", "kind": "test", "heat": 40, "alert": "crit", "summary": "Review of orders over €300. Today it has the longest queue in the warehouse." },
+    { "id": "expedicion", "lane": "salida", "label": "Shipping", "kind": "route", "heat": 9, "progress": 0.48, "summary": "Sorts boxes by route and carrier. It has handled 48% of the shift's shipments." },
+    { "id": "transportistas", "lane": "salida", "label": "Carriers", "kind": "external", "heat": 4, "summary": "Pickups at 11:00, 12:30 and 14:00." },
+    { "id": "t-envios", "lane": "turno", "label": "Orders shipped", "shape": "kpi", "kind": "route", "value": 1846, "change": 6.4, "spark": [120, 260, 420, 610, 840, 1090, 1370, 1846], "summary": "Orders that have left through the docks since 06:00." },
+    { "id": "t-precision", "lane": "turno", "label": "Picking accuracy", "shape": "gauge", "kind": "other", "value": 99.2, "min": 97, "max": 100, "unit": "%", "decimals": 1, "thresholds": [99, 98.5], "good": "high", "summary": "Lines picked without errors against the 99% target." },
+    { "id": "t-transp", "lane": "turno", "label": "Shipments by carrier", "shape": "donut", "kind": "other", "parts": [ { "label": "SEUR", "value": 720 }, { "label": "Correos Express", "value": 540 }, { "label": "DHL", "value": 380 }, { "label": "GLS", "value": 206 } ], "summary": "How the shift's shipments are split across carriers." }
+  ],
+  "edges": [
+    { "id": "a1", "from": "recepcion", "to": "inspeccion", "kind": "data", "rate": 11, "label": "pallets" },
+    { "id": "a2", "from": "inspeccion", "to": "ubicacion", "kind": "data", "rate": 10 },
+    { "id": "a3", "from": "ubicacion", "to": "reposicion", "kind": "data", "rate": 6 },
+    { "id": "a4", "from": "reposicion", "to": "picking", "kind": "data", "rate": 14, "label": "slots filled" },
+    { "id": "a5", "from": "picking", "to": "empaquetado", "kind": "data", "rate": 22, "emphasis": "hero", "label": "orders" },
+    { "id": "a6", "from": "empaquetado", "to": "calidad", "kind": "data", "rate": 5, "label": "> €300" },
+    { "id": "a7", "from": "empaquetado", "to": "expedicion", "kind": "data", "rate": 17 },
+    { "id": "a8", "from": "calidad", "to": "expedicion", "kind": "data", "rate": 4 },
+    { "id": "a9", "from": "expedicion", "to": "transportistas", "kind": "data", "rate": 21, "label": "pickups" }
+  ]
+}

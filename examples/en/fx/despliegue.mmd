@@ -1,0 +1,15 @@
+---
+title: Continuous deployment
+config:
+  theme: forest
+  look: handDrawn
+---
+flowchart LR
+  commit([Commit]) --> ci[Tests and build]
+  ci --> rev{Review approved?}
+  rev -->|yes| stg[Staging]
+  rev -->|no| commit
+  stg e1@==> prod[(Production)]
+  e1@{ animation: fast }
+  stg -.-> obs[Observability]
+  prod --> obs

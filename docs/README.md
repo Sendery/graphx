@@ -6,7 +6,7 @@
 | [efectos.md](efectos.md) | los efectos clasificados por función (lo dibujan los datos, responde al lector, ayuda a leer, estilo), cómo se configuran y recetas |
 | [demo.md](demo.md) | la página de demostración, pestaña a pestaña |
 | [ejemplos.md](ejemplos.md) | los ejemplos del repositorio, qué demuestra cada uno y cómo se regenera |
-| [../README.md](../README.md) | la referencia del JSON campo a campo, la API y las herramientas |
+| [referencia.md](referencia.md) | la referencia del JSON campo a campo, la API y las herramientas |
 
 Las capturas (`img/*.webp`) se regeneran con:
 
@@ -16,5 +16,11 @@ node tools/build-dist.mjs                                 # dist/ al día (la de
 node tools/capture-docs.mjs                               # todas; o solo algunas: … demo-panel fx-ondas
 ```
 
-El script construye cada página en un directorio temporal, la abre en Chromium, prepara la escena (un panel
+Los GIF de los README (`gif/es/*.gif` y `gif/en/*.gif`) se graban de la demo en cada idioma (necesita ffmpeg):
+
+```bash
+node tools/capture-gifs.mjs                 # todos, en los dos idiomas; o: … diagramas efectos --lang en
+```
+
+El script de capturas construye cada página en un directorio temporal, la abre en Chromium, prepara la escena (un panel
 abierto, el impacto, las 13:00 en la línea de tiempo, una piel…) y guarda la captura en WebP.

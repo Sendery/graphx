@@ -1,0 +1,15 @@
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    CUSTOMER }|..|{ DELIVERY-ADDRESS : uses
+    PRODUCT ||--o{ LINE-ITEM : "ordered in"
+    CUSTOMER {
+        string id PK
+        string name
+        string email UK "unique"
+    }
+    ORDER {
+        int id PK
+        string customerId FK
+        date createdAt
+    }

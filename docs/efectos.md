@@ -35,7 +35,7 @@ GraphX.mount(el, spec, { fx: 'off' });         // la página manda sobre el JSON
 | `off` · `false` | nada |
 
 Cada efecto también se enciende o se apaga por su clave (`{ "glow": false }`). La tabla completa de claves y
-valores por defecto está en el [README, §8](../README.md#8--efectos-y-datos-en-vivo-graphx-fxjs).
+valores por defecto está en el [referencia, §8](referencia.md#8--efectos-y-datos-en-vivo-graphx-fxjs).
 
 ---
 

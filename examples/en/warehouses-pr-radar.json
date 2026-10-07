@@ -1,0 +1,3308 @@
+{
+  "schema": "graphx/1",
+  "title": "Warehouses PRs",
+  "summary": "Snapshot from Sep 23, 2026.",
+  "lang": "en",
+  "direction": "right",
+  "initialDepth": 2,
+  "levels": [
+    {
+      "depth": 0,
+      "label": "Block"
+    },
+    {
+      "depth": 1,
+      "label": "PR"
+    }
+  ],
+  "layout": {
+    "lanes": "strict",
+    "frames": true
+  },
+  "collapsed": [
+    "b-mapkit",
+    "b-other"
+  ],
+  "theme": {
+    "light": {
+      "accent": "#2c56c9"
+    },
+    "dark": {
+      "accent": "#8aa8ff"
+    }
+  },
+  "links": {
+    "repo": "acme/platform",
+    "jira": "https://example.atlassian.net/browse/",
+    "related": [
+      {
+        "kind": "jira",
+        "key": "WH-900",
+        "status": "To Do",
+        "note": "Epic · Warehouses: Page"
+      },
+      {
+        "kind": "jira",
+        "key": "WH-901",
+        "status": "In Progress",
+        "note": "Epic · Warehouses: Migration & validation"
+      },
+      {
+        "kind": "jira",
+        "key": "WH-902",
+        "status": "To Do",
+        "note": "Epic · Warehouses: Core"
+      },
+      {
+        "kind": "jira",
+        "key": "WH-903",
+        "status": "To Do",
+        "note": "Epic · Warehouses: Map"
+      },
+      {
+        "kind": "jira",
+        "key": "WH-904",
+        "status": "To Do",
+        "note": "Epic · Warehouses: Rollout"
+      },
+      {
+        "kind": "jira",
+        "key": "WH-905",
+        "status": "In Progress",
+        "note": "Epic · Warehouses: Docs"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/060277ac3fe1f4b2d61480",
+        "label": "Design note 1",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/eb41c94bfdb75276ae465e",
+        "label": "Design note 2",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/04e0a109d46cd75bfb56cc",
+        "label": "Design note 3",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/8e5b20d82a3b90307ee43f",
+        "label": "Design note 4",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/bd10336b55a5b752cb2e35",
+        "label": "Design note 5",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/3d0706d6bd642cb58d7c92",
+        "label": "Design note 6",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/a91b0d186e34ffd774c6dc",
+        "label": "Design note 7",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/468560553f61aa1e6e935b",
+        "label": "Design note 8",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/884e74b6b1fc5ad8ab27d2",
+        "label": "Design note 9",
+        "note": "Project context"
+      },
+      {
+        "kind": "artifact",
+        "url": "https://example.com/notes/75dfa4d7c0dfaa7ba6d774",
+        "label": "Design note 10",
+        "note": "Project context"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "page",
+      "label": "Page and navigation",
+      "subtitle": "Organization, people, detail, list",
+      "color": {
+        "light": "#2c56c9",
+        "dark": "#8aa8ff"
+      }
+    },
+    {
+      "id": "geo",
+      "label": "Addresses and map",
+      "subtitle": "form, geocoding, map view, MapView",
+      "color": {
+        "light": "#0b6e8c",
+        "dark": "#4fb3d1"
+      }
+    },
+    {
+      "id": "back",
+      "label": "Backend and cross-cutting",
+      "subtitle": "events, core and outside the project",
+      "color": {
+        "light": "#8250df",
+        "dark": "#c297ff"
+      }
+    }
+  ],
+  "statuses": {
+    "merged": {
+      "label": "Merged",
+      "color": {
+        "light": "#1f7a45",
+        "dark": "#5fd08e"
+      }
+    },
+    "pending": {
+      "label": "Awaiting approval",
+      "color": {
+        "light": "#b07004",
+        "dark": "#f0b64a"
+      }
+    },
+    "draft": {
+      "label": "Draft",
+      "color": {
+        "light": "#7a6a9e",
+        "dark": "#b3a3dc"
+      }
+    },
+    "changes": {
+      "label": "Changes requested",
+      "color": {
+        "light": "#b42318",
+        "dark": "#ff8a7a"
+      }
+    }
+  },
+  "icons": {
+    "service": "M4 2.5h8A1.5 1.5 0 0 1 13.5 4v8a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 12V4A1.5 1.5 0 0 1 4 2.5zM10 5.3a1.9 1.9 0 0 0-3.2 1.4v5M5.4 8.3h3.6"
+  },
+  "legend": {
+    "edges": [
+      {
+        "label": "stack: branches off another PR",
+        "style": "solid"
+      },
+      {
+        "label": "functional: needs what another one brings",
+        "style": "dashed"
+      },
+      {
+        "label": "still blocks (the source PR is still open)",
+        "style": "flow"
+      },
+      {
+        "label": "no longer blocks (the source PR is merged)",
+        "style": "muted"
+      },
+      {
+        "label": "the dependency holding things up the most today",
+        "style": "hero"
+      }
+    ],
+    "kinds": {
+      "module": "functional block",
+      "service": "PR in the platform monorepo",
+      "package": "ui-kit PR (library)"
+    }
+  },
+  "nodes": [
+    {
+      "id": "b-nav",
+      "lane": "page",
+      "kind": "module",
+      "label": "Warehouses in Organization",
+      "subtitle": "navigation and copy",
+      "summary": "6 PRs in this block: 3 open and 3 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "3"
+        },
+        {
+          "label": "Merged",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "id": "b-members",
+      "lane": "page",
+      "kind": "module",
+      "label": "People tab",
+      "subtitle": "Staff",
+      "summary": "4 PRs in this block: 3 open and 1 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "3"
+        },
+        {
+          "label": "Merged",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "b-detail",
+      "lane": "page",
+      "kind": "module",
+      "label": "Detail page",
+      "subtitle": "warehouse detail",
+      "summary": "4 PRs in this block: 1 open and 3 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "1"
+        },
+        {
+          "label": "Merged",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "id": "b-list",
+      "lane": "page",
+      "kind": "module",
+      "label": "List and demo",
+      "subtitle": "Data Collection",
+      "summary": "2 PRs in this block: 1 open and 1 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "1"
+        },
+        {
+          "label": "Merged",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "b-geo",
+      "lane": "geo",
+      "kind": "module",
+      "label": "Geographic normalization",
+      "subtitle": "city / state → id",
+      "summary": "5 PRs in this block: 5 open and 0 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "5"
+        },
+        {
+          "label": "Merged",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "b-form",
+      "lane": "geo",
+      "kind": "module",
+      "label": "Create, edit and addresses",
+      "subtitle": "LocationInput",
+      "summary": "3 PRs in this block: 1 open and 2 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "1"
+        },
+        {
+          "label": "Merged",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "id": "b-mapview",
+      "lane": "geo",
+      "kind": "module",
+      "label": "Map view",
+      "subtitle": "monorepo + ui-kit",
+      "summary": "6 PRs in this block: 5 open and 1 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "5"
+        },
+        {
+          "label": "Merged",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "b-mapkit",
+      "lane": "geo",
+      "kind": "module",
+      "label": "MapView in ui-kit",
+      "subtitle": "engine and providers",
+      "summary": "11 PRs in this block: 1 open and 10 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "1"
+        },
+        {
+          "label": "Merged",
+          "value": "10"
+        }
+      ]
+    },
+    {
+      "id": "b-core",
+      "lane": "back",
+      "kind": "module",
+      "label": "Backend core and events",
+      "subtitle": "locations",
+      "summary": "4 PRs in this block: 1 open and 3 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "1"
+        },
+        {
+          "label": "Merged",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "id": "b-other",
+      "lane": "back",
+      "kind": "module",
+      "label": "Cross-cutting",
+      "subtitle": "outside the project",
+      "summary": "6 PRs in this block: 4 open and 2 merged.",
+      "metrics": [
+        {
+          "label": "Open",
+          "value": "4"
+        },
+        {
+          "label": "Merged",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "id": "pr-1000",
+      "parent": "b-nav",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1000 · add the warehouses tab behind a flag",
+      "subtitle": "Merged · 07-28",
+      "summary": "Merged, merged on 07-28, by bruno-soler.",
+      "tags": [
+        "Merged",
+        "bruno-soler",
+        "platform"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1000,
+          "repo": "acme/platform",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-07-28"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1001",
+      "parent": "b-nav",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1001 · relocate tab links to the mounted base",
+      "subtitle": "Merged · 09-18",
+      "summary": "Merged, merged on 09-18, by clara-mendez. Depends on #1000 (functional). Jira: WH-100 (Done).",
+      "tags": [
+        "Merged",
+        "clara-mendez",
+        "platform",
+        "WH-100"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1001,
+          "repo": "acme/platform",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-100",
+          "status": "Done",
+          "note": "cluster pins above fifty markers (follow-up 2) · Done · Elena Ortiz · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-18"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1002",
+      "parent": "b-nav",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1002 · 'Warehouses has moved' notice",
+      "subtitle": "Merged · 09-21",
+      "summary": "Merged, merged on 09-21, by clara-mendez. Depends on #1001 (functional). Jira: WH-101 (Done).",
+      "tags": [
+        "Merged",
+        "clara-mendez",
+        "platform",
+        "WH-101"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1002,
+          "repo": "acme/platform",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-101",
+          "status": "Done",
+          "note": "theme the map from design tokens (follow-up 3) · Done · Elena Ortiz · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-21"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1003",
+      "parent": "b-nav",
+      "kind": "service",
+      "status": "changes",
+      "label": "#1003 · keep the old route redirecting",
+      "subtitle": "Changes requested · 09-21",
+      "summary": "Changes requested, opened on 09-21, by clara-mendez. 2 approvals, but fcsonline requested changes on Sep 24: talk to the translations team about reusing the existing ones. Jira: WH-102 (In Code Review), WH-104 (Blocked).",
+      "tags": [
+        "Changes requested",
+        "clara-mendez",
+        "platform",
+        "WH-102",
+        "WH-104"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "Has changes requested: it blocks the PRs that hang off it."
+        },
+        {
+          "tone": "warn",
+          "text": "WH-104: Blocked; #1003, which cites it, has changes requested"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1003,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-102",
+          "status": "In Code Review",
+          "note": "add the warehouses tab behind a flag (follow-up 2) · In Code Review · Elena Ortiz · epic WH-900"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-104",
+          "status": "Blocked",
+          "note": "avatars fall back to initials · Blocked · Elena Ortiz · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Changes requested"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-21"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1004",
+      "parent": "b-nav",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1004 · drop the legacy entry from the sidebar",
+      "subtitle": "Awaiting approval · 09-22",
+      "summary": "Awaiting approval, opened on 09-22, by clara-mendez. Depends on #1003 (stack), #1001 (functional). Jira: WH-106 (In Code Review), WH-102 (In Code Review).",
+      "tags": [
+        "Awaiting approval",
+        "clara-mendez",
+        "platform",
+        "WH-106",
+        "WH-102"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1004,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-106",
+          "status": "In Code Review",
+          "note": "tabs keep their scroll position · In Code Review · Elena Ortiz · epic WH-900"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-102",
+          "status": "In Code Review",
+          "note": "add the warehouses tab behind a flag (follow-up 2) · In Code Review · Elena Ortiz · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-22"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1005",
+      "parent": "b-nav",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1005 · tidy the breadcrumb for nested views",
+      "subtitle": "Draft · 09-22",
+      "summary": "Draft, opened on 09-22, by bruno-soler. New title today (previously: QA fixes for warehouses in Organization). Depends on #1000 (functional). Jira: WH-107 (In Progress).",
+      "tags": [
+        "Draft",
+        "bruno-soler",
+        "platform",
+        "WH-107"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1005,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-107",
+          "status": "In Progress",
+          "note": "'Warehouses has moved' notice (follow-up 2) · In Progress · Elena Ortiz"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-22"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1006",
+      "parent": "b-members",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1006 · list the staff assigned to a warehouse",
+      "subtitle": "Merged · 09-22",
+      "summary": "Merged, merged on 09-22, by diego-narvaez. Jira: WH-109 (In Progress).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "platform",
+        "WH-109"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1006,
+          "repo": "acme/platform",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-109",
+          "status": "In Progress",
+          "note": "paginate the staff tab (follow-up 2) · In Progress · Ana Rivera"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-22"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1007",
+      "parent": "b-members",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1007 · paginate the staff tab",
+      "subtitle": "Awaiting approval · 09-23",
+      "summary": "Awaiting approval, opened on 09-23, by diego-narvaez. Uses the i18n namespace that #1003 creates. Depends on #1003 (functional), #1006 (functional). Jira: WH-110 (In Progress), WH-111 (To Do).",
+      "tags": [
+        "Awaiting approval",
+        "diego-narvaez",
+        "platform",
+        "WH-110",
+        "WH-111"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-111: To Do, but #1007 already implements its recommendation"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1007,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-110",
+          "status": "In Progress",
+          "note": "normalise city and state to ids (follow-up 2) · In Progress · Ana Rivera · epic WH-900"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-111",
+          "status": "To Do",
+          "note": "inline errors on the address block · To Do · Clara Méndez · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-23"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1008",
+      "parent": "b-members",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1008 · empty state for a warehouse with no staff",
+      "subtitle": "Draft · 09-23",
+      "summary": "Draft, opened on 09-23, by diego-narvaez. Depends on #1007 (stack). Jira: WH-110 (In Progress).",
+      "tags": [
+        "Draft",
+        "diego-narvaez",
+        "platform",
+        "WH-110"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1008,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-110",
+          "status": "In Progress",
+          "note": "normalise city and state to ids (follow-up 2) · In Progress · Ana Rivera · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-23"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1009",
+      "parent": "b-members",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1009 · filter staff by role",
+      "subtitle": "Awaiting approval · 09-10",
+      "summary": "Awaiting approval, opened on 09-10, by diego-narvaez. Last one in the WH-109 set; picked up by the monitor. Depends on #1006 (functional). Jira: WH-109 (In Progress).",
+      "tags": [
+        "Awaiting approval",
+        "diego-narvaez",
+        "platform",
+        "WH-109"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1009,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-109",
+          "status": "In Progress",
+          "note": "paginate the staff tab (follow-up 2) · In Progress · Ana Rivera"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-10"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1010",
+      "parent": "b-detail",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1010 · detail page skeleton",
+      "subtitle": "Merged · 08-28",
+      "summary": "Merged, merged on 08-28, by clara-mendez. Jira: WH-113 (Done).",
+      "tags": [
+        "Merged",
+        "clara-mendez",
+        "platform",
+        "WH-113"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1010,
+          "repo": "acme/platform",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-113",
+          "status": "Done",
+          "note": "expose locations through the public API · Done · Elena Ortiz · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-08-28"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1011",
+      "parent": "b-detail",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1011 · show opening hours on the header",
+      "subtitle": "Merged · 09-01",
+      "summary": "Merged, merged on 09-01, by clara-mendez. Jira: WH-114 (Done).",
+      "tags": [
+        "Merged",
+        "clara-mendez",
+        "platform",
+        "WH-114"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1011,
+          "repo": "acme/platform",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-114",
+          "status": "Done",
+          "note": "typo in the release checklist (follow-up 2) · Done · Elena Ortiz · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-01"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1012",
+      "parent": "b-detail",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1012 · edit button respects permissions",
+      "subtitle": "Merged · 09-17",
+      "summary": "Merged, merged on 09-17, by bruno-soler. merged into the #1013 branch.",
+      "tags": [
+        "Merged",
+        "bruno-soler",
+        "platform"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1012,
+          "repo": "acme/platform",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-17"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1013",
+      "parent": "b-detail",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1013 · surface the address block",
+      "subtitle": "Awaiting approval · 09-07",
+      "summary": "Awaiting approval, opened on 09-07, by bruno-soler. Depends on #1014 (stack), #1012 (stack), #1010 (functional), #1011 (functional). Jira: WH-115 (To Do).",
+      "tags": [
+        "Awaiting approval",
+        "bruno-soler",
+        "platform",
+        "WH-115"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-115: To Do and unassigned with an open PR"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1013,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-115",
+          "status": "To Do",
+          "note": "search box debounces its query · To Do · Clara Méndez · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-07"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1015",
+      "parent": "b-list",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1015 · card grid for the warehouse list",
+      "subtitle": "Merged · 08-07",
+      "summary": "Merged, merged on 08-07, by bruno-soler.",
+      "tags": [
+        "Merged",
+        "bruno-soler",
+        "platform"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1015,
+          "repo": "acme/platform",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-08-07"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1016",
+      "parent": "b-list",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1016 · sort by city and by capacity",
+      "subtitle": "Draft · 09-03",
+      "summary": "Draft, opened on 09-03, by clara-mendez. independent. Jira: WH-116 (To Do).",
+      "tags": [
+        "Draft",
+        "clara-mendez",
+        "platform",
+        "WH-116"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-116: To Do and unassigned with an open PR"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1016,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-116",
+          "status": "To Do",
+          "note": "backfill the existing rows (follow-up 2) · To Do · Clara Méndez · epic WH-902"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-03"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1017",
+      "parent": "b-geo",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1017 · normalise city and state to ids",
+      "subtitle": "Awaiting approval · 09-17 · mine",
+      "summary": "Awaiting approval, opened on 09-17, by ana-rivera. Jira: WH-117 (In Progress).",
+      "tags": [
+        "Awaiting approval",
+        "ana-rivera",
+        "platform",
+        "WH-117"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1017,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-117",
+          "status": "In Progress",
+          "note": "relocate tab links to the mounted base (follow-up 2) · In Progress · Bruno Soler · epic WH-901"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-17"
+        },
+        {
+          "label": "Author",
+          "value": "ana-rivera"
+        }
+      ]
+    },
+    {
+      "id": "pr-1018",
+      "parent": "b-geo",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1018 · backfill the existing rows",
+      "subtitle": "Draft · 09-22 · mine",
+      "summary": "Draft, opened on 09-22, by ana-rivera. Depends on #1017 (functional). Jira: WH-118 (In Progress), WH-119 (In Progress).",
+      "tags": [
+        "Draft",
+        "ana-rivera",
+        "platform",
+        "WH-118",
+        "WH-119"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1018,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-118",
+          "status": "In Progress",
+          "note": "list the staff assigned to a warehouse (follow-up 2) · In Progress · Bruno Soler · epic WH-901"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-119",
+          "status": "In Progress",
+          "note": "detail page skeleton (follow-up 2) · In Progress · Bruno Soler · epic WH-901"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-22"
+        },
+        {
+          "label": "Author",
+          "value": "ana-rivera"
+        }
+      ]
+    },
+    {
+      "id": "pr-1019",
+      "parent": "b-geo",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1019 · fall back to the raw string when the id is unknown",
+      "subtitle": "Draft · 09-23 · mine",
+      "summary": "Draft, opened on 09-23, by ana-rivera. Depends on #1018 (stack). Jira: WH-119 (In Progress).",
+      "tags": [
+        "Draft",
+        "ana-rivera",
+        "platform",
+        "WH-119"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1019,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-119",
+          "status": "In Progress",
+          "note": "detail page skeleton (follow-up 2) · In Progress · Bruno Soler · epic WH-901"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-23"
+        },
+        {
+          "label": "Author",
+          "value": "ana-rivera"
+        }
+      ]
+    },
+    {
+      "id": "pr-1020",
+      "parent": "b-geo",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1020 · cache geocoding lookups",
+      "subtitle": "Draft · 09-23 · mine",
+      "summary": "Draft, opened on 09-23, by ana-rivera. Depends on #1019 (stack). Jira: WH-119 (In Progress).",
+      "tags": [
+        "Draft",
+        "ana-rivera",
+        "platform",
+        "WH-119"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1020,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-119",
+          "status": "In Progress",
+          "note": "detail page skeleton (follow-up 2) · In Progress · Bruno Soler · epic WH-901"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-23"
+        },
+        {
+          "label": "Author",
+          "value": "ana-rivera"
+        }
+      ]
+    },
+    {
+      "id": "pr-1021",
+      "parent": "b-geo",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1021 · reject coordinates outside the country",
+      "subtitle": "Draft · 09-24 · mine",
+      "summary": "Draft, opened on 09-24, by ana-rivera. Detected by the monitor. Depends on #1020 (stack). Jira: WH-119 (In Progress).",
+      "tags": [
+        "Draft",
+        "ana-rivera",
+        "platform",
+        "WH-119"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1021,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-119",
+          "status": "In Progress",
+          "note": "detail page skeleton (follow-up 2) · In Progress · Bruno Soler · epic WH-901"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-24"
+        },
+        {
+          "label": "Author",
+          "value": "ana-rivera"
+        }
+      ]
+    },
+    {
+      "id": "pr-1022",
+      "parent": "b-form",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1022 · address autocomplete in the create form",
+      "subtitle": "Merged · 09-17",
+      "summary": "Merged, merged on 09-17, by bruno-soler.",
+      "tags": [
+        "Merged",
+        "bruno-soler",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1022,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-17"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1023",
+      "parent": "b-form",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1023 · validate postal codes per country",
+      "subtitle": "Merged · 09-17",
+      "summary": "Merged, merged on 09-17, by elena-ortiz.",
+      "tags": [
+        "Merged",
+        "elena-ortiz",
+        "platform"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1023,
+          "repo": "acme/platform",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-17"
+        },
+        {
+          "label": "Author",
+          "value": "elena-ortiz"
+        }
+      ]
+    },
+    {
+      "id": "pr-1014",
+      "parent": "b-form",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1014 · edit keeps the pristine address untouched",
+      "subtitle": "Awaiting approval · 09-07",
+      "summary": "Awaiting approval, opened on 09-07, by bruno-soler. Branch rewritten today (9 commits). Depends on ui-kit #1022 (functional), #1023 (functional). Jira: WH-120 (To Do).",
+      "tags": [
+        "Awaiting approval",
+        "bruno-soler",
+        "platform",
+        "WH-120"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-120: To Do and unassigned with an open PR"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1014,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-120",
+          "status": "To Do",
+          "note": "demo seed for the empty account · To Do · Clara Méndez · epic WH-901"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-07"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1024",
+      "parent": "b-mapview",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1024 · embed the map on the list page",
+      "subtitle": "Merged · 09-10",
+      "summary": "Merged, merged on 09-10, by bruno-soler.",
+      "tags": [
+        "Merged",
+        "bruno-soler",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1024,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-10"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1025",
+      "parent": "b-mapview",
+      "kind": "package",
+      "status": "changes",
+      "label": "ui-kit #1025 · cluster pins above fifty markers",
+      "subtitle": "Changes requested · 09-03",
+      "summary": "Changes requested, opened on 09-03, by clara-mendez. Approved today by bruno-soler; the requested changes still stand. Depends on ui-kit #1024 (stack), ui-kit #1026 (functional). Jira: WH-121 (To Do).",
+      "tags": [
+        "Changes requested",
+        "clara-mendez",
+        "ui-kit",
+        "WH-121"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "Has changes requested: it blocks the PRs that hang off it."
+        },
+        {
+          "tone": "warn",
+          "text": "WH-121: To Do and unassigned; 3 PRs touch it"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1025,
+          "repo": "acme/ui-kit",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-121",
+          "status": "To Do",
+          "note": "confirm before discarding a draft · To Do · Clara Méndez · epic WH-903"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Changes requested"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-03"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1027",
+      "parent": "b-mapview",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1027 · sync the map viewport with the filters",
+      "subtitle": "Draft · 09-03",
+      "summary": "Draft, opened on 09-03, by clara-mendez. Depends on ui-kit #1025 (stack), #1015 (functional). Jira: WH-121 (To Do).",
+      "tags": [
+        "Draft",
+        "clara-mendez",
+        "platform",
+        "WH-121"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-121: To Do and unassigned; 3 PRs touch it"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1027,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-121",
+          "status": "To Do",
+          "note": "confirm before discarding a draft · To Do · Clara Méndez · epic WH-903"
+        },
+        {
+          "kind": "node",
+          "target": "pr-1031",
+          "note": "Parallel path for the map view"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-03"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1028",
+      "parent": "b-mapview",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1028 · pin tooltip shows the address",
+      "subtitle": "Draft · 09-03",
+      "summary": "Draft, opened on 09-03, by clara-mendez. Depends on #1027 (stack). Jira: WH-121 (To Do), WH-115 (To Do).",
+      "tags": [
+        "Draft",
+        "clara-mendez",
+        "platform",
+        "WH-121",
+        "WH-115"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-121: To Do and unassigned; 3 PRs touch it"
+        },
+        {
+          "tone": "warn",
+          "text": "WH-115: To Do and unassigned with an open PR"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1028,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-121",
+          "status": "To Do",
+          "note": "confirm before discarding a draft · To Do · Clara Méndez · epic WH-903"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-115",
+          "status": "To Do",
+          "note": "search box debounces its query · To Do · Clara Méndez · epic WH-900"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-03"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1029",
+      "parent": "b-mapview",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1029 · lazy-load the map bundle",
+      "subtitle": "Draft · 09-08",
+      "summary": "Draft, opened on 09-08, by diego-narvaez. Unblocked: ui-kit#1030 merged; ui-kit-react still needs a bump. Depends on ui-kit #1030 (functional), #1027 (functional). Jira: WH-122 (In Code Review), WH-123.",
+      "tags": [
+        "Draft",
+        "diego-narvaez",
+        "platform",
+        "WH-122",
+        "WH-123"
+      ],
+      "notes": [
+        {
+          "tone": "good",
+          "text": "Unblocked: ui-kit#1030 merged; ui-kit-react still needs a bump"
+        },
+        {
+          "tone": "warn",
+          "text": "WH-122: In Code Review, but ui-kit#1030 was merged today"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1029,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-122",
+          "status": "In Code Review",
+          "note": "sync the map viewport with the filters (follow-up 2) · In Code Review · Ana Rivera · epic WH-904"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-123",
+          "status": "",
+          "note": ""
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-08"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1031",
+      "parent": "b-mapview",
+      "kind": "service",
+      "status": "draft",
+      "label": "#1031 · embed the map on the list page (follow-up 2)",
+      "subtitle": "Draft · 09-23",
+      "summary": "Draft, opened on 09-23, by diego-narvaez. Parallel path to #1027. Depends on ui-kit #1025 (stack). Jira: WH-124.",
+      "tags": [
+        "Draft",
+        "diego-narvaez",
+        "platform",
+        "WH-124"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "Two PRs build the map view along parallel paths (#1027 and #1031)."
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1031,
+          "repo": "acme/platform",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-124",
+          "status": "",
+          "note": ""
+        },
+        {
+          "kind": "node",
+          "target": "pr-1027",
+          "note": "Parallel path for the map view"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-23"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1026",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1026 · provider fallback when the tiles fail",
+      "subtitle": "Merged · 08-13",
+      "summary": "Merged, merged on 08-13, by bruno-soler.",
+      "tags": [
+        "Merged",
+        "bruno-soler",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1026,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-08-13"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    },
+    {
+      "id": "pr-1032",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1032 · theme the map from design tokens",
+      "subtitle": "Merged · 09-09",
+      "summary": "Merged, merged on 09-09, by diego-narvaez. Depends on ui-kit #1026 (functional).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1032,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-09"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1033",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1033 · expose a controlled viewport prop",
+      "subtitle": "Merged · 09-14",
+      "summary": "Merged, merged on 09-14, by diego-narvaez. Depends on ui-kit #1032 (functional).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1033,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-14"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1034",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1034 · marker slot accepts custom content",
+      "subtitle": "Merged · 09-14",
+      "summary": "Merged, merged on 09-14, by diego-narvaez. Depends on ui-kit #1033 (functional).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1034,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-14"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1035",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1035 · document the provider contract",
+      "subtitle": "Merged · 09-15",
+      "summary": "Merged, merged on 09-15, by diego-narvaez. Depends on ui-kit #1034 (functional).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1035,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-15"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1036",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1036 · provider fallback when the tiles fail (follow-up 2)",
+      "subtitle": "Merged · 09-17",
+      "summary": "Merged, merged on 09-17, by diego-narvaez. Depends on ui-kit #1035 (functional).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1036,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-17"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1037",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1037 · theme the map from design tokens (follow-up 2)",
+      "subtitle": "Merged · 09-18",
+      "summary": "Merged, merged on 09-18, by diego-narvaez. Depends on ui-kit #1036 (functional).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1037,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-18"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1038",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1038 · expose a controlled viewport prop (follow-up 2)",
+      "subtitle": "Merged · 09-21",
+      "summary": "Merged, merged on 09-21, by diego-narvaez. Depends on ui-kit #1037 (functional).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1038,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-21"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1039",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1039 · marker slot accepts custom content (follow-up 2)",
+      "subtitle": "Merged · 09-21",
+      "summary": "Merged, merged on 09-21, by diego-narvaez. landed with #1030. Jira: WH-125 (Done).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit",
+        "WH-125"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1039,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-125",
+          "status": "Done",
+          "note": "expose a controlled viewport prop (follow-up 3) · Done · Ana Rivera · epic WH-904"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-21"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1030",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1030 · document the provider contract (follow-up 2)",
+      "subtitle": "Merged · 09-23",
+      "summary": "Merged, merged on 09-23, by diego-narvaez. Merged today. Depends on ui-kit #1038 (functional), ui-kit #1039 (stack). Jira: WH-122 (In Code Review), WH-125 (Done).",
+      "tags": [
+        "Merged",
+        "diego-narvaez",
+        "ui-kit",
+        "WH-122",
+        "WH-125"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-122: In Code Review, but ui-kit#1030 was merged today"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1030,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-122",
+          "status": "In Code Review",
+          "note": "sync the map viewport with the filters (follow-up 2) · In Code Review · Ana Rivera · epic WH-904"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-125",
+          "status": "Done",
+          "note": "expose a controlled viewport prop (follow-up 3) · Done · Ana Rivera · epic WH-904"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-09-23"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1040",
+      "parent": "b-mapkit",
+      "kind": "package",
+      "status": "draft",
+      "label": "ui-kit #1040 · provider fallback when the tiles fail (follow-up 3)",
+      "subtitle": "Draft · 09-08",
+      "summary": "Draft, opened on 09-08, by diego-narvaez. Depends on ui-kit #1026 (functional). Jira: WH-127 (Done), WH-123.",
+      "tags": [
+        "Draft",
+        "diego-narvaez",
+        "ui-kit",
+        "WH-127",
+        "WH-123"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-127: Done while ui-kit#1040 is still open"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1040,
+          "repo": "acme/ui-kit",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-127",
+          "status": "Done",
+          "note": "locations table and its model (follow-up 2) · Done · Ana Rivera · epic WH-904"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-123",
+          "status": "",
+          "note": ""
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-08"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1041",
+      "parent": "b-core",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1041 · locations table and its model",
+      "subtitle": "Merged · 07-24",
+      "summary": "Merged, merged on 07-24, by farid-haddad. Jira: WH-128 (Done).",
+      "tags": [
+        "Merged",
+        "farid-haddad",
+        "platform",
+        "WH-128"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1041,
+          "repo": "acme/platform",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-128",
+          "status": "Done",
+          "note": "address autocomplete in the create form (follow-up 2) · Done · Gemma Roca"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-07-24"
+        },
+        {
+          "label": "Author",
+          "value": "farid-haddad"
+        }
+      ]
+    },
+    {
+      "id": "pr-1042",
+      "parent": "b-core",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1042 · publish an event when a location changes",
+      "subtitle": "Merged · 07-27",
+      "summary": "Merged, merged on 07-27, by farid-haddad. Jira: WH-129 (Done).",
+      "tags": [
+        "Merged",
+        "farid-haddad",
+        "platform",
+        "WH-129"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1042,
+          "repo": "acme/platform",
+          "status": "merged"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-129",
+          "status": "Done",
+          "note": "fall back to the raw string when the id is unknown (follow-up 2) · Done · Gemma Roca"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-07-27"
+        },
+        {
+          "label": "Author",
+          "value": "farid-haddad"
+        }
+      ]
+    },
+    {
+      "id": "pr-1043",
+      "parent": "b-core",
+      "kind": "service",
+      "status": "merged",
+      "label": "#1043 · soft delete keeps the history",
+      "subtitle": "Merged · 07-28",
+      "summary": "Merged, merged on 07-28, by gemma-roca.",
+      "tags": [
+        "Merged",
+        "gemma-roca",
+        "platform"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1043,
+          "repo": "acme/platform",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-07-28"
+        },
+        {
+          "label": "Author",
+          "value": "gemma-roca"
+        }
+      ]
+    },
+    {
+      "id": "pr-1044",
+      "parent": "b-core",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1044 · index the lookup columns",
+      "subtitle": "Awaiting approval · 09-10",
+      "summary": "Awaiting approval, opened on 09-10, by hugo-prats. Depends on #1043 (functional). Jira: WH-130 (In Code Review).",
+      "tags": [
+        "Awaiting approval",
+        "hugo-prats",
+        "platform",
+        "WH-130"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1044,
+          "repo": "acme/platform",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-130",
+          "status": "In Code Review",
+          "note": "unrelated dependency bump (follow-up 2) · In Code Review · Farid Haddad · epic WH-905"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-10"
+        },
+        {
+          "label": "Author",
+          "value": "hugo-prats"
+        }
+      ]
+    },
+    {
+      "id": "pr-1045",
+      "parent": "b-other",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1045 · bump the shared linter",
+      "subtitle": "Merged · 08-24",
+      "summary": "Merged, merged on 08-24, by clara-mendez.",
+      "tags": [
+        "Merged",
+        "clara-mendez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1045,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-08-24"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1046",
+      "parent": "b-other",
+      "kind": "package",
+      "status": "merged",
+      "label": "ui-kit #1046 · flaky test in the scheduler suite",
+      "subtitle": "Merged · 08-24",
+      "summary": "Merged, merged on 08-24, by clara-mendez.",
+      "tags": [
+        "Merged",
+        "clara-mendez",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1046,
+          "repo": "acme/ui-kit",
+          "status": "merged"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Merged"
+        },
+        {
+          "label": "Merge",
+          "value": "2026-08-24"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1047",
+      "parent": "b-other",
+      "kind": "package",
+      "status": "draft",
+      "label": "ui-kit #1047 · typo in the release checklist",
+      "subtitle": "Draft · 08-24",
+      "summary": "Draft, opened on 08-24, by clara-mendez. Depends on ui-kit #1045 (stack), ui-kit #1046 (stack). Jira: WH-131 (Done).",
+      "tags": [
+        "Draft",
+        "clara-mendez",
+        "ui-kit",
+        "WH-131"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1047,
+          "repo": "acme/ui-kit",
+          "status": "draft"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-131",
+          "status": "Done",
+          "note": "virtualise long lists · Done · Elena Ortiz"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-08-24"
+        },
+        {
+          "label": "Author",
+          "value": "clara-mendez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1048",
+      "parent": "b-other",
+      "kind": "package",
+      "status": "pending",
+      "label": "ui-kit #1048 · unrelated dependency bump",
+      "subtitle": "Awaiting approval · 08-26",
+      "summary": "Awaiting approval, opened on 08-26, by diego-narvaez. Jira: WH-132 (Done).",
+      "tags": [
+        "Awaiting approval",
+        "diego-narvaez",
+        "ui-kit",
+        "WH-132"
+      ],
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "WH-132: Done while ui-kit#1048 is still open"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1048,
+          "repo": "acme/ui-kit",
+          "status": "open"
+        },
+        {
+          "kind": "jira",
+          "key": "WH-132",
+          "status": "Done",
+          "note": "show opening hours on the header (follow-up 2) · Done · Ana Rivera"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-08-26"
+        },
+        {
+          "label": "Author",
+          "value": "diego-narvaez"
+        }
+      ]
+    },
+    {
+      "id": "pr-1049",
+      "parent": "b-other",
+      "kind": "package",
+      "status": "draft",
+      "label": "ui-kit #1049 · bump the shared linter (follow-up 2)",
+      "subtitle": "Draft · 08-27",
+      "summary": "Draft, opened on 08-27, by ines-valls.",
+      "tags": [
+        "Draft",
+        "ines-valls",
+        "ui-kit"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1049,
+          "repo": "acme/ui-kit",
+          "status": "draft"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Draft"
+        },
+        {
+          "label": "Start",
+          "value": "2026-08-27"
+        },
+        {
+          "label": "Author",
+          "value": "ines-valls"
+        }
+      ]
+    },
+    {
+      "id": "pr-1050",
+      "parent": "b-other",
+      "kind": "service",
+      "status": "pending",
+      "label": "#1050 · flaky test in the scheduler suite (follow-up 2)",
+      "subtitle": "Awaiting approval · 09-03",
+      "summary": "Awaiting approval, opened on 09-03, by bruno-soler.",
+      "tags": [
+        "Awaiting approval",
+        "bruno-soler",
+        "platform"
+      ],
+      "notes": [],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 1050,
+          "repo": "acme/platform",
+          "status": "open"
+        }
+      ],
+      "metrics": [
+        {
+          "label": "Status",
+          "value": "Awaiting approval"
+        },
+        {
+          "label": "Start",
+          "value": "2026-09-03"
+        },
+        {
+          "label": "Author",
+          "value": "bruno-soler"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "pr-1000",
+      "to": "pr-1001",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1001 needs what #1000 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e2",
+      "from": "pr-1001",
+      "to": "pr-1002",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1002 needs what #1001 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e3",
+      "from": "pr-1003",
+      "to": "pr-1004",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1004 branches off #1003; still open, so it blocks.",
+      "emphasis": "hero",
+      "animated": true
+    },
+    {
+      "id": "e4",
+      "from": "pr-1001",
+      "to": "pr-1004",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1004 needs what #1001 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e5",
+      "from": "pr-1000",
+      "to": "pr-1005",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1005 needs what #1000 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e6",
+      "from": "pr-1003",
+      "to": "pr-1007",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1007 needs what #1003 brings; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e7",
+      "from": "pr-1006",
+      "to": "pr-1007",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1007 needs what #1006 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e8",
+      "from": "pr-1007",
+      "to": "pr-1008",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1008 branches off #1007; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e9",
+      "from": "pr-1006",
+      "to": "pr-1009",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1009 needs what #1006 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e10",
+      "from": "pr-1014",
+      "to": "pr-1013",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1013 branches off #1014; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e11",
+      "from": "pr-1012",
+      "to": "pr-1013",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1013 branches off #1012; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e12",
+      "from": "pr-1010",
+      "to": "pr-1013",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1013 needs what #1010 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e13",
+      "from": "pr-1011",
+      "to": "pr-1013",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1013 needs what #1011 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e14",
+      "from": "pr-1017",
+      "to": "pr-1018",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1018 needs what #1017 brings; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e15",
+      "from": "pr-1018",
+      "to": "pr-1019",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1019 branches off #1018; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e16",
+      "from": "pr-1019",
+      "to": "pr-1020",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1020 branches off #1019; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e17",
+      "from": "pr-1020",
+      "to": "pr-1021",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1021 branches off #1020; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e18",
+      "from": "pr-1022",
+      "to": "pr-1014",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1014 needs what ui-kit #1022 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e19",
+      "from": "pr-1023",
+      "to": "pr-1014",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1014 needs what #1023 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e20",
+      "from": "pr-1024",
+      "to": "pr-1025",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "ui-kit #1025 branches off ui-kit #1024; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e21",
+      "from": "pr-1026",
+      "to": "pr-1025",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1025 needs what ui-kit #1026 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e22",
+      "from": "pr-1025",
+      "to": "pr-1027",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1027 branches off ui-kit #1025; still open, so it blocks.",
+      "emphasis": "hero",
+      "animated": true
+    },
+    {
+      "id": "e23",
+      "from": "pr-1015",
+      "to": "pr-1027",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1027 needs what #1015 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e24",
+      "from": "pr-1027",
+      "to": "pr-1028",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1028 branches off #1027; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e25",
+      "from": "pr-1030",
+      "to": "pr-1029",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1029 needs what ui-kit #1030 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e26",
+      "from": "pr-1027",
+      "to": "pr-1029",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1029 needs what #1027 brings; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e27",
+      "from": "pr-1025",
+      "to": "pr-1031",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "#1031 branches off ui-kit #1025; still open, so it blocks.",
+      "emphasis": "normal",
+      "animated": true
+    },
+    {
+      "id": "e28",
+      "from": "pr-1026",
+      "to": "pr-1032",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1032 needs what ui-kit #1026 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e29",
+      "from": "pr-1032",
+      "to": "pr-1033",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1033 needs what ui-kit #1032 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e30",
+      "from": "pr-1033",
+      "to": "pr-1034",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1034 needs what ui-kit #1033 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e31",
+      "from": "pr-1034",
+      "to": "pr-1035",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1035 needs what ui-kit #1034 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e32",
+      "from": "pr-1035",
+      "to": "pr-1036",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1036 needs what ui-kit #1035 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e33",
+      "from": "pr-1036",
+      "to": "pr-1037",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1037 needs what ui-kit #1036 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e34",
+      "from": "pr-1037",
+      "to": "pr-1038",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1038 needs what ui-kit #1037 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e35",
+      "from": "pr-1038",
+      "to": "pr-1030",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1030 needs what ui-kit #1038 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e36",
+      "from": "pr-1039",
+      "to": "pr-1030",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "ui-kit #1030 branches off ui-kit #1039; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e37",
+      "from": "pr-1026",
+      "to": "pr-1040",
+      "kind": "async",
+      "label": "functional",
+      "summary": "ui-kit #1040 needs what ui-kit #1026 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e38",
+      "from": "pr-1043",
+      "to": "pr-1044",
+      "kind": "async",
+      "label": "functional",
+      "summary": "#1044 needs what #1043 brings; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e39",
+      "from": "pr-1045",
+      "to": "pr-1047",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "ui-kit #1047 branches off ui-kit #1045; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    },
+    {
+      "id": "e40",
+      "from": "pr-1046",
+      "to": "pr-1047",
+      "kind": "dependency",
+      "label": "stack",
+      "summary": "ui-kit #1047 branches off ui-kit #1046; already merged.",
+      "emphasis": "muted",
+      "animated": false
+    }
+  ],
+  "flows": [
+    {
+      "id": "map",
+      "title": "Road to the map",
+      "summary": "From the MapView engine in ui-kit to the Warehouses map view in the monorepo.",
+      "participants": [
+        "pr-1026",
+        "pr-1038",
+        "pr-1030",
+        "pr-1025",
+        "pr-1027",
+        "pr-1028",
+        "pr-1031",
+        "pr-1029"
+      ],
+      "messages": [
+        {
+          "id": "m1",
+          "from": "pr-1026",
+          "to": "pr-1038",
+          "label": "engine behind the MapAdapter (7 PRs merged)",
+          "kind": "sync"
+        },
+        {
+          "id": "m2",
+          "from": "pr-1038",
+          "to": "pr-1030",
+          "label": "Google provider · merged today",
+          "kind": "sync"
+        },
+        {
+          "id": "m3",
+          "from": "pr-1026",
+          "to": "pr-1025",
+          "label": "map view in Data Collection",
+          "kind": "sync"
+        },
+        {
+          "id": "m4",
+          "from": "pr-1025",
+          "to": "pr-1027",
+          "label": "pinned to the alpha · blocked by requested changes",
+          "kind": "async",
+          "note": "ui-kit#1025 still has changes requested"
+        },
+        {
+          "id": "m5",
+          "from": "pr-1025",
+          "to": "pr-1031",
+          "label": "pinned to the alpha (parallel path)",
+          "kind": "async"
+        },
+        {
+          "id": "m6",
+          "from": "pr-1027",
+          "to": "pr-1028",
+          "label": "stack: side panel",
+          "kind": "sync"
+        },
+        {
+          "id": "m7",
+          "from": "pr-1030",
+          "to": "pr-1029",
+          "label": "unblocked: ui-kit-react still needs a bump",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "id": "geo",
+      "title": "geocoding",
+      "summary": "Your drafts: from the new columns to the place pickers.",
+      "participants": [
+        "pr-1017",
+        "pr-1018",
+        "pr-1019",
+        "pr-1020",
+        "pr-1021"
+      ],
+      "messages": [
+        {
+          "id": "g1",
+          "from": "pr-1017",
+          "to": "pr-1018",
+          "label": "geoname_state_id / geoname_city_id columns",
+          "kind": "async"
+        },
+        {
+          "id": "g2",
+          "from": "pr-1018",
+          "to": "pr-1019",
+          "label": "stack: name places by id",
+          "kind": "sync"
+        },
+        {
+          "id": "g3",
+          "from": "pr-1019",
+          "to": "pr-1020",
+          "label": "stack: list places for pickers",
+          "kind": "sync"
+        },
+        {
+          "id": "g4",
+          "from": "pr-1020",
+          "to": "pr-1021",
+          "label": "stack: time zone from the city",
+          "kind": "sync"
+        }
+      ]
+    },
+    {
+      "id": "nav",
+      "title": "Navigation and people",
+      "summary": "What is waiting for #1003 to be merged.",
+      "participants": [
+        "pr-1003",
+        "pr-1004",
+        "pr-1007",
+        "pr-1008"
+      ],
+      "messages": [
+        {
+          "id": "n1",
+          "from": "pr-1003",
+          "to": "pr-1004",
+          "label": "stack: single link",
+          "kind": "sync"
+        },
+        {
+          "id": "n2",
+          "from": "pr-1003",
+          "to": "pr-1007",
+          "label": "shared i18n namespace",
+          "kind": "async"
+        },
+        {
+          "id": "n3",
+          "from": "pr-1007",
+          "to": "pr-1008",
+          "label": "stack: filter by relationship",
+          "kind": "sync"
+        }
+      ]
+    }
+  ],
+  "tour": {
+    "title": "What needs attention today",
+    "steps": [
+      {
+        "title": "The whole map",
+        "body_html": "<p>PRs only, in three themed lanes and ten blocks by feature. Color is the PR status; animated arrows are dependencies that still block. Jira tickets and artifacts are linked from each PR's panel.</p>",
+        "focus": {
+          "nodes": [
+            "b-mapview",
+            "b-geo",
+            "b-nav",
+            "b-members"
+          ]
+        }
+      },
+      {
+        "title": "ui-kit#1025 is holding up the map view",
+        "body_html": "<p>It has bruno-soler's approval, but the <b>requested changes</b> still stand. #1027, #1028 and the new #1031 hang off its alpha version.</p>",
+        "focus": {
+          "nodes": [
+            "pr-1025",
+            "pr-1027",
+            "pr-1028",
+            "pr-1031"
+          ]
+        },
+        "select": "pr-1025"
+      },
+      {
+        "title": "Two paths to the same map",
+        "body_html": "<p><b>#1027</b> (Bruno) and <b>#1031</b> (Clara) both build the Warehouses map view. We need to decide which one goes ahead.</p>",
+        "focus": {
+          "nodes": [
+            "pr-1027",
+            "pr-1031"
+          ]
+        }
+      },
+      {
+        "title": "#1003 unblocks three PRs",
+        "body_html": "<p>It had <b>2 approvals</b>, but on Sep 24 fcsonline <b>requested changes</b>: talk to the translations team about reusing the existing ones. Once it is merged, #1004, #1007 and, behind it, #1008 can move forward.</p>",
+        "focus": {
+          "nodes": [
+            "pr-1003",
+            "pr-1004",
+            "pr-1007",
+            "pr-1008"
+          ]
+        },
+        "select": "pr-1003"
+      },
+      {
+        "title": "Your geocoding chain",
+        "body_html": "<p><b>#1017</b> creates the columns; #1018 resolves the ids; #1019, #1020 and #1021 (time zone) are stacked on top. The last three are drafts with no ticket cited: they fit under WH-119 and WH-118.</p>",
+        "focus": {
+          "nodes": [
+            "pr-1017",
+            "pr-1018",
+            "pr-1019",
+            "pr-1020",
+            "pr-1021"
+          ]
+        }
+      },
+      {
+        "title": "#1029 can move forward now",
+        "body_html": "<p><b>ui-kit#1030</b>, the Google provider, was merged today. #1029 now only needs the ui-kit-react version bump and the lat/long fields from #1027.</p>",
+        "focus": {
+          "nodes": [
+            "pr-1030",
+            "pr-1029",
+            "pr-1027"
+          ]
+        },
+        "select": "pr-1029"
+      },
+      {
+        "title": "Jira does not reflect what happened",
+        "body_html": "<p>PRs with a ⚠ warning have an out-of-sync ticket: <b>ui-kit#1030</b> is merged while WH-122 is In Code Review; <b>#1003</b> has WH-104 in Blocked; #1027, #1028, #1013, #1014 and #1016 have their ticket in To Do and unassigned; <b>#1007</b> implements WH-111, which is still To Do. Open each PR to jump to its ticket.</p>",
+        "focus": {
+          "nodes": [
+            "pr-1030",
+            "pr-1003",
+            "pr-1027",
+            "pr-1028",
+            "pr-1013",
+            "pr-1014",
+            "pr-1016",
+            "pr-1007"
+          ]
+        }
+      }
+    ]
+  }
+}

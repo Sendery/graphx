@@ -1,0 +1,413 @@
+{
+  "title": "The nightly data load",
+  "summary": "From the CRM, the ERP and web analytics to the lakehouse and the dashboards. The timeline comes from a long-format CSV (time · id · field · value), loaded with tools/timeline.mjs.",
+  "lang": "en",
+  "direction": "right",
+  "initialDepth": 1,
+  "fx": {
+    "particles": true,
+    "heat": {
+      "label": "Delay",
+      "unit": "min",
+      "domain": [
+        0,
+        60
+      ],
+      "scheme": "heat"
+    },
+    "play": true,
+    "glow": true,
+    "spotlight": true
+  },
+  "owners": {
+    "data-eng": {
+      "label": "Data engineering",
+      "short": "DE",
+      "contact": "#data-eng"
+    },
+    "analytics": {
+      "label": "Analytics",
+      "short": "AN",
+      "contact": "#analytics"
+    },
+    "ml": {
+      "label": "Machine learning",
+      "short": "ML",
+      "contact": "#ml-platform"
+    }
+  },
+  "lanes": [
+    {
+      "id": "origenes",
+      "label": "Sources",
+      "subtitle": "business systems"
+    },
+    {
+      "id": "ingesta",
+      "label": "Ingestion",
+      "subtitle": "change data capture",
+      "owner": "data-eng"
+    },
+    {
+      "id": "proceso",
+      "label": "Processing",
+      "subtitle": "Spark, every 10 min",
+      "owner": "data-eng"
+    },
+    {
+      "id": "lake",
+      "label": "Lakehouse",
+      "subtitle": "bronze · silver · gold",
+      "owner": "data-eng"
+    },
+    {
+      "id": "consumo",
+      "label": "Consumption",
+      "subtitle": "who uses the data"
+    },
+    {
+      "id": "kpis",
+      "label": "The load",
+      "subtitle": "tonight's numbers"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "crm",
+      "lane": "origenes",
+      "label": "CRM",
+      "kind": "user",
+      "summary": "Customers and opportunities (Salesforce)."
+    },
+    {
+      "id": "erp",
+      "lane": "origenes",
+      "label": "ERP",
+      "kind": "card",
+      "summary": "Orders, invoices and stock (SAP)."
+    },
+    {
+      "id": "web",
+      "lane": "origenes",
+      "label": "Web analytics",
+      "kind": "chart",
+      "summary": "Browsing and purchase events."
+    },
+    {
+      "id": "kafka",
+      "lane": "ingesta",
+      "label": "Kafka Connect",
+      "kind": "queue",
+      "summary": "Change data capture (CDC) from each source."
+    },
+    {
+      "id": "limpieza",
+      "lane": "proceso",
+      "label": "Cleaning",
+      "kind": "function",
+      "summary": "Types, nulls and formats. Invalid rows are dropped here.",
+      "blocks": [
+        {
+          "type": "table",
+          "title": "Quality checks",
+          "columns": [
+            "Check",
+            "Rows",
+            "Result"
+          ],
+          "rows": [
+            [
+              "Valid date",
+              1203400,
+              {
+                "v": "ok",
+                "tone": "good"
+              }
+            ],
+            [
+              "Amount ≥ 0",
+              1203380,
+              {
+                "v": "20 out of range",
+                "tone": "warn"
+              }
+            ],
+            [
+              "Customer exists",
+              1201950,
+              {
+                "v": "1,450 orphans",
+                "tone": "crit"
+              }
+            ]
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "Corrupt ERP batch",
+          "text": "At 03:30 a batch arrived with dates in a different format; it was dropped and retried at 04:00."
+        }
+      ]
+    },
+    {
+      "id": "dedup",
+      "lane": "proceso",
+      "label": "Deduplication",
+      "kind": "function",
+      "summary": "One row per business key and version."
+    },
+    {
+      "id": "enriquecido",
+      "lane": "proceso",
+      "label": "Enrichment",
+      "kind": "cpu",
+      "summary": "Adds region, segment and exchange rate.",
+      "blocks": [
+        {
+          "type": "code",
+          "lang": "py",
+          "title": "The Spark step",
+          "code": "# join orders with the customers table\npedidos = spark.table(\"silver.pedidos\")\nclientes = spark.table(\"silver.clientes\")\nout = pedidos.join(clientes, \"cliente_id\", \"left\")\nout.write.mode(\"append\").saveAsTable(\"gold.pedidos\")"
+        }
+      ]
+    },
+    {
+      "id": "silver",
+      "lane": "lake",
+      "label": "Silver",
+      "kind": "datastore",
+      "summary": "Clean, deduplicated tables (Delta)."
+    },
+    {
+      "id": "gold",
+      "lane": "lake",
+      "label": "Gold",
+      "kind": "datastore",
+      "summary": "Business-ready tables. The backfill advances with the load.",
+      "blocks": [
+        {
+          "type": "stats",
+          "items": [
+            {
+              "label": "Tables",
+              "value": 42
+            },
+            {
+              "label": "Rows today",
+              "value": 8400000
+            },
+            {
+              "label": "Size",
+              "value": "1.2",
+              "unit": "TB"
+            }
+          ]
+        },
+        {
+          "type": "kv",
+          "items": [
+            [
+              "Format",
+              "Delta Lake"
+            ],
+            [
+              "Retention",
+              "400 days"
+            ],
+            [
+              "Partitioning",
+              "by day"
+            ],
+            [
+              "Schema",
+              "`gold.*`"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bi",
+      "lane": "consumo",
+      "label": "Dashboards",
+      "kind": "chart",
+      "owner": "analytics",
+      "summary": "Looker: sales, margins and stock."
+    },
+    {
+      "id": "ml",
+      "lane": "consumo",
+      "label": "ML models",
+      "kind": "cpu",
+      "owner": "ml",
+      "summary": "Demand forecasting and default risk."
+    },
+    {
+      "id": "k-filas",
+      "lane": "kpis",
+      "label": "Million rows loaded",
+      "shape": "kpi",
+      "kind": "datastore",
+      "value": 0,
+      "decimals": 1,
+      "summary": "Rows loaded into gold tonight."
+    },
+    {
+      "id": "k-frescura",
+      "lane": "kpis",
+      "label": "Gold freshness (min)",
+      "shape": "gauge",
+      "kind": "gauge",
+      "value": 20,
+      "min": 0,
+      "max": 90,
+      "unit": "min",
+      "thresholds": [
+        45,
+        60
+      ],
+      "summary": "Minutes since the latest data landed in gold; the SLA is 60."
+    },
+    {
+      "id": "k-origen",
+      "lane": "kpis",
+      "label": "Rows by source",
+      "shape": "donut",
+      "kind": "other",
+      "parts": [
+        {
+          "label": "Web",
+          "value": 40
+        },
+        {
+          "label": "CRM",
+          "value": 35
+        },
+        {
+          "label": "ERP",
+          "value": 25
+        }
+      ],
+      "summary": "Where the loaded data comes from."
+    }
+  ],
+  "edges": [
+    {
+      "id": "crm-cdc",
+      "from": "crm",
+      "to": "kafka",
+      "kind": "event",
+      "rate": 1000
+    },
+    {
+      "id": "erp-cdc",
+      "from": "erp",
+      "to": "kafka",
+      "kind": "event",
+      "rate": 800
+    },
+    {
+      "id": "web-ev",
+      "from": "web",
+      "to": "kafka",
+      "kind": "event",
+      "rate": 1400
+    },
+    {
+      "id": "ing-clean",
+      "from": "kafka",
+      "to": "limpieza",
+      "kind": "data",
+      "rate": 3200,
+      "emphasis": "hero"
+    },
+    {
+      "id": "clean-dedup",
+      "from": "limpieza",
+      "to": "dedup",
+      "kind": "data",
+      "rate": 3100
+    },
+    {
+      "id": "dedup-enrich",
+      "from": "dedup",
+      "to": "enriquecido",
+      "kind": "data",
+      "rate": 3000
+    },
+    {
+      "id": "enrich-silver",
+      "from": "enriquecido",
+      "to": "silver",
+      "kind": "data",
+      "rate": 3000
+    },
+    {
+      "id": "silver-gold",
+      "from": "silver",
+      "to": "gold",
+      "kind": "data",
+      "rate": 1800
+    },
+    {
+      "id": "gold-bi",
+      "from": "bi",
+      "to": "gold",
+      "kind": "data",
+      "rate": 400,
+      "label": "queries"
+    },
+    {
+      "id": "gold-ml",
+      "from": "ml",
+      "to": "gold",
+      "kind": "data",
+      "rate": 260
+    }
+  ],
+  "timeline": {
+    "label": "Night of October 6–7 · every 10 minutes",
+    "step": 800,
+    "window": 10,
+    "start": "end",
+    "data": "time,id,field,value\n02:00,crm-cdc,rate,0\n02:00,erp-cdc,rate,0\n02:00,web-ev,rate,0\n02:00,ing-clean,rate,0\n02:00,clean-dedup,rate,0\n02:00,dedup-enrich,rate,0\n02:00,enrich-silver,rate,0\n02:00,silver-gold,rate,0\n02:00,gold-bi,rate,0\n02:00,gold-ml,rate,0\n02:00,kafka,heat,1.8\n02:00,limpieza,heat,6.3\n02:00,dedup,heat,4.6\n02:00,enriquecido,heat,7.8\n02:00,silver,heat,4.1\n02:00,gold,heat,10.7\n02:00,gold,progress,0\n02:00,k-filas,value,0\n02:00,k-frescura,value,17.8\n02:00,limpieza,spark,0\n02:00,limpieza,alert,-\n02:10,crm-cdc,rate,351.9\n02:10,erp-cdc,rate,271.8\n02:10,web-ev,rate,427.8\n02:10,ing-clean,rate,1055.7\n02:10,clean-dedup,rate,1005.9\n02:10,dedup-enrich,rate,960.8\n02:10,enrich-silver,rate,957.7\n02:10,silver-gold,rate,648.7\n02:10,gold-bi,rate,90.2\n02:10,gold-ml,rate,61\n02:10,kafka,heat,2.8\n02:10,limpieza,heat,7.3\n02:10,dedup,heat,5.2\n02:10,enriquecido,heat,9.3\n02:10,silver,heat,4.5\n02:10,gold,heat,10\n02:10,gold,progress,0\n02:10,k-filas,value,1.3\n02:10,k-frescura,value,17.7\n02:10,limpieza,spark,1061.6\n02:10,limpieza,alert,-\n02:20,crm-cdc,rate,785.6\n02:20,erp-cdc,rate,510.9\n02:20,web-ev,rate,907.4\n02:20,ing-clean,rate,1998.9\n02:20,clean-dedup,rate,2059.8\n02:20,dedup-enrich,rate,2034.8\n02:20,enrich-silver,rate,2040.7\n02:20,silver-gold,rate,1233.2\n02:20,gold-bi,rate,186.7\n02:20,gold-ml,rate,137.8\n02:20,kafka,heat,4\n02:20,limpieza,heat,8.4\n02:20,dedup,heat,7.1\n02:20,enriquecido,heat,11.7\n02:20,silver,heat,3.9\n02:20,gold,heat,9.5\n02:20,gold,progress,0.1\n02:20,k-filas,value,3.8\n02:20,k-frescura,value,19\n02:20,limpieza,spark,2000\n02:20,limpieza,alert,-\n02:30,crm-cdc,rate,1177.2\n02:30,erp-cdc,rate,826.7\n02:30,web-ev,rate,1222.6\n02:30,ing-clean,rate,3267.9\n02:30,clean-dedup,rate,2873.2\n02:30,dedup-enrich,rate,3010.2\n02:30,enrich-silver,rate,3061.7\n02:30,silver-gold,rate,1899.4\n02:30,gold-bi,rate,310.8\n02:30,gold-ml,rate,195.4\n02:30,kafka,heat,4.7\n02:30,limpieza,heat,8.9\n02:30,dedup,heat,7.9\n02:30,enriquecido,heat,13.7\n02:30,silver,heat,3.9\n02:30,gold,heat,10.6\n02:30,gold,progress,0.1\n02:30,k-filas,value,7.6\n02:30,k-frescura,value,19.2\n02:30,limpieza,spark,3063.6\n02:30,limpieza,alert,-\n02:40,crm-cdc,rate,1370.3\n02:40,erp-cdc,rate,979.4\n02:40,web-ev,rate,1789.9\n02:40,ing-clean,rate,4035.7\n02:40,clean-dedup,rate,3971.8\n02:40,dedup-enrich,rate,3968.1\n02:40,enrich-silver,rate,3857.8\n02:40,silver-gold,rate,2513\n02:40,gold-bi,rate,368.5\n02:40,gold-ml,rate,253.7\n02:40,kafka,heat,4.5\n02:40,limpieza,heat,10.1\n02:40,dedup,heat,8.1\n02:40,enriquecido,heat,15.2\n02:40,silver,heat,3.5\n02:40,gold,heat,11\n02:40,gold,progress,0.2\n02:40,k-filas,value,12.6\n02:40,k-frescura,value,20.6\n02:40,limpieza,spark,4315.2\n02:40,limpieza,alert,-\n02:50,crm-cdc,rate,1484.4\n02:50,erp-cdc,rate,1029.5\n02:50,web-ev,rate,1801.4\n02:50,ing-clean,rate,4261.3\n02:50,clean-dedup,rate,4032.9\n02:50,dedup-enrich,rate,3871.3\n02:50,enrich-silver,rate,3918.8\n02:50,silver-gold,rate,2458.7\n02:50,gold-bi,rate,437\n02:50,gold-ml,rate,263.6\n02:50,kafka,heat,5.6\n02:50,limpieza,heat,9.3\n02:50,dedup,heat,7.5\n02:50,enriquecido,heat,15.3\n02:50,silver,heat,4.2\n02:50,gold,heat,9.6\n02:50,gold,progress,0.2\n02:50,k-filas,value,15.1\n02:50,k-frescura,value,20.7\n02:50,limpieza,spark,4142.7\n02:50,limpieza,alert,-\n03:00,crm-cdc,rate,1553.6\n03:00,erp-cdc,rate,1047.4\n03:00,web-ev,rate,1683\n03:00,ing-clean,rate,4087.1\n03:00,clean-dedup,rate,3870.9\n03:00,dedup-enrich,rate,4065.7\n03:00,enrich-silver,rate,4051.8\n03:00,silver-gold,rate,2460.1\n03:00,gold-bi,rate,420.6\n03:00,gold-ml,rate,251.7\n03:00,kafka,heat,5.5\n03:00,limpieza,heat,9.9\n03:00,dedup,heat,7.2\n03:00,enriquecido,heat,12.7\n03:00,silver,heat,3.4\n03:00,gold,heat,10.1\n03:00,gold,progress,0.3\n03:00,k-filas,value,17.6\n03:00,k-frescura,value,20\n03:00,limpieza,spark,4329.4\n03:00,limpieza,alert,-\n03:10,crm-cdc,rate,1429.6\n03:10,erp-cdc,rate,1071.9\n03:10,web-ev,rate,1844.6\n03:10,ing-clean,rate,4197\n03:10,clean-dedup,rate,4135.6\n03:10,dedup-enrich,rate,3818.8\n03:10,enrich-silver,rate,3966\n03:10,silver-gold,rate,2518.7\n03:10,gold-bi,rate,379.5\n03:10,gold-ml,rate,247.8\n03:10,kafka,heat,5\n03:10,limpieza,heat,10.2\n03:10,dedup,heat,7.9\n03:10,enriquecido,heat,13.4\n03:10,silver,heat,4\n03:10,gold,heat,10\n03:10,gold,progress,0.3\n03:10,k-filas,value,20.2\n03:10,k-frescura,value,20\n03:10,limpieza,spark,4254.5\n03:10,limpieza,alert,-\n03:20,crm-cdc,rate,1539.8\n03:20,erp-cdc,rate,1049.4\n03:20,web-ev,rate,1700.2\n03:20,ing-clean,rate,4079.8\n03:20,clean-dedup,rate,4142.2\n03:20,dedup-enrich,rate,3898.1\n03:20,enrich-silver,rate,3751.5\n03:20,silver-gold,rate,2538.2\n03:20,gold-bi,rate,390.9\n03:20,gold-ml,rate,244.3\n03:20,kafka,heat,5\n03:20,limpieza,heat,10.8\n03:20,dedup,heat,7.8\n03:20,enriquecido,heat,13.1\n03:20,silver,heat,4.4\n03:20,gold,heat,10.7\n03:20,gold,progress,0.4\n03:20,k-filas,value,22.7\n03:20,k-frescura,value,21.7\n03:20,limpieza,spark,4091.1\n03:20,limpieza,alert,-\n03:30,crm-cdc,rate,1422\n03:30,erp-cdc,rate,1008.4\n03:30,web-ev,rate,1616.9\n03:30,ing-clean,rate,2406.7\n03:30,clean-dedup,rate,2140.2\n03:30,dedup-enrich,rate,2113.1\n03:30,enrich-silver,rate,2000.3\n03:30,silver-gold,rate,1009.4\n03:30,gold-bi,rate,395.4\n03:30,gold-ml,rate,272.6\n03:30,kafka,heat,4.3\n03:30,limpieza,heat,35.9\n03:30,dedup,heat,29.6\n03:30,enriquecido,heat,41.6\n03:30,silver,heat,23.9\n03:30,gold,heat,51.9\n03:30,gold,progress,0.4\n03:30,k-filas,value,25.2\n03:30,k-frescura,value,58.7\n03:30,limpieza,spark,2196.4\n03:30,limpieza,alert,warn\n03:40,crm-cdc,rate,1546\n03:40,erp-cdc,rate,1124.9\n03:40,web-ev,rate,1813.9\n03:40,ing-clean,rate,2251.9\n03:40,clean-dedup,rate,2030.3\n03:40,dedup-enrich,rate,2072.2\n03:40,enrich-silver,rate,2011.1\n03:40,silver-gold,rate,1058.2\n03:40,gold-bi,rate,420.1\n03:40,gold-ml,rate,258.4\n03:40,kafka,heat,4.5\n03:40,limpieza,heat,34.4\n03:40,dedup,heat,28.6\n03:40,enriquecido,heat,50.5\n03:40,silver,heat,20.8\n03:40,gold,heat,47.7\n03:40,gold,progress,0.5\n03:40,k-filas,value,27.7\n03:40,k-frescura,value,57.8\n03:40,limpieza,spark,2416.3\n03:40,limpieza,alert,warn\n03:50,crm-cdc,rate,1543.3\n03:50,erp-cdc,rate,982.5\n03:50,web-ev,rate,1706.5\n03:50,ing-clean,rate,2361.8\n03:50,clean-dedup,rate,2175.3\n03:50,dedup-enrich,rate,2099.7\n03:50,enrich-silver,rate,1988.6\n03:50,silver-gold,rate,976\n03:50,gold-bi,rate,432.9\n03:50,gold-ml,rate,268.3\n03:50,kafka,heat,4.5\n03:50,limpieza,heat,34.4\n03:50,dedup,heat,27.1\n03:50,enriquecido,heat,47.3\n03:50,silver,heat,24.2\n03:50,gold,heat,47.1\n03:50,gold,progress,0.5\n03:50,k-filas,value,30.2\n03:50,k-frescura,value,58.4\n03:50,limpieza,spark,2395.9\n03:50,limpieza,alert,warn\n04:00,crm-cdc,rate,1537.9\n04:00,erp-cdc,rate,1092.8\n04:00,web-ev,rate,1565.4\n04:00,ing-clean,rate,2243\n04:00,clean-dedup,rate,2151.7\n04:00,dedup-enrich,rate,2157.7\n04:00,enrich-silver,rate,1934.7\n04:00,silver-gold,rate,1029.9\n04:00,gold-bi,rate,427.8\n04:00,gold-ml,rate,253.7\n04:00,kafka,heat,4.8\n04:00,limpieza,heat,34\n04:00,dedup,heat,26.3\n04:00,enriquecido,heat,42.2\n04:00,silver,heat,22.2\n04:00,gold,heat,55\n04:00,gold,progress,0.5\n04:00,k-filas,value,32.8\n04:00,k-frescura,value,60.8\n04:00,limpieza,spark,2317.2\n04:00,limpieza,alert,warn\n04:10,crm-cdc,rate,1570.1\n04:10,erp-cdc,rate,1110.3\n04:10,web-ev,rate,1636.6\n04:10,ing-clean,rate,4370.6\n04:10,clean-dedup,rate,4021.1\n04:10,dedup-enrich,rate,4011.7\n04:10,enrich-silver,rate,3982.8\n04:10,silver-gold,rate,2604.9\n04:10,gold-bi,rate,371.4\n04:10,gold-ml,rate,279.4\n04:10,kafka,heat,4.3\n04:10,limpieza,heat,9.7\n04:10,dedup,heat,8.8\n04:10,enriquecido,heat,14.5\n04:10,silver,heat,4.5\n04:10,gold,heat,10.6\n04:10,gold,progress,0.6\n04:10,k-filas,value,35.3\n04:10,k-frescura,value,22.1\n04:10,limpieza,spark,3994.1\n04:10,limpieza,alert,-\n04:20,crm-cdc,rate,1471.5\n04:20,erp-cdc,rate,971.4\n04:20,web-ev,rate,1683.7\n04:20,ing-clean,rate,4239.9\n04:20,clean-dedup,rate,4035\n04:20,dedup-enrich,rate,3942.5\n04:20,enrich-silver,rate,3811.4\n04:20,silver-gold,rate,2444.6\n04:20,gold-bi,rate,423.9\n04:20,gold-ml,rate,240\n04:20,kafka,heat,4.3\n04:20,limpieza,heat,10.8\n04:20,dedup,heat,7.8\n04:20,enriquecido,heat,15.2\n04:20,silver,heat,3.8\n04:20,gold,heat,9.7\n04:20,gold,progress,0.6\n04:20,k-filas,value,37.8\n04:20,k-frescura,value,24.5\n04:20,limpieza,spark,4106.4\n04:20,limpieza,alert,-\n04:30,crm-cdc,rate,1464.2\n04:30,erp-cdc,rate,1037.9\n04:30,web-ev,rate,1608.9\n04:30,ing-clean,rate,4393.8\n04:30,clean-dedup,rate,4077.9\n04:30,dedup-enrich,rate,3799.7\n04:30,enrich-silver,rate,3923.8\n04:30,silver-gold,rate,2550.9\n04:30,gold-bi,rate,411.8\n04:30,gold-ml,rate,239.4\n04:30,kafka,heat,4.5\n04:30,limpieza,heat,9.2\n04:30,dedup,heat,7.4\n04:30,enriquecido,heat,14.9\n04:30,silver,heat,4.2\n04:30,gold,heat,9\n04:30,gold,progress,0.7\n04:30,k-filas,value,40.3\n04:30,k-frescura,value,24\n04:30,limpieza,spark,4149.4\n04:30,limpieza,alert,-\n04:40,crm-cdc,rate,1494.5\n04:40,erp-cdc,rate,1120.2\n04:40,web-ev,rate,1549.6\n04:40,ing-clean,rate,4298.7\n04:40,clean-dedup,rate,4180.1\n04:40,dedup-enrich,rate,4077.8\n04:40,enrich-silver,rate,3933.2\n04:40,silver-gold,rate,2423.7\n04:40,gold-bi,rate,393.1\n04:40,gold-ml,rate,285.1\n04:40,kafka,heat,5.2\n04:40,limpieza,heat,10.5\n04:40,dedup,heat,8.3\n04:40,enriquecido,heat,13.4\n04:40,silver,heat,3.8\n04:40,gold,heat,10.9\n04:40,gold,progress,0.7\n04:40,k-filas,value,42.8\n04:40,k-frescura,value,24.7\n04:40,limpieza,spark,4233.8\n04:40,limpieza,alert,-\n04:50,crm-cdc,rate,1469.4\n04:50,erp-cdc,rate,1051\n04:50,web-ev,rate,1746.6\n04:50,ing-clean,rate,4112.6\n04:50,clean-dedup,rate,3987\n04:50,dedup-enrich,rate,4061.4\n04:50,enrich-silver,rate,3747\n04:50,silver-gold,rate,2511.9\n04:50,gold-bi,rate,410.1\n04:50,gold-ml,rate,272.1\n04:50,kafka,heat,5.1\n04:50,limpieza,heat,10.6\n04:50,dedup,heat,7.7\n04:50,enriquecido,heat,13.9\n04:50,silver,heat,4.5\n04:50,gold,heat,9.3\n04:50,gold,progress,0.8\n04:50,k-filas,value,45.4\n04:50,k-frescura,value,23.9\n04:50,limpieza,spark,4190\n04:50,limpieza,alert,-\n05:00,crm-cdc,rate,1467.5\n05:00,erp-cdc,rate,1099.5\n05:00,web-ev,rate,1652.5\n05:00,ing-clean,rate,4187.1\n05:00,clean-dedup,rate,4112.2\n05:00,dedup-enrich,rate,4042.5\n05:00,enrich-silver,rate,4041.6\n05:00,silver-gold,rate,2412.3\n05:00,gold-bi,rate,385.9\n05:00,gold-ml,rate,281.6\n05:00,kafka,heat,4.6\n05:00,limpieza,heat,9.5\n05:00,dedup,heat,7.3\n05:00,enriquecido,heat,15\n05:00,silver,heat,3.5\n05:00,gold,heat,10.6\n05:00,gold,progress,0.8\n05:00,k-filas,value,47.9\n05:00,k-frescura,value,24.9\n05:00,limpieza,spark,4174.2\n05:00,limpieza,alert,-\n05:10,crm-cdc,rate,1253.2\n05:10,erp-cdc,rate,811.3\n05:10,web-ev,rate,1520\n05:10,ing-clean,rate,3462.3\n05:10,clean-dedup,rate,3214.7\n05:10,dedup-enrich,rate,3238\n05:10,enrich-silver,rate,3267.1\n05:10,silver-gold,rate,2008.6\n05:10,gold-bi,rate,345.9\n05:10,gold-ml,rate,206.9\n05:10,kafka,heat,4.9\n05:10,limpieza,heat,10.3\n05:10,dedup,heat,8.6\n05:10,enriquecido,heat,14.4\n05:10,silver,heat,3.8\n05:10,gold,heat,10.6\n05:10,gold,progress,0.9\n05:10,k-filas,value,42\n05:10,k-frescura,value,26.8\n05:10,limpieza,spark,3587.8\n05:10,limpieza,alert,-\n05:20,crm-cdc,rate,924.4\n05:20,erp-cdc,rate,664.8\n05:20,web-ev,rate,1011.7\n05:20,ing-clean,rate,2680.4\n05:20,clean-dedup,rate,2555.6\n05:20,dedup-enrich,rate,2525.8\n05:20,enrich-silver,rate,2716.7\n05:20,silver-gold,rate,1708.7\n05:20,gold-bi,rate,278.1\n05:20,gold-ml,rate,165.8\n05:20,kafka,heat,5.2\n05:20,limpieza,heat,9\n05:20,dedup,heat,8.8\n05:20,enriquecido,heat,13.3\n05:20,silver,heat,4.3\n05:20,gold,heat,10.6\n05:20,gold,progress,0.9\n05:20,k-filas,value,35.3\n05:20,k-frescura,value,26.7\n05:20,limpieza,spark,2884.8\n05:20,limpieza,alert,-\n05:30,crm-cdc,rate,724.7\n05:30,erp-cdc,rate,506.8\n05:30,web-ev,rate,908.4\n05:30,ing-clean,rate,2132\n05:30,clean-dedup,rate,1930.2\n05:30,dedup-enrich,rate,1933\n05:30,enrich-silver,rate,2027.8\n05:30,silver-gold,rate,1202.9\n05:30,gold-bi,rate,198.1\n05:30,gold-ml,rate,139.9\n05:30,kafka,heat,5.4\n05:30,limpieza,heat,10.9\n05:30,dedup,heat,8.2\n05:30,enriquecido,heat,13.2\n05:30,silver,heat,4.4\n05:30,gold,heat,9.1\n05:30,gold,progress,1\n05:30,k-filas,value,27.7\n05:30,k-frescura,value,26.2\n05:30,limpieza,spark,2142.7\n05:30,limpieza,alert,-\n05:40,crm-cdc,rate,507.3\n05:40,erp-cdc,rate,375.4\n05:40,web-ev,rate,536.1\n05:40,ing-clean,rate,1382.4\n05:40,clean-dedup,rate,1309.5\n05:40,dedup-enrich,rate,1368\n05:40,enrich-silver,rate,1269.4\n05:40,silver-gold,rate,865.4\n05:40,gold-bi,rate,144.7\n05:40,gold-ml,rate,79.4\n05:40,kafka,heat,5.7\n05:40,limpieza,heat,9.2\n05:40,dedup,heat,8.1\n05:40,enriquecido,heat,13.8\n05:40,silver,heat,3.5\n05:40,gold,heat,9.3\n05:40,gold,progress,1\n05:40,k-filas,value,19.3\n05:40,k-frescura,value,27.4\n05:40,limpieza,spark,1404.9\n05:40,limpieza,alert,-\n05:50,crm-cdc,rate,242.3\n05:50,erp-cdc,rate,177.8\n05:50,web-ev,rate,295.5\n05:50,ing-clean,rate,718.4\n05:50,clean-dedup,rate,703\n05:50,dedup-enrich,rate,642.7\n05:50,enrich-silver,rate,654.7\n05:50,silver-gold,rate,409.7\n05:50,gold-bi,rate,60.4\n05:50,gold-ml,rate,45.2\n05:50,kafka,heat,5.6\n05:50,limpieza,heat,10.3\n05:50,dedup,heat,7.4\n05:50,enriquecido,heat,13.1\n05:50,silver,heat,4.2\n05:50,gold,heat,9.7\n05:50,gold,progress,1\n05:50,k-filas,value,10.1\n05:50,k-frescura,value,27.2\n05:50,limpieza,spark,710\n05:50,limpieza,alert,-\n06:00,crm-cdc,rate,224.9\n06:00,erp-cdc,rate,165.9\n06:00,web-ev,rate,275.5\n06:00,ing-clean,rate,599.6\n06:00,clean-dedup,rate,599.8\n06:00,dedup-enrich,rate,581.7\n06:00,enrich-silver,rate,565.6\n06:00,silver-gold,rate,373.7\n06:00,gold-bi,rate,58.1\n06:00,gold-ml,rate,36.1\n06:00,kafka,heat,5\n06:00,limpieza,heat,10.8\n06:00,dedup,heat,7.8\n06:00,enriquecido,heat,13.6\n06:00,silver,heat,4.2\n06:00,gold,heat,9.1\n06:00,gold,progress,1\n06:00,k-filas,value,9.5\n06:00,k-frescura,value,28.6\n06:00,limpieza,spark,646.1\n06:00,limpieza,alert,-\n",
+    "events": [
+      {
+        "time": "02:00",
+        "label": "The nightly load starts",
+        "tone": "info",
+        "nodes": [
+          "crm",
+          "erp",
+          "web"
+        ]
+      },
+      {
+        "time": "03:30",
+        "label": "Cleaning stalls on a corrupt ERP batch",
+        "tone": "warn",
+        "nodes": [
+          "limpieza"
+        ]
+      },
+      {
+        "time": "04:00",
+        "label": "The batch is dropped and retried",
+        "tone": "good",
+        "nodes": [
+          "limpieza",
+          "dedup"
+        ]
+      },
+      {
+        "time": "05:40",
+        "label": "Gold ready for the dashboards",
+        "tone": "good",
+        "nodes": [
+          "gold"
+        ]
+      }
+    ]
+  }
+}

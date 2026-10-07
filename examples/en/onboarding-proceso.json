@@ -1,0 +1,406 @@
+{
+  "schema": "graphx/1",
+  "title": "Onboarding a new hire",
+  "summary": "A fictional example of use beyond PRs: a cross-department process, from signing the contract to the end of the first month.",
+  "lang": "en",
+  "direction": "down",
+  "initialDepth": 1,
+  "levels": [
+    {
+      "depth": 0,
+      "label": "Area"
+    },
+    {
+      "depth": 1,
+      "label": "Stage"
+    },
+    {
+      "depth": 2,
+      "label": "Task"
+    }
+  ],
+  "theme": {
+    "light": {
+      "accent": "#0b6e8c"
+    },
+    "dark": {
+      "accent": "#4fb3d1"
+    }
+  },
+  "lanes": [
+    {
+      "id": "rrhh",
+      "label": "People and culture",
+      "subtitle": "HR",
+      "color": "#8250df"
+    },
+    {
+      "id": "it",
+      "label": "IT",
+      "subtitle": "devices and access",
+      "color": {
+        "light": "#bc4c00",
+        "dark": "#f0883e"
+      }
+    },
+    {
+      "id": "equipo",
+      "label": "Team and manager",
+      "subtitle": "where they land",
+      "color": "#1a7f37"
+    },
+    {
+      "id": "persona",
+      "label": "New hire",
+      "subtitle": "what the newcomer experiences",
+      "color": "#0b6e8c"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "p-firma",
+      "lane": "persona",
+      "label": "Contract signed",
+      "kind": "ui",
+      "summary": "The starting point: once it is signed, the other areas are notified and start preparing for the arrival."
+    },
+    {
+      "id": "p-dia1",
+      "lane": "persona",
+      "label": "First day",
+      "kind": "ui",
+      "summary": "What the person sees on day one. Everything else in the diagram exists so this day goes well."
+    },
+    {
+      "id": "p-dia1-acceso",
+      "parent": "p-dia1",
+      "label": "Logs in with their credentials",
+      "kind": "function",
+      "summary": "If IT made it in time, the laptop boots and email works. It is the most visible failure when something runs late."
+    },
+    {
+      "id": "p-dia1-bienvenida",
+      "parent": "p-dia1",
+      "label": "Welcome session",
+      "kind": "function",
+      "summary": "An hour with People and culture: how the company works and who to ask about what."
+    },
+    {
+      "id": "p-mes1",
+      "lane": "persona",
+      "label": "First month",
+      "kind": "ui",
+      "summary": "The weeks in which the person goes from observing to contributing."
+    },
+    {
+      "id": "r-alta",
+      "lane": "rrhh",
+      "label": "Administrative setup",
+      "kind": "service",
+      "summary": "Everything that has to exist before day one: the person's record, their contract and their payroll."
+    },
+    {
+      "id": "r-alta-ficha",
+      "parent": "r-alta",
+      "label": "Create the employee record",
+      "kind": "function",
+      "summary": "The record is the source of truth for every other system: without it, IT cannot create the accounts."
+    },
+    {
+      "id": "r-alta-nomina",
+      "parent": "r-alta",
+      "label": "Add to payroll",
+      "kind": "function",
+      "summary": "Needs bank and tax details; if they are missing, the first paycheck is delayed."
+    },
+    {
+      "id": "r-plan",
+      "lane": "rrhh",
+      "label": "Onboarding plan",
+      "kind": "config",
+      "summary": "The script for the first month: sessions, reading and who accompanies them each week."
+    },
+    {
+      "id": "r-plan-agenda",
+      "parent": "r-plan",
+      "label": "First-day agenda",
+      "kind": "function",
+      "summary": "Sent to the person and their manager the week before."
+    },
+    {
+      "id": "r-plan-encuesta",
+      "parent": "r-plan",
+      "label": "30-day survey",
+      "kind": "function",
+      "summary": "Closes the process: what worked and what did not, to improve the next onboarding."
+    },
+    {
+      "id": "i-equipo",
+      "lane": "it",
+      "label": "Hardware",
+      "kind": "external",
+      "summary": "Laptop and peripherals. The purchase lead time is what most often sets the schedule."
+    },
+    {
+      "id": "i-cuentas",
+      "lane": "it",
+      "label": "Accounts and access",
+      "kind": "service",
+      "summary": "Email, SSO and the team's tools, with the permissions the manager requests."
+    },
+    {
+      "id": "i-cuentas-sso",
+      "parent": "i-cuentas",
+      "label": "SSO account",
+      "kind": "function",
+      "summary": "Created from the HR record: if the record changes, the account updates itself."
+    },
+    {
+      "id": "i-cuentas-permisos",
+      "parent": "i-cuentas",
+      "label": "Team permissions",
+      "kind": "function",
+      "summary": "The specific groups and access for the role. The manager defines them, not IT."
+    },
+    {
+      "id": "e-preparar",
+      "lane": "equipo",
+      "label": "Prepare the arrival",
+      "kind": "module",
+      "summary": "What the team decides beforehand: first task, onboarding buddy and permissions."
+    },
+    {
+      "id": "e-preparar-buddy",
+      "parent": "e-preparar",
+      "label": "Pick an onboarding buddy",
+      "kind": "function",
+      "summary": "Someone on the team who is not the manager and answers the small questions."
+    },
+    {
+      "id": "e-preparar-tarea",
+      "parent": "e-preparar",
+      "label": "First real task",
+      "kind": "function",
+      "summary": "Small and finishable in the first week: it gives an early sense of contributing."
+    },
+    {
+      "id": "e-seguimiento",
+      "lane": "equipo",
+      "label": "Follow-up",
+      "kind": "job",
+      "summary": "Weekly one-on-ones during the first month."
+    }
+  ],
+  "edges": [
+    {
+      "id": "x-aviso",
+      "from": "p-firma",
+      "to": "r-alta-ficha",
+      "kind": "event",
+      "label": "new-hire notice",
+      "animated": true,
+      "summary": "Signing triggers the process.",
+      "data": "personal details and start date"
+    },
+    {
+      "id": "x-ficha-sso",
+      "from": "r-alta-ficha",
+      "to": "i-cuentas-sso",
+      "kind": "data",
+      "label": "the record creates the account",
+      "emphasis": "hero",
+      "animated": true,
+      "summary": "The connection that matters most: if the record is late, everything IT does is late."
+    },
+    {
+      "id": "x-ficha-nom",
+      "from": "r-alta-ficha",
+      "to": "r-alta-nomina",
+      "kind": "call"
+    },
+    {
+      "id": "x-pedido",
+      "from": "r-alta-ficha",
+      "to": "i-equipo",
+      "kind": "queue",
+      "label": "hardware order"
+    },
+    {
+      "id": "x-permisos",
+      "from": "e-preparar-tarea",
+      "to": "i-cuentas-permisos",
+      "kind": "call",
+      "label": "what access they need"
+    },
+    {
+      "id": "x-acceso",
+      "from": "i-cuentas-sso",
+      "to": "p-dia1-acceso",
+      "kind": "data",
+      "label": "credentials"
+    },
+    {
+      "id": "x-portatil",
+      "from": "i-equipo",
+      "to": "p-dia1-acceso",
+      "kind": "data",
+      "label": "laptop ready"
+    },
+    {
+      "id": "x-agenda",
+      "from": "r-plan-agenda",
+      "to": "p-dia1-bienvenida",
+      "kind": "event",
+      "label": "agenda"
+    },
+    {
+      "id": "x-buddy",
+      "from": "e-preparar-buddy",
+      "to": "p-dia1",
+      "kind": "call",
+      "label": "welcomes them"
+    },
+    {
+      "id": "x-mes",
+      "from": "p-dia1",
+      "to": "p-mes1",
+      "kind": "call"
+    },
+    {
+      "id": "x-seguir",
+      "from": "e-seguimiento",
+      "to": "p-mes1",
+      "kind": "call",
+      "label": "weekly 1:1"
+    },
+    {
+      "id": "x-encuesta",
+      "from": "p-mes1",
+      "to": "r-plan-encuesta",
+      "kind": "event",
+      "label": "after 30 days"
+    }
+  ],
+  "flows": [
+    {
+      "id": "dia1",
+      "title": "The first day",
+      "summary": "What has to have happened before 9:00.",
+      "participants": [
+        {
+          "node": "r-alta"
+        },
+        {
+          "node": "i-cuentas"
+        },
+        {
+          "node": "i-equipo"
+        },
+        {
+          "node": "p-dia1"
+        },
+        {
+          "node": "e-preparar"
+        }
+      ],
+      "messages": [
+        {
+          "id": "d1",
+          "from": "r-alta",
+          "to": "i-cuentas",
+          "label": "complete record",
+          "kind": "async",
+          "note": "At least one week before."
+        },
+        {
+          "id": "d2",
+          "from": "i-cuentas",
+          "to": "p-dia1",
+          "label": "credentials",
+          "kind": "sync"
+        },
+        {
+          "id": "d3",
+          "from": "i-equipo",
+          "to": "p-dia1",
+          "label": "laptop on the desk",
+          "kind": "sync"
+        },
+        {
+          "id": "d4",
+          "from": "e-preparar",
+          "to": "p-dia1",
+          "label": "the buddy welcomes them",
+          "kind": "sync",
+          "animated": true
+        },
+        {
+          "id": "d5",
+          "from": "p-dia1",
+          "to": "p-dia1",
+          "label": "first task",
+          "kind": "self",
+          "note": "Finishable that same week."
+        }
+      ]
+    }
+  ],
+  "tour": {
+    "title": "How an onboarding is prepared",
+    "steps": [
+      {
+        "title": "It all starts with the signature",
+        "depth": 1,
+        "focus": {
+          "nodes": [
+            "p-firma",
+            "r-alta"
+          ]
+        },
+        "body_html": "<p>Signing the contract notifies People and culture, who open the person's <b>record</b>. Everything else hangs off that record.</p>"
+      },
+      {
+        "title": "The record creates the accounts",
+        "focus": {
+          "edges": [
+            "x-ficha-sso"
+          ]
+        },
+        "body_html": "<p><b>What travels:</b> the data in the record. <b>What triggers it:</b> the HR setup. If the record is late, so are the first-day credentials.</p>"
+      },
+      {
+        "title": "The team decides what access is needed",
+        "focus": {
+          "nodes": [
+            "e-preparar-tarea",
+            "i-cuentas-permisos"
+          ]
+        },
+        "body_html": "<p>IT does not guess permissions: the manager requests them based on the first task the person will do.</p>"
+      },
+      {
+        "title": "9:00 on the first day",
+        "view": "flow:dia1",
+        "focus": {
+          "messages": [
+            "d2",
+            "d3",
+            "d4"
+          ]
+        },
+        "body_html": "<p>Three things have to be ready at once: credentials, a laptop and a buddy to welcome them. Miss one and the day starts badly.</p>"
+      },
+      {
+        "title": "It closes after 30 days",
+        "focus": {
+          "nodes": [
+            "p-mes1",
+            "r-plan-encuesta",
+            "e-seguimiento"
+          ]
+        },
+        "body_html": "<p>The process ends with a survey for the person. Their answers improve the <b>onboarding plan</b> for the next hire.</p>"
+      }
+    ]
+  }
+}

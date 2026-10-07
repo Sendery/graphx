@@ -1,0 +1,24 @@
+stateDiagram-v2
+    [*] --> Borrador
+    state "Draft" as Borrador
+    Borrador --> EnRevision : submit
+    state "In review" as EnRevision
+    EnRevision --> Aprobado : approve
+    EnRevision --> Borrador : request changes
+    state "Approved" as Aprobado {
+        [*] --> Programado
+        state "Scheduled" as Programado
+        Programado --> Publicado : the date arrives
+        state "Published" as Publicado
+        Publicado --> [*]
+    }
+    Aprobado --> Archivado
+    state "Archived" as Archivado
+    state decide <<choice>>
+    Archivado --> decide
+    decide --> [*] : expired
+    decide --> Borrador : reopen
+    Borrador : the author edits it
+    note right of EnRevision : Someone else reviews it
+    classDef importante fill:#ffd,stroke:#b80
+    class Aprobado importante

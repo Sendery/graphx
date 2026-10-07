@@ -1,0 +1,29 @@
+---
+title: pagos-api CI/CD
+config:
+  theme: neutral
+---
+flowchart LR
+  %% Valid Mermaid with GraphX data: each stage's duration as heat, canary progress, teams and panels.
+  %% @gx { "owners": { "plataforma": { "label": "Platform", "short": "PL" }, "qa": { "label": "Quality", "short": "QA" }, "pagos": { "label": "Payments team", "short": "PY" } } }
+  %% @gx { "fx": { "particles": true, "heat": { "label": "Duration", "unit": "min", "domain": [0, 20], "scheme": "heat" } } }
+  commit([Push to main]) e1@--> build[Build]
+  build@{ heat: 4, owner: plataforma, spark: "6 5 5 4 4 5 4 4", unit: "min" }
+  build e2@--> unit[[Unit tests]]
+  build e3@--> integ[[Integration tests]]
+  unit@{ heat: 3, owner: qa }
+  integ@{ heat: 14, owner: qa, alert: warn }
+  unit --> scan{Security OK?}
+  integ --> scan
+  scan -->|yes| staging[(Staging)]
+  scan -->|no| bloqueo>Blocked]
+  staging e4@--> canary[/Canary 10%/]
+  canary@{ progress: 0.4, owner: pagos, heat: 9 }
+  canary e5@==> prod[(Production)]
+  e1@{ rate: 30 }
+  e2@{ rate: 30, speed: fast }
+  e3@{ rate: 30 }
+  e4@{ rate: 12 }
+  e5@{ rate: 12, animation: slow }
+  %% @gx integ { "summary": "Spins up Postgres and Kafka in containers and runs 1,840 tests.", "blocks": [ { "type": "table", "columns": ["Suite", "Tests", "Failures"], "rows": [["payments", 920, 0], ["webhooks", 510, { "v": 2, "tone": "warn" }], ["reconciliation", 410, 0]] }, { "type": "chart", "kind": "bar", "title": "Duration of recent runs (min)", "labels": ["#481", "#482", "#483", "#484", "#485", "#486"], "series": [ { "label": "integration", "values": [11, 12, 12, 13, 15, 14] } ] } ] }
+  %% @gx canary { "blocks": [ { "type": "progress", "items": [ { "label": "Traffic to canary", "value": 0.1 }, { "label": "Observation time", "value": 0.4 } ] }, { "type": "stats", "items": [ { "label": "Canary errors", "value": "0.2", "unit": "%" }, { "label": "Stable errors", "value": "0.3", "unit": "%" } ] } ] }

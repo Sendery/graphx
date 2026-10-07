@@ -2,7 +2,7 @@
 
 Todo lo que GraphX sabe dibujar, ordenado por familias. Cada familia dice qué es, para qué sirve, qué
 campos del JSON la activan y dónde verla. Los efectos (cómo se comporta lo dibujado) están en
-[efectos.md](efectos.md); la referencia campo a campo, en el [README](../README.md#2--el-json-de-menos-a-más).
+[efectos.md](efectos.md); la referencia campo a campo, en el [referencia](referencia.md#2--el-json-de-menos-a-más).
 
 | Familia | Qué es | Se activa con |
 |---|---|---|
@@ -77,7 +77,7 @@ y con datos en vivo (`setData` o la línea de tiempo) se animan de un valor al s
 |---|---|---|
 | `kpi` | `value`, `unit`, `decimals`, `change` (%) con `good: "down"` si bajar es bueno, `spark` | una cifra con su tendencia: pedidos por minuto, altas del día |
 | `gauge` | `value`, `min`, `max`, `unit`, `thresholds: [aviso, crítico]` con `good: "high"` si lo alto es bueno | un valor contra un límite: CPU, SLO, presupuesto de error |
-| `donut` | `parts: [{ label, value, color }]`, `unit` | un reparto: tráfico por canal, coste por equipo |
+| `donut` | `parts: [{ label, value, color }]`, `unit` | un reparto: tráfico por canal, coste por equipo; un `pie` de Mermaid se convierte en un donut |
 
 ## 4. Contenedores: carriles, grupos y niveles
 

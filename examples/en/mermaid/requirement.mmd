@@ -1,0 +1,19 @@
+requirementDiagram
+    requirement test_req {
+    id: 1
+    text: The system responds in under 200 ms.
+    risk: high
+    verifymethod: test
+    }
+    functionalRequirement login_req {
+    id: 1.1
+    text: The user can sign in.
+    risk: low
+    verifymethod: inspection
+    }
+    element test_entity {
+    type: simulation
+    }
+    test_entity - satisfies -> test_req
+    login_req - traces -> test_req
+    test_entity - verifies -> login_req

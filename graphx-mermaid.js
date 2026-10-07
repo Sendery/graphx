@@ -11,7 +11,7 @@
  * Tipos: flowchart/graph · sequenceDiagram · classDiagram · stateDiagram(-v2) · erDiagram ·
  * mindmap · gantt · journey · timeline · gitGraph · C4 (Context, Container, Component,
  * Dynamic, Deployment) · architecture-beta · block-beta · requirementDiagram · sankey-beta ·
- * kanban · treemap-beta. Los gráficos de datos (pie, xychart, quadrantChart, radar, packet)
+ * kanban · treemap-beta · pie (como un donut). Los gráficos de datos (xychart, quadrantChart, radar, packet)
  * no son grafos de piezas y conexiones: se rechazan con un error que lo explica.
  *
  * Qué se conserva: piezas, formas (como icono), textos, subgrafos y anidamientos (niveles
@@ -143,7 +143,7 @@
   };
   const PALETTE = [['#0969da', '#4493f8'], ['#1a7f37', '#4ac26b'], ['#bc4c00', '#f0883e'], ['#8250df', '#b083f0'], ['#bf3989', '#f778ba'], ['#1b7c83', '#39c5cf'], ['#9a6700', '#d29922'], ['#cf222e', '#ff7b72']]
     .map(([light, dark]) => ({ light, dark }));
-  const REJECT = /^(pie|quadrantChart|xychart(-beta)?|radar(-beta)?|packet(-beta)?|venn(-beta)?)$/;
+  const REJECT = /^(quadrantChart|xychart(-beta)?|radar(-beta)?|packet(-beta)?|venn(-beta)?)$/;
 
   class MermaidError extends Error { constructor(msg, line) { super(line ? `línea ${line}: ${msg}` : msg); this.line = line || null; this.name = 'MermaidError'; } }
 
@@ -1553,6 +1553,31 @@
     nodes.filter(x => x.kind === 'group').forEach(g => { const s = sum(g.id); g.metrics = [{ label: T.total, value: String(Math.round(s * 100) / 100) }]; g.subtitle = String(Math.round(s * 100) / 100); });
   }
 
+  /* ================= pie ================= */
+  /* Un reparto es un dato, no un grafo: una sola pieza `donut` con todas sus partes (el donut agrupa a
+     partir de la quinta en «Otros») y, en el panel, la lista completa como ranking. */
+  function parsePie(P, b) {
+    const T = b.T, en = b.lang === 'en', parts = [];
+    let title = (/^pie\b(?:\s+showData)?(?:\s+title\s+(.+))?$/.exec(P.lines[0].t) || [])[1] || null;
+    for (const L of P.lines.slice(1)) {
+      let m;
+      if ((m = /^title\s+(.+)$/.exec(L.t))) { title = clean(m[1]); continue; }
+      if (/^(showData|accDescr\b)/.test(L.t)) continue;
+      if ((m = /^("[^"]*"|'[^']*')\s*:\s*(-?[\d.]+)\s*$/.exec(L.t))) { const v = parseFloat(m[2]); if (v > 0) parts.push({ label: clean(m[1]), value: v }); continue; }
+      b.warn(T.ignored(L.t), L.n);
+    }
+    if (!parts.length) return { title };
+    if (title) title = clean(title);
+    const total = parts.reduce((a, p) => a + p.value, 0), fmt = v => String(Math.round(v * 100) / 100);
+    const nd = b.node('pie', { label: title || (en ? 'Breakdown' : 'Reparto'), kind: 'chart', shape: 'donut' });
+    nd.parts = parts;
+    nd.metrics = [{ label: T.total, value: fmt(total) }];
+    const top = parts.slice().sort((x, y) => y.value - x.value);
+    nd.summary = top.map(p => `${p.label}: ${fmt(p.value)} (${Math.round(p.value / total * 100)} %)`).join(' · ');
+    nd.blocks = [{ type: 'bars', items: top.map(p => ({ label: p.label, value: p.value })) }];
+    return { title };
+  }
+
   /* ---------- entrada ---------- */
   const TYPES = [
     [/^(flowchart|flowchart-elk|graph)\b/, 'flowchart', parseFlowchart],
@@ -1571,7 +1596,8 @@
     [/^requirementDiagram\b/, 'requirementDiagram', parseRequirement],
     [/^sankey(-beta)?\b/, 'sankey', parseSankey],
     [/^kanban\b/, 'kanban', parseKanban],
-    [/^treemap(-beta)?\b/, 'treemap', parseTreemap]
+    [/^treemap(-beta)?\b/, 'treemap', parseTreemap],
+    [/^pie\b/, 'pie', parsePie]
   ];
   function detect(text) {
     const P = prep(text);
