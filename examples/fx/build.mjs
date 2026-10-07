@@ -22,6 +22,17 @@ const data = {
   galeria: json('examples/fx/galeria.json'),
   arquitectura: R('examples/fx/arquitectura.mmd'),
   blocks: json('examples/fx/bloques.json'),
+  /* la pestaña de ejemplos: uno por caso de uso, con lo que demuestra */
+  ejemplos: [
+    { title: 'Postmortem de un incidente', file: 'examples/fx/postmortem.json', what: 'La caída del login, minuto a minuto: recorrido narrado, línea de tiempo con eventos, impacto y acciones.', shows: ['timeline', 'tour', 'blast', 'blocks'], spec: json('examples/fx/postmortem.json') },
+    { title: 'La carga nocturna de datos', file: 'examples/fx/pipeline-datos.json', what: 'Un pipeline ETL con su línea de tiempo desde un CSV en formato largo, cargado con tools/timeline.mjs.', shows: ['timeline CSV', 'rate', 'heat', 'owners'], spec: json('examples/fx/pipeline-datos.json') },
+    { title: 'Clúster de Kubernetes', file: 'examples/fx/kubernetes.json', what: 'Namespaces, deployments y pods con la CPU como calor, un rollout y un pod en CrashLoopBackOff.', shows: ['niveles', 'heat rollup', 'progress', 'alert'], spec: json('examples/fx/kubernetes.json') },
+    { title: 'CI/CD en Mermaid', file: 'examples/fx/ci-cd.mmd', what: 'Un pipeline de despliegue en Mermaid válido, con la duración de cada etapa, el canario y paneles por @gx.', shows: ['Mermaid', '@gx', 'attach', 'theme'], mermaid: R('examples/fx/ci-cd.mmd') },
+    { title: 'Almacén de Getafe', file: 'examples/fx/almacen.json', what: 'Un proceso de negocio: tiempo en cola como calor, ritmo por hora y KPIs del turno.', shows: ['heat', 'spark', 'kpi', 'gauge', 'donut'], spec: json('examples/fx/almacen.json') },
+    { title: 'Incorporación de una persona', file: 'examples/onboarding-proceso.json', what: 'Un proceso de RR. HH. entre departamentos, vertical y con colores, sin datos de código.', shows: ['carriles', 'niveles', 'flujo'], spec: json('examples/onboarding-proceso.json') },
+    { title: 'Radar de PRs', file: 'examples/warehouses-pr-radar.json', what: 'Las PRs de un proyecto, sus dependencias y su estado, generado desde datos.', shows: ['statuses', 'links', 'tour'], spec: json('examples/warehouses-pr-radar.json') },
+    { title: 'Todas las formas de Mermaid', file: 'examples/mermaid/shapes.mmd', what: 'Las formas de un flowchart de Mermaid, convertidas.', shows: ['Mermaid', 'formas'], mermaid: R('examples/mermaid/shapes.mmd') }
+  ],
   viva: json('examples/fx/plataforma-viva.json'),
   almacen: json('examples/fx/almacen.json'),
   grande: json('examples/pr-review-stack-202.json'),

@@ -164,7 +164,29 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
 @keyframes icdraw { to { stroke-dashoffset: 0; } }
 .gal-host { --gx-h: min(78vh, 860px); }
 .soft-host { --gx-h: min(66vh, 620px); }
-@media (max-width: 980px) { .split { grid-template-columns: minmax(0, 1fr); } .split pre { max-height: 260px; } }
+/* ejemplos */
+.exs { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.exlist { display: flex; flex-direction: column; gap: 8px; }
+.ex { text-align: left; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 11px 13px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+.ex:hover { border-color: var(--muted); }
+.ex[aria-pressed="true"] { border-color: var(--accent-ink); box-shadow: inset 3px 0 0 var(--accent-ink); }
+.ex b { font-family: var(--f-display); font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.ex span { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.ex code { font-size: 11.5px; color: var(--accent-ink); }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tags i { font: 500 11px var(--f-mono); font-style: normal; padding: 1px 7px; border-radius: 99px; background: var(--accent-wash); color: var(--accent-ink); }
+.exview { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.exview .gx-host { --gx-h: min(66vh, 600px); }
+/* guía */
+.guide { display: flex; flex-direction: column; gap: 14px; }
+.guide h3 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.guide .intro { color: var(--muted); max-width: 72ch; }
+.cls td:first-child { white-space: normal; min-width: 150px; }
+.cls td b { font-weight: 600; }
+.grpn { font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); }
+.goto { font: 600 12.5px var(--f-body); color: var(--accent-ink); background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; }
+.goto:hover { text-decoration: underline; }
+@media (max-width: 980px) { .split { grid-template-columns: minmax(0, 1fr); } .split pre { max-height: 260px; } .exs { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .icon:hover svg path { animation: none; } }
 </style>
 
@@ -188,8 +210,9 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
     <button type="button" role="tab" id="t-software" aria-controls="p-software" aria-selected="true">Software <small>servicios · tiempo · impacto</small></button>
     <button type="button" role="tab" id="t-galeria" aria-controls="p-galeria" aria-selected="false">Galería <small>piezas · bloques · iconos</small></button>
     <button type="button" role="tab" id="t-vivo" aria-controls="p-vivo" aria-selected="false">En vivo <small>efectos y presets</small></button>
+    <button type="button" role="tab" id="t-ejemplos" aria-controls="p-ejemplos" aria-selected="false">Ejemplos <small>del repositorio</small></button>
     <button type="button" role="tab" id="t-mermaid" aria-controls="p-mermaid" aria-selected="false">Mermaid</button>
-    <button type="button" role="tab" id="t-referencia" aria-controls="p-referencia" aria-selected="false">Referencia</button>
+    <button type="button" role="tab" id="t-referencia" aria-controls="p-referencia" aria-selected="false">Guía <small>assets · efectos</small></button>
   </nav>
 
   <!-- ===================== SOFTWARE ===================== -->
@@ -286,6 +309,20 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
     </section>
   </div>
 
+  <!-- ===================== EJEMPLOS ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-ejemplos" aria-labelledby="t-ejemplos" hidden>
+    <section aria-labelledby="h-ex">
+      <div class="sh">
+        <div><span class="kicker">Ejemplos del repositorio</span><h2 id="h-ex">Un caso de uso por diagrama</h2></div>
+        <p>Cada ejemplo está en <code>examples/</code> y se construye con <code>node graphx-build.mjs &lt;fichero&gt;</code>. Elige uno: se monta aquí al lado, con sus datos, su recorrido y sus efectos.</p>
+      </div>
+      <div class="exs">
+        <div class="exlist" id="ex-list" role="group" aria-label="Ejemplos"></div>
+        <div class="exview"><div class="gx-host" id="g-ex"></div></div>
+      </div>
+    </section>
+  </div>
+
   <!-- ===================== MERMAID ===================== -->
   <div class="tabpanel" role="tabpanel" id="p-mermaid" aria-labelledby="t-mermaid" hidden>
     <section aria-labelledby="h-mmd">
@@ -310,9 +347,23 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
 
   <!-- ===================== REFERENCIA ===================== -->
   <div class="tabpanel" role="tabpanel" id="p-referencia" aria-labelledby="t-referencia" hidden>
+    <section aria-labelledby="h-assets">
+      <div class="sh">
+        <div><span class="kicker">Guía · 1</span><h2 id="h-assets">Qué se puede dibujar</h2></div>
+        <p>Los assets del motor, por familia. Cada fila dice para qué sirve y dónde verla en esta página; el detalle de cada campo está en <code>README.md</code> y en <code>docs/catalogo.md</code>.</p>
+      </div>
+      <div class="tbl"><table class="cls"><thead><tr><th>Familia</th><th>Qué incluye</th><th>Para qué</th><th></th></tr></thead><tbody id="cls-assets"></tbody></table></div>
+    </section>
+    <section aria-labelledby="h-efectos">
+      <div class="sh">
+        <div><span class="kicker">Guía · 2</span><h2 id="h-efectos">Cómo se comporta</h2></div>
+        <p>Los efectos, por lo que hacen. Los que dependen de los datos se encienden solos si el JSON los trae; los de estilo, solo si se piden. Todos se apagan con <code>fx: false</code>. Más en <code>docs/efectos.md</code>.</p>
+      </div>
+      <div class="tbl"><table class="cls"><thead><tr><th>Efecto</th><th>Clave</th><th>Qué pide</th><th>Qué hace</th><th></th></tr></thead><tbody id="cls-fx"></tbody></table></div>
+    </section>
     <section aria-labelledby="h-ref">
       <div class="sh">
-        <div><span class="kicker">Referencia</span><h2 id="h-ref">Qué se puede configurar</h2></div>
+        <div><span class="kicker">Guía · 3</span><h2 id="h-ref">Qué se puede configurar</h2></div>
         <p><code>fx</code> va en la raíz del JSON o en las opciones de montaje, que mandan. Puede ser un preset, un objeto o <code>false</code>. Sin <code>fx</code> solo se encienden las mejoras discretas y lo que piden los propios datos.</p>
       </div>
       <div class="ref">
@@ -375,8 +426,14 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
   var visible = function (id) { return !$(id).hidden && !document.hidden; };
 
   /* ---------- pestañas: cada una se monta la primera vez que se abre ---------- */
-  var TABS = ['software', 'galeria', 'vivo', 'mermaid', 'referencia'], inited = {};
-  var INIT = { software: initSoftware, galeria: initGaleria, vivo: initVivo, mermaid: initMermaid, referencia: initRef };
+  var TABS = ['software', 'galeria', 'vivo', 'ejemplos', 'mermaid', 'referencia'], inited = {};
+  var INIT = { software: initSoftware, galeria: initGaleria, vivo: initVivo, ejemplos: initEjemplos, mermaid: initMermaid, referencia: initRef };
+  /* «Ver →» en la guía: abre la pestaña y baja a la sección */
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('[data-goto]'); if (!b) return;
+    var t = b.getAttribute('data-goto').split('#'); show(t[0]);
+    setTimeout(function () { var el = t[1] && $(t[1]); if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }, 60);
+  });
   function show(name, focus) {
     if (TABS.indexOf(name) < 0) name = 'software';
     TABS.forEach(function (t) { var on = t === name; $('t-' + t).setAttribute('aria-selected', String(on)); $('t-' + t).tabIndex = on ? 0 : -1; $('p-' + t).hidden = !on; });
@@ -538,6 +595,23 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
     GX.mount($('g-grande'), big, { fx: 'vivid', lang: 'es' });
   }
 
+  /* ---------- EJEMPLOS ---------- */
+  function initEjemplos() {
+    var EX = DATA.ejemplos, cur = null, inst = null;
+    $('ex-list').innerHTML = EX.map(function (x, i) {
+      return '<button type="button" class="ex" data-i="' + i + '" aria-pressed="false"><b>' + esc(x.title) + '</b><span>' + esc(x.what) + '</span><code>' + esc(x.file) + '</code><span class="tags">' + x.shows.map(function (t) { return '<i>' + esc(t) + '</i>'; }).join('') + '</span></button>';
+    }).join('');
+    function open(i) {
+      if (cur === i) return; cur = i;
+      [].forEach.call($('ex-list').children, function (b) { b.setAttribute('aria-pressed', String(+b.dataset.i === i)); });
+      if (inst) inst.destroy(); $('g-ex').innerHTML = '';
+      var x = EX[i];
+      try { inst = x.mermaid ? GX.mountMermaid($('g-ex'), x.mermaid, { lang: 'es' }) : GX.mount($('g-ex'), clone(x.spec), {}); } catch (e) { $('g-ex').textContent = e.message; }
+    }
+    $('ex-list').addEventListener('click', function (ev) { var b = ev.target.closest('.ex'); if (b) open(+b.dataset.i); });
+    open(0);
+  }
+
   /* ---------- MERMAID ---------- */
   function initMermaid() {
     var MM = DATA.mermaid, mOff = null, mOn = null, mT = null, mPreset = 'neon';
@@ -584,6 +658,53 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
       ['skin · sketch', '—', '<code>neon</code>, <code>blueprint</code> o <code>glass</code>; trazo a mano (lo enciende <code>look: handDrawn</code>).']
     ];
     $('ref-rows').innerHTML = REF.map(function (r) { return '<tr><td><code>' + r[0] + '</code></td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>'; }).join('');
+    var go = function (t) { return t ? '<button type="button" class="goto" data-goto="' + t + '">Ver →</button>' : ''; };
+    var ASSETS = [
+      ['Tarjetas', 'La pieza por defecto: icono según <code>kind</code>, título, subtítulo, chip de cambio, enlaces, ficheros, notas y <code>+N</code> si tiene hijos.', 'Servicios, módulos, tareas: casi todo.', 'galeria#h-gal'],
+      ['Formas de flujo', '28 formas: rectángulo, rombo, cilindro, círculo, hexágono, documento, nube, flechas… (las de Mermaid).', 'Procesos y diagramas de flujo.', 'mermaid#h-mmd'],
+      ['Marcas y commits', 'Inicio, fin, uniones, elección, bifurcación y cuatro clases de commit.', 'Máquinas de estados, ramas de git.', 'galeria#h-gal'],
+      ['Tablas, notas y C4', 'Entidad de ER, clase UML, requisito; notas; persona, sistema, base de datos y cola de C4; baldosas de arquitectura y actores.', 'Modelos de datos y arquitectura.', 'galeria#h-gal'],
+      ['Tarjetas con datos', 'Barra de gantt, tarea de journey, ticket de kanban, barra de sankey, hoja de treemap, ficheros y carpetas.', 'Planes, tableros y repositorios.', 'galeria#h-gal'],
+      ['Gráficos como piezas', '<code>kpi</code> (cifra, variación y serie), <code>gauge</code> (rango y umbrales) y <code>donut</code> (reparto).', 'Indicadores dentro del diagrama.', 'galeria#h-gal'],
+      ['Contenedores', 'Carriles con marco y cabecera fija, grupos plegables (marco continuo, discontinuo o punteado) y niveles con nombre.', 'Fronteras: equipos, sistemas, capas.', 'software#h-soft'],
+      ['Aristas', 'Llamada o evento, principal o discreta, animada, grosor por valor, curva, 13 puntas, cardinalidades, etiquetas y caudal (<code>rate</code>).', 'Quién depende de quién y cuánto viaja.', 'software#h-soft'],
+      ['Iconos de tipo', '35 tipos (<code>service</code>, <code>datastore</code>, <code>queue</code>, <code>user</code>, <code>lock</code>, <code>cart</code>…) y los tuyos con <code>icons</code>.', 'Reconocer cada pieza de un vistazo.', 'galeria#h-ic'],
+      ['Bloques del panel', '24 tipos: texto, avisos, citas, código, tablas, cifras, gráficos, barras, gauge, donut, checklist, pasos, eventos, actividad, insignias, imágenes.', 'Explicar una pieza con detalle.', 'galeria#h-blk'],
+      ['Vistas y layouts', 'Grafo jerárquico (ELK), secuencia por flujo, y layouts propios: gantt, git, sankey, treemap, timeline, journey, rejilla y árbol de ficheros.', 'Cada tipo de diagrama con su forma natural.', 'ejemplos#h-ex'],
+      ['Color y temas', 'Tokens de claro y oscuro, colores por pieza, estados con leyenda, paleta categórica, 5 escalas de calor y 3 pieles (neon, blueprint, glass).', 'Que el diagrama hable el idioma visual del equipo.', 'vivo#h-vivo']
+    ];
+    $('cls-assets').innerHTML = ASSETS.map(function (r) { return '<tr><td><b>' + r[0] + '</b></td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + go(r[3]) + '</td></tr>'; }).join('');
+    var FXC = [
+      ['Lo dibujan los datos', [
+        ['Partículas', 'particles', '<code>rate</code> en la arista', 'Viajan por la arista; más caudal, más densas y más rápidas.', 'vivo#h-vivo'],
+        ['Mapa de calor', 'heat', '<code>heat</code> o una métrica', 'Tiñe la pieza con una escala y pone su cifra; un grupo plegado toma el máximo.', 'software#h-soft'],
+        ['Serie y progreso', 'spark · progress', '<code>spark</code>, <code>progress</code>', 'Sparkline con su último valor y anillo de avance; en las formas, en una franja.', 'galeria#h-gal'],
+        ['Alertas', 'alerts', '<code>alert</code>', 'Un halo que late: crítica, atención, aviso o correcto.', 'galeria#h-gal'],
+        ['Equipos', 'owners', '<code>owners</code> + <code>owner</code>', 'Iniciales en la tarjeta, filtro y color por equipo.', 'software#h-soft'],
+        ['Bloques', 'blocks', '<code>blocks</code>', 'Gráficos, tablas, código y más en el panel.', 'galeria#h-blk'],
+        ['Línea de tiempo', 'timeline', 'una tabla TSV/CSV', 'Reproduce los datos fila a fila, con eventos y tiras de calor.', 'software#h-soft']
+      ]],
+      ['Responde al lector', [
+        ['Ondas', 'waves', '—', 'Recorren el grafo salto a salto al seleccionar, trazar o avanzar el recorrido.', 'software#h-soft'],
+        ['Impacto', 'blast', '—', 'Qué deja de funcionar si una pieza falla: anillos por salto y resumen.', 'software#h-soft'],
+        ['▶ Flujo', 'play', '—', 'Una onda que sale de los orígenes y enciende lo que alcanza.', 'mermaid#h-mmd'],
+        ['Marcha al pasar', 'hoverFlow', '—', 'Las conexiones de la pieza bajo el puntero avanzan en su sentido.', 'vivo#h-big'],
+        ['Foco', 'spotlight', '—', 'Atenúa lo que rodea a la selección o al paso del recorrido.', 'software#h-soft']
+      ]],
+      ['Ayuda a leer', [
+        ['Zoom semántico', 'lod', '—', 'Lejos, los nombres de los grupos crecen y las etiquetas pequeñas se callan.', 'vivo#h-big'],
+        ['Retícula viva', 'grid', '—', 'El fondo se mueve y escala con la cámara.', 'vivo#h-big'],
+        ['Vecindad y minimapa', '(motor)', '—', 'Entradas y salidas como mini-grafo en el panel; minimapa plegable en el borde.', 'vivo#h-big']
+      ]],
+      ['Estilo y presentación', [
+        ['Cascada', 'entrance', '—', 'Las piezas entran en orden de lectura al abrir.', 'galeria#h-gal'],
+        ['Brillo y degradado', 'glow · gradient', '—', 'Halo en lo principal; aristas del color de su origen al de su destino.', 'vivo#h-vivo'],
+        ['Colores automáticos', 'autoColor', '—', 'Paleta por carril, grupo o tipo donde no hay color.', 'mermaid#h-mmd'],
+        ['Pieles', 'skin', '—', 'neon, blueprint o glass: el diagrama entero con otra identidad.', 'vivo#h-vivo'],
+        ['Trazo a mano', 'sketch', '<code>look: handDrawn</code>', 'El contorno tiembla, como dibujado a mano.', 'mermaid#h-mmd']
+      ]]
+    ];
+    $('cls-fx').innerHTML = FXC.map(function (g) { return '<tr><td colspan="5" class="grpn">' + g[0] + '</td></tr>' + g[1].map(function (r) { return '<tr><td><b>' + r[0] + '</b></td><td><code>' + r[1] + '</code></td><td>' + r[2] + '</td><td>' + r[3] + '</td><td>' + go(r[4]) + '</td></tr>'; }).join(''); }).join('');
   }
 
   var start = (location.hash || '').replace('#', '');

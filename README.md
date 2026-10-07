@@ -24,13 +24,16 @@ graphx-shapes.js    las formas (rombos, tablas, barras de gantt, KPI, gauge, don
 graphx-fx.js        los efectos y los datos en vivo (§8): opcional, sin él todo funciona igual
 react/              componentes de React sobre las mismas formas (§7.1)
 dist/               versión compacta — ver §1.1 (se regenera con tools/build-dist.mjs)
+docs/               catálogo de assets, efectos clasificados, la página de demostración y los ejemplos, con capturas
 examples/           pr-review-stack-202.json (73 piezas, 4 niveles)
                     onboarding-proceso.json  (un proceso de RR. HH., vertical y con colores)
                     warehouses-pr-radar.json (seguimiento de PRs entre repos; se genera desde datos)
                     mermaid/*.mmd            (un ejemplo por cada tipo de Mermaid admitido; shapes.mmd, todas las formas)
                     gallery/                 (la galería: Mermaid frente a GraphX y el catálogo de formas en React)
-                    fx/                      (los efectos: plataforma-viva.json, almacen.json y la página de demostración)
+                    fx/                      (los efectos: software, postmortem, pipeline de datos, Kubernetes, CI/CD en
+                                              Mermaid, almacén, galería y la página de demostración; ver docs/ejemplos.md)
 tools/              verify.mjs (jsdom) · verify-mermaid.mjs · verify-shapes.mjs · verify-tree.mjs · verify-fx.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
+                    timeline.mjs (una tabla TSV/CSV → línea de tiempo) · capture-docs.mjs (capturas de docs/)
                     build-dist.mjs (compacta) · sync.sh (copia el motor a la skill y a desarrollo)
 ```
 
@@ -589,6 +592,9 @@ node examples/fx/build.mjs /tmp/fx.html --standalone   # la demostración, en pe
 node tools/verify-fx.mjs                               # comprueba configuración, efectos, datos en vivo, tiempo, impacto, equipos y Mermaid
 ```
 
+> **Documentación visual**: [docs/catalogo.md](docs/catalogo.md) (qué se puede dibujar) y
+> [docs/efectos.md](docs/efectos.md) (los efectos por función, con capturas y recetas).
+
 ### 8.1 · Línea de tiempo desde una tabla
 
 `timeline` en la raíz pone bajo el lienzo una banda con la actividad a lo largo del tiempo: la suma de los
@@ -610,6 +616,8 @@ avanza fila a fila (1×, 2×, 4×) y aplica cada fila con `setData`: el diagrama
 - **Formato largo**: columnas `time · id · field · value`, una fila por dato (lo que devuelve una consulta).
 - `data` puede ser TSV o CSV (el separador se detecta; coma decimal admitida) o `rows: [{…}]` o `columns` + `values`.
   `GraphX.fx.parseTable(texto)` lee la tabla por su cuenta. `spark` toma la ventana de las últimas `window` filas.
+- `node tools/timeline.mjs <spec.json> <datos.tsv|.csv> [--events eventos.tsv]` la lleva a un diagrama y avisa
+  de las series que no apuntan a ninguna pieza (ver `examples/fx/pipeline-datos.json`).
 - La fila de partida (`start: "end" | "start"`) se aplica antes del primer layout: el diagrama nace con sus datos.
 - Desde JS: `g.timeline.seek(i | "13:00")`, `play()`, `pause()`, `index`, `length`, `labels`.
   `examples/fx/software/gen.mjs` genera la tabla de un día como saldría de una consulta.

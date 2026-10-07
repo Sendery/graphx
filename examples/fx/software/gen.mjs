@@ -49,6 +49,7 @@ const spec = {
     datos: { label: 'Datos', short: 'DT', contact: '#data-eng' }
   },
   levels: [{ depth: 0, label: 'Capa' }, { depth: 1, label: 'Servicio' }],
+  legend: { kinds: { ui: 'interfaz', mobile: 'app', route: 'pasarela', lock: 'identidad', search: 'búsqueda', cart: 'comercio', card: 'cobros', shield: 'riesgo', service: 'servicio', mail: 'mensajería', datastore: 'base de datos', cache: 'caché', queue: 'cola de eventos', gauge: 'indicador', other: 'otro' } },
   lanes: [
     { id: 'clientes', label: 'Clientes', subtitle: 'web y apps', owner: 'web' },
     { id: 'borde', label: 'Borde', subtitle: 'entrada y sesión', owner: 'plataforma' },

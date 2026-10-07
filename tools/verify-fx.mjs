@@ -266,5 +266,26 @@ console.log('— minimapa plegable —');
   gx.destroy();
 }
 
+/* 9 · los ejemplos de examples/fx */
+console.log('— ejemplos —');
+{
+  const pm = await mount(JSON.parse(R('examples/fx/postmortem.json')));
+  ok(pm.gx.timeline.length === 27 && pm.gx.timeline.index === 0 && pm.q('.gx-tml-ev').length === 6, 'postmortem: 27 instantes, empieza al principio y marca seis eventos');
+  pm.gx.timeline.seek('10:50'); await wait(900);
+  const authT = pm.host.querySelector('.gx-node[data-id="auth"] .gx-hb text').textContent;
+  ok(!!pm.host.querySelector('.gx-node[data-id="auth"] .gx-alert.a-crit') && /k ms$/.test(authT), `postmortem: a las 10:50 el servicio de identidad está en crítico (${authT})`);
+  pm.gx.destroy();
+  const pl = await mount(JSON.parse(R('examples/fx/pipeline-datos.json')));
+  ok(pl.gx.timeline.length === 25 && pl.q('.gx-tml-row').length >= 5, 'pipeline: el CSV en formato largo da 25 instantes y una tira por paso');
+  pl.gx.timeline.seek('03:40'); await wait(900);
+  ok(!!pl.host.querySelector('.gx-node[data-id="limpieza"] .gx-alert.a-warn'), 'pipeline: el atasco de las 03:40 pone la limpieza en aviso');
+  pl.gx.destroy();
+  const k8 = await mount(JSON.parse(R('examples/fx/kubernetes.json')));
+  ok(k8.host.querySelector('.gx-node[data-id="pagos"] .gx-hb text').textContent === '92%' && !!k8.host.querySelector('.gx-node[data-id="checkout"] .gx-pr'), 'kubernetes: el deployment plegado enseña el pico de sus pods y su rollout');
+  await k8.gx.expandTo(2); await wait(900);
+  ok(!!k8.host.querySelector('.gx-node[data-id="pagos-1"] .gx-alert.a-crit'), 'kubernetes: abierto, el pod en CrashLoopBackOff late');
+  k8.gx.destroy();
+}
+
 console.log('\n' + (fail.length ? `FALLOS (${fail.length}):\n - ` + fail.join('\n - ') : '✅ Sin fallos'));
 process.exit(fail.length ? 1 : 0);

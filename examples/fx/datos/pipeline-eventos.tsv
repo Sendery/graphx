@@ -1,0 +1,5 @@
+time	label	tone	nodes
+02:00	Empieza la carga nocturna	info	crm,erp,web
+03:30	La limpieza se atasca con un lote corrupto del ERP	warn	limpieza
+04:00	Se descarta el lote y se reintenta	good	limpieza,dedup
+05:40	Gold listo para los cuadros de mando	good	gold

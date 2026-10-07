@@ -58,6 +58,25 @@
       "label": "Servicio"
     }
   ],
+  "legend": {
+    "kinds": {
+      "ui": "interfaz",
+      "mobile": "app",
+      "route": "pasarela",
+      "lock": "identidad",
+      "search": "búsqueda",
+      "cart": "comercio",
+      "card": "cobros",
+      "shield": "riesgo",
+      "service": "servicio",
+      "mail": "mensajería",
+      "datastore": "base de datos",
+      "cache": "caché",
+      "queue": "cola de eventos",
+      "gauge": "indicador",
+      "other": "otro"
+    }
+  },
   "lanes": [
     {
       "id": "clientes",
