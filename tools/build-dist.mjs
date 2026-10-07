@@ -29,7 +29,7 @@ esb(r('graphx-tree.js'), path.join(DIST, 'graphx-tree.min.js'));
 /* los estilos de los efectos van dentro del módulo (se inyectan solos): esbuild no toca una plantilla,
    así que se compactan aquí antes (comentarios fuera, espacios mínimos) */
 {
-  const fxSrc = fs.readFileSync(r('graphx-fx.js'), 'utf8').replace(/const CSS = `([\s\S]*?)`;/, (_, css) => 'const CSS = `' + css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').replace(/\s*([{};,>])\s*/g, '$1').replace(/;}/g, '}').trim() + '`;');
+  const fxSrc = fs.readFileSync(r('graphx-fx.js'), 'utf8').replace(/const CSS = `([\s\S]*?)`;/, (_, css) => 'const CSS = `' + css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').replace(/\s*([{};,>])\s*/g, '$1').replace(/([{;])([a-z-]+):\s+/g, '$1$2:').replace(/;}/g, '}').trim() + '`;');
   const tmp = path.join(DIST, '.graphx-fx.tmp.js'); fs.writeFileSync(tmp, fxSrc);
   esb(tmp, path.join(DIST, 'graphx-fx.min.js')); fs.unlinkSync(tmp);
 }

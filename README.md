@@ -7,11 +7,12 @@ tooltips, panel de detalle, búsqueda, trazado de dependencias, secuencias anima
 guiado con modo presentación. Funciona igual como artifact de claude.ai, fichero local o bloque
 dentro de otra página.
 
-Versión **1.8.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
+Versión **1.9.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
 nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7),
 desde la 1.7 dibuja sus formas y tiene componentes de **React** (§7.1), y desde la 1.8 tiene un
 módulo de **efectos** con datos en vivo: partículas por caudal, mapa de calor, gráficos como piezas,
-ondas, pieles y más, todo configurable con `fx` (§8).
+ondas, pieles y más, todo configurable con `fx` (§8). La 1.9 añade línea de tiempo desde TSV/CSV, radio
+de impacto, equipos, bloques ricos en el panel y formas de Mermaid con los mismos datos (§8.1–8.5).
 
 ```
 graphx.js           el motor (≈1 500 líneas, sin dependencias salvo ELK)
@@ -23,13 +24,16 @@ graphx-shapes.js    las formas (rombos, tablas, barras de gantt, KPI, gauge, don
 graphx-fx.js        los efectos y los datos en vivo (§8): opcional, sin él todo funciona igual
 react/              componentes de React sobre las mismas formas (§7.1)
 dist/               versión compacta — ver §1.1 (se regenera con tools/build-dist.mjs)
+docs/               catálogo de assets, efectos clasificados, la página de demostración y los ejemplos, con capturas
 examples/           pr-review-stack-202.json (73 piezas, 4 niveles)
                     onboarding-proceso.json  (un proceso de RR. HH., vertical y con colores)
                     warehouses-pr-radar.json (seguimiento de PRs entre repos; se genera desde datos)
                     mermaid/*.mmd            (un ejemplo por cada tipo de Mermaid admitido; shapes.mmd, todas las formas)
                     gallery/                 (la galería: Mermaid frente a GraphX y el catálogo de formas en React)
-                    fx/                      (los efectos: plataforma-viva.json, almacen.json y la página de demostración)
+                    fx/                      (los efectos: software, postmortem, pipeline de datos, Kubernetes, CI/CD en
+                                              Mermaid, almacén, galería y la página de demostración; ver docs/ejemplos.md)
 tools/              verify.mjs (jsdom) · verify-mermaid.mjs · verify-shapes.mjs · verify-tree.mjs · verify-fx.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
+                    timeline.mjs (una tabla TSV/CSV → línea de tiempo) · capture-docs.mjs (capturas de docs/)
                     build-dist.mjs (compacta) · sync.sh (copia el motor a la skill y a desarrollo)
 ```
 
@@ -96,7 +100,8 @@ o, desde JS: `const g = GraphX.mount(elemento, spec, { height: 640, lang: 'es', 
 (`minimap: false` o `data-minimap="false"` abre con el minimapa oculto; `fx` o `data-fx` configura los
 efectos, §8; los dos mandan sobre el JSON). La instancia expone `ready`, `expandTo(n)`, `reveal(id)`,
 `select(id)`, `goStep(i)`, `showView('flow:<id>')`, `setPresent(bool)`, `setExplore(bool)`,
-`setDirection('right'|'down')`, `setMinimap(bool)`, `setData(cambios)`, `playFlow()`, `stopFlow()` y `destroy()`.
+`setDirection('right'|'down')`, `setMinimap(bool)`, `setData(cambios)`, `playFlow()`, `stopFlow()`, `timeline`,
+`blast(id)`, `clearBlast()`, `filterOwners(ids)`, `colorOwners(bool)` y `destroy()`.
 
 ---
 
@@ -156,7 +161,7 @@ efectos, §8; los dos mandan sobre el JSON). La instancia expone `ready`, `expan
 | | `links` | `repo`, `sha`, `pr`, `jira` (base), `related[]` — ver §5 |
 | carril | `id` `label` `subtitle` `color` `links` | |
 | pieza | `id` `label` `summary` | `summary` es lo que se lee al pasar y en el panel: escríbelo siempre |
-| | `kind` | `service app module function method class file route job queue datastore cache external ui config test package other` (solo cambia el icono) |
+| | `kind` | `service app module function method class file route job queue datastore cache external ui config test package other`, y desde la 1.9 `user mobile cloud lock key shield card cart search mail bell cpu bug branch chart gauge` (solo cambia el icono) |
 | | `delta` | `added modified removed unchanged` — si no es un diff, déjalo sin poner |
 | | `parent` · `lane` · `subtitle` · `tags` | `tags` entran en la búsqueda |
 | | `status` | una clave de `statuses`: etiqueta en el tooltip y el panel, color de la pieza si no trae `color` |
@@ -207,13 +212,15 @@ efectos, §8; los dos mandan sobre el JSON). La instancia expone `ready`, `expan
 - **Tooltip** al pasar (resumen, estado, entradas y salidas) con la vecindad iluminada.
 - **Panel** al pulsar: migas de pan, acciones en una línea (◎ Centrar · ⟵ Depende de · Dependientes ⟶),
   enlaces como chips con el estado en color, ficheros, notas, métricas, los pasos del recorrido que
-  la explican como números (título en el tooltip), y entradas/salidas plegadas por defecto.
+  la explican como números (título en el tooltip), y la vecindad como un mini-grafo (entradas · pieza ·
+  salidas, cada una navegable) con la lista completa plegada en una línea.
   La rueda sobre el panel desplaza el panel, no el lienzo.
 - **Tarjetas** de 140–212 px: un título largo parte en dos líneas antes que ensanchar la caja, y
   llevan el icono de cada tipo de enlace que hay en su detalle (GitHub, Jira, Notion, Claude…).
 - **Búsqueda** (tecla `/`), sin tildes; **trazado** de «de qué depende» / «qué depende de esto».
 - **Marcos** por carril con cabecera que queda fija al borde al acercarse; **↦/↧** cambia la orientación.
-- **Minimapa** (se oculta y se muestra con su botón o la tecla `m`; `minimap: false` lo abre oculto),
+- **Minimapa** (con su botón o la tecla `m` se pliega a una pestaña en el borde, que se despliega al pasar
+  por encima y se fija con la chincheta; `minimap: false` lo abre plegado),
   **leyenda**, «Solo cambios», zoom con rueda (o ⌘/Ctrl + rueda) y arrastre.
 - **Secuencias** por flujo con reproducción animada.
 - **Presentación**: pantalla completa, `← → espacio`, `Esc`. El recorrido también funciona en línea.
@@ -563,6 +570,11 @@ Todo se configura con `fx`, en la raíz del JSON o en las opciones de montaje (`
 | `gradient` | no | cada arista, un degradado del color de su origen al de su destino |
 | `autoColor` | no | colores de la paleta donde no los hay: `"lanes"`, `"groups"`, `"kinds"` o `"auto"` (no en un diff) |
 | `skin` | — | una piel completa: `neon`, `blueprint` (oscuras, con su propio fondo) o `glass` (clara y oscura) |
+| `owners` | si hay datos | equipos: iniciales en la tarjeta, botón «Equipos» para filtrar y colorear (§8.3) |
+| `blast` | sí | «✺ Impacto» en el panel: el radio de impacto de la pieza (§8.2) |
+| `blocks` | si hay datos | bloques ricos en el panel (§8.4) |
+| `timeline` | si hay datos | la línea de tiempo bajo el lienzo (§8.1) |
+| `attach` | sí | la serie y el progreso en las formas de Mermaid, en una franja con su sitio (§8.5) |
 | `sketch` | no | trazo a mano (lo enciende `look: handDrawn` de Mermaid) |
 
 Presets: `vivid` (partículas, cascada, foco, brillo, degradado, colores automáticos y «▶ Flujo»), `neon`,
@@ -576,9 +588,93 @@ color de calor transita). Si el cambio mueve el layout (una etiqueta, una serie 
 `g.playFlow({ from, hop, loop })` y `g.stopFlow()` controlan «▶ Flujo» desde fuera.
 
 ```bash
-node examples/fx/build.mjs /tmp/fx.html --standalone   # la demostración: datos en vivo, Mermaid, almacén, referencia
-node tools/verify-fx.mjs                               # comprueba configuración, efectos, datos en vivo y Mermaid
+node examples/fx/build.mjs /tmp/fx.html --standalone   # la demostración, en pestañas: software, galería, en vivo, Mermaid, referencia
+node tools/verify-fx.mjs                               # comprueba configuración, efectos, datos en vivo, tiempo, impacto, equipos y Mermaid
 ```
+
+> **Documentación visual**: [docs/catalogo.md](docs/catalogo.md) (qué se puede dibujar) y
+> [docs/efectos.md](docs/efectos.md) (los efectos por función, con capturas y recetas).
+
+### 8.1 · Línea de tiempo desde una tabla
+
+`timeline` en la raíz pone bajo el lienzo una banda con la actividad a lo largo del tiempo: la suma de los
+caudales como área, una tira de calor por pieza, los eventos marcados y un cursor que se arrastra. Reproducir
+avanza fila a fila (1×, 2×, 4×) y aplica cada fila con `setData`: el diagrama entero se mueve con el día.
+
+```json
+"timeline": {
+  "label": "Martes 6 de octubre",
+  "data": "time\tpagos.heat\tantifraude.heat\te-co-pay\tk-pedidos.value\tevent\n09:00\t180\t140\t120\t610\tDespliegue 4.2\n…",
+  "events": [{ "time": "13:00", "label": "Antifraude supera los 700 ms", "tone": "crit", "nodes": ["antifraude"] }],
+  "window": 12, "step": 900, "start": "end"
+}
+```
+
+- **Formato ancho** (una fila por instante): una columna de tiempo y una por serie, `<id>.<campo>`. Campos:
+  `heat`, `rate`, `value`, `progress`, `change`, `spark`, `weight`, `alert`. Un id sin campo es `heat` en una
+  pieza y `rate` en una arista. Una columna `event` pone un evento en esa fila.
+- **Formato largo**: columnas `time · id · field · value`, una fila por dato (lo que devuelve una consulta).
+- `data` puede ser TSV o CSV (el separador se detecta; coma decimal admitida) o `rows: [{…}]` o `columns` + `values`.
+  `GraphX.fx.parseTable(texto)` lee la tabla por su cuenta. `spark` toma la ventana de las últimas `window` filas.
+- `node tools/timeline.mjs <spec.json> <datos.tsv|.csv> [--events eventos.tsv]` la lleva a un diagrama y avisa
+  de las series que no apuntan a ninguna pieza (ver `examples/fx/pipeline-datos.json`).
+- La fila de partida (`start: "end" | "start"`) se aplica antes del primer layout: el diagrama nace con sus datos.
+- Desde JS: `g.timeline.seek(i | "13:00")`, `play()`, `pause()`, `index`, `length`, `labels`.
+  `examples/fx/software/gen.mjs` genera la tabla de un día como saldría de una consulta.
+
+### 8.2 · Radio de impacto
+
+«✺ Impacto» en el panel (o `g.blast(id)`) dibuja qué deja de funcionar si esa pieza falla: anillos por salto
+con su recuento, las piezas teñidas por distancia (rojo, naranja, ámbar), pulsos en el sentido del fallo y, en
+el panel, cuántas piezas, cuántos saltos y qué equipos toca. En una llamada (`call`, `http`, `rpc`, `data`…) el
+fallo sube hacia quien llama; en un `event`, `queue` o `async` baja hacia quien consume. `fx.blast.mode`:
+`auto` (eso), `callers`, `downstream` o `both`. Seleccionar otra pieza lo quita; `g.clearBlast()` también.
+
+### 8.3 · Equipos
+
+`owners: { "pagos": { "label": "Equipo Pagos", "short": "PG", "color": "#8250df", "contact": "#pagos", "url": "https://…" } }`
+en la raíz y `owner` en una pieza o un carril (lo heredan sus hijos). Cada tarjeta lleva las iniciales del
+equipo sobre el icono; el panel, el equipo con su contacto; el tooltip, su nombre. «Equipos» en la barra filtra
+por uno o varios (lo de otros equipos se apaga y las dependencias entre equipos quedan a media luz), incluye
+«Sin equipo» para encontrar lo huérfano y colorea por equipo. Desde JS: `g.filterOwners(['pagos'])`, `g.colorOwners(true)`.
+
+### 8.4 · Bloques ricos en el panel
+
+`blocks: [ … ]` en una pieza añade al panel, debajo del resumen:
+
+| `type` | Qué dibuja |
+|---|---|
+| `text` (`style`: `lead`, `muted`, `small`) · `heading` · `divider` | párrafos con **negrita**, *cursiva*, `código` y [enlaces](https://…) |
+| `callout` (`tone`: `info`, `warn`, `good`, `crit`) · `quote` (`by`) | avisos y citas |
+| `code` (`lang`) | código con resaltado ligero (JS, TS, SQL, Python, shell…) |
+| `kv` · `list` (`ordered`) · `checklist` · `steps` (`done`, `active`, `todo`) · `badges` | pares, listas, tareas con su avance, pasos de un proceso, insignias |
+| `table` (`columns`, `rows`; celdas `{ v, tone }`) | tabla con números alineados y estados en color |
+| `stats` (`items`: `label`, `value`, `unit`, `change`, `good`, `spark`) · `spark` | cifras con su variación y su serie |
+| `chart` (`kind`: `line`, `area`, `bar`, `stack`; `series`, `labels`, `unit`) | gráfico con rejilla, ejes, leyenda y tooltip por punto; se dibuja al abrir |
+| `bars` · `progress` | un ranking y el avance por partes |
+| `gauge` · `donut` · `kpi` | las formas de gráfico (§7.1), dentro del panel |
+| `timeline` (`items`: `time`, `label`, `tone`) · `heatstrip` (`rows`, `labels`, `scheme`) | una línea de eventos y una tira de actividad |
+| `image` (`src`: `data:image/…` o `https://`) | una imagen con pie |
+
+Todo el texto se escapa y los colores y las URLs solo pasan si son válidos. Fuera de un diagrama:
+`GraphX.fx.renderBlocks(blocks, { lang })` devuelve el HTML (dentro de un elemento con la clase `gx` para los tokens).
+
+### 8.5 · Formas de Mermaid igual de ricas
+
+Las formas (rombos, cilindros, hexágonos, círculos, baldosas, C4, tablas, notas) aceptan los mismos datos que
+una tarjeta: `heat` (tiñe y pone la cifra), `owner` (sus iniciales), `alert` (el halo) y, en una franja debajo
+con su sitio en el layout, `spark` y `progress`. Desde Mermaid, sin dejar de ser Mermaid válido:
+
+```
+api@{ shape: hex, label: "API", heat: 85, spark: "40 52 61 58", owner: busqueda, progress: 0.5 }
+e1@{ rate: 900, speed: fast }
+%% @gx { "owners": { "busqueda": { "label": "Equipo Búsqueda" } }, "fx": { "particles": true } }
+%% @gx api { "blocks": [ { "type": "callout", "tone": "warn", "text": "Reindexado en curso" } ] }
+```
+
+Las claves de `@{…}` que Mermaid no conoce pasan a la pieza o a la arista; un comentario `%% @gx [id] {json}`
+lleva JSON a la raíz (`fx`, `owners`, `timeline`, `statuses`, `tour`…) o a una pieza (`blocks`, `metrics`,
+`links`…). Ver `examples/fx/arquitectura.mmd`.
 
 ## 9 · Verificar sin navegador
 

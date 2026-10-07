@@ -1,0 +1,1207 @@
+{
+  "title": "Checkout de la tienda, un día de tráfico",
+  "summary": "Servicios, equipos y dependencias del checkout. La línea de tiempo reproduce un día real: el pico de mediodía, el despliegue de Pagos a las 09:00 y el incidente de Antifraude de las 13:00.",
+  "lang": "es",
+  "direction": "right",
+  "initialDepth": 1,
+  "fx": {
+    "particles": true,
+    "play": true,
+    "heat": {
+      "label": "Latencia p95",
+      "unit": "ms",
+      "domain": [
+        0,
+        600
+      ],
+      "scheme": "traffic"
+    },
+    "spotlight": true,
+    "glow": true,
+    "entrance": "cascade"
+  },
+  "owners": {
+    "web": {
+      "label": "Equipo Web",
+      "short": "WEB",
+      "contact": "#web-squad"
+    },
+    "checkout": {
+      "label": "Equipo Checkout",
+      "short": "CO",
+      "contact": "#checkout"
+    },
+    "pagos": {
+      "label": "Equipo Pagos",
+      "short": "PG",
+      "contact": "#pagos-oncall",
+      "url": "https://example.com/equipos/pagos"
+    },
+    "plataforma": {
+      "label": "Plataforma",
+      "short": "PL",
+      "contact": "#platform"
+    },
+    "datos": {
+      "label": "Datos",
+      "short": "DT",
+      "contact": "#data-eng"
+    }
+  },
+  "levels": [
+    {
+      "depth": 0,
+      "label": "Capa"
+    },
+    {
+      "depth": 1,
+      "label": "Servicio"
+    }
+  ],
+  "legend": {
+    "kinds": {
+      "ui": "interfaz",
+      "mobile": "app",
+      "route": "pasarela",
+      "lock": "identidad",
+      "search": "búsqueda",
+      "cart": "comercio",
+      "card": "cobros",
+      "shield": "riesgo",
+      "service": "servicio",
+      "mail": "mensajería",
+      "datastore": "base de datos",
+      "cache": "caché",
+      "queue": "cola de eventos",
+      "gauge": "indicador",
+      "other": "otro"
+    }
+  },
+  "lanes": [
+    {
+      "id": "clientes",
+      "label": "Clientes",
+      "subtitle": "web y apps",
+      "owner": "web"
+    },
+    {
+      "id": "borde",
+      "label": "Borde",
+      "subtitle": "entrada y sesión",
+      "owner": "plataforma"
+    },
+    {
+      "id": "dominio",
+      "label": "Dominio",
+      "subtitle": "la lógica del checkout"
+    },
+    {
+      "id": "datos",
+      "label": "Datos",
+      "subtitle": "estado y eventos",
+      "owner": "datos"
+    },
+    {
+      "id": "panel",
+      "label": "Indicadores",
+      "subtitle": "lo que vigila la guardia"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "web",
+      "lane": "clientes",
+      "label": "Tienda web",
+      "kind": "ui",
+      "summary": "La web en Next.js. Sirve el catálogo y el checkout."
+    },
+    {
+      "id": "app",
+      "lane": "clientes",
+      "label": "App móvil",
+      "kind": "mobile",
+      "summary": "La app de iOS y Android."
+    },
+    {
+      "id": "gateway",
+      "lane": "borde",
+      "label": "API Gateway",
+      "kind": "route",
+      "summary": "Termina TLS, limita por cliente y enruta.",
+      "blocks": [
+        {
+          "type": "quote",
+          "text": "Ninguna petición llega a un servicio sin pasar por aquí: límites, autenticación y trazas en un solo sitio.",
+          "by": "ADR-014 · Una sola puerta de entrada"
+        },
+        {
+          "type": "kv",
+          "items": [
+            [
+              "Instancias",
+              "6 × c6g.large"
+            ],
+            [
+              "Límite por cliente",
+              "50 req/s"
+            ],
+            [
+              "Timeout",
+              "8 s"
+            ],
+            [
+              "Repositorio",
+              "`platform/gateway`"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "lane": "borde",
+      "label": "Sesión y OAuth",
+      "kind": "lock",
+      "summary": "Valida tokens y sesiones."
+    },
+    {
+      "id": "catalogo",
+      "lane": "dominio",
+      "label": "Catálogo",
+      "kind": "search",
+      "owner": "web",
+      "summary": "Productos, precios y búsqueda."
+    },
+    {
+      "id": "checkout",
+      "lane": "dominio",
+      "label": "Checkout",
+      "kind": "cart",
+      "owner": "checkout",
+      "summary": "Orquesta la compra: reserva stock, cobra y confirma.",
+      "blocks": [
+        {
+          "type": "steps",
+          "title": "La saga de una compra",
+          "items": [
+            {
+              "label": "Reservar stock",
+              "state": "done"
+            },
+            {
+              "label": "Cobrar",
+              "state": "active"
+            },
+            {
+              "label": "Confirmar el pedido",
+              "state": "todo"
+            },
+            {
+              "label": "Enviar la confirmación",
+              "state": "todo"
+            }
+          ]
+        },
+        {
+          "type": "bars",
+          "title": "Endpoints más lentos (p95)",
+          "unit": "ms",
+          "items": [
+            {
+              "label": "POST /orders",
+              "value": 212
+            },
+            {
+              "label": "POST /payments",
+              "value": 188
+            },
+            {
+              "label": "GET /cart",
+              "value": 64
+            },
+            {
+              "label": "PUT /cart/items",
+              "value": 41
+            }
+          ]
+        },
+        {
+          "type": "donut",
+          "label": "Errores por tipo (24 h)",
+          "parts": [
+            {
+              "label": "Timeout de Pagos",
+              "value": 61
+            },
+            {
+              "label": "Sin stock",
+              "value": 27
+            },
+            {
+              "label": "Validación",
+              "value": 12
+            }
+          ]
+        },
+        {
+          "type": "kv",
+          "items": [
+            [
+              "Lenguaje",
+              "Kotlin · Spring"
+            ],
+            [
+              "Guardia",
+              "@ana.ruiz"
+            ],
+            [
+              "SLO",
+              "99,9 % · p95 < 300 ms"
+            ],
+            [
+              "Repositorio",
+              "`checkout/api`"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pagos",
+      "lane": "dominio",
+      "label": "Pagos",
+      "kind": "card",
+      "owner": "pagos",
+      "unit": "ms",
+      "summary": "Cobra con el proveedor de tarjetas y emite el evento de pago.",
+      "blocks": [
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "Despliegue en curso",
+          "text": "La versión **4.2** está en canario. Si el p95 pasa de 400 ms, el rollback es automático."
+        },
+        {
+          "type": "stats",
+          "items": [
+            {
+              "label": "p95",
+              "value": 268,
+              "unit": "ms",
+              "change": 12,
+              "good": "down",
+              "spark": [
+                231,
+                508,
+                501,
+                216,
+                200,
+                190,
+                194,
+                212,
+                235,
+                246,
+                235,
+                210
+              ]
+            },
+            {
+              "label": "Errores",
+              "value": "0,8",
+              "unit": "%",
+              "change": -0.3,
+              "good": "down"
+            },
+            {
+              "label": "Cobros/min",
+              "value": 412,
+              "change": 6.1
+            }
+          ]
+        },
+        {
+          "type": "chart",
+          "title": "Latencia p95 en el día",
+          "kind": "area",
+          "unit": "ms",
+          "labels": [
+            "00:00",
+            "01:00",
+            "02:00",
+            "03:00",
+            "04:00",
+            "05:00",
+            "06:00",
+            "07:00",
+            "08:00",
+            "09:00",
+            "10:00",
+            "11:00",
+            "12:00",
+            "13:00",
+            "14:00",
+            "15:00",
+            "16:00",
+            "17:00",
+            "18:00",
+            "19:00",
+            "20:00",
+            "21:00",
+            "22:00",
+            "23:00"
+          ],
+          "series": [
+            {
+              "label": "p95",
+              "values": [
+                172,
+                172,
+                172,
+                172,
+                172,
+                172,
+                172,
+                173,
+                177,
+                185,
+                198,
+                216,
+                231,
+                508,
+                501,
+                216,
+                200,
+                190,
+                194,
+                212,
+                235,
+                246,
+                235,
+                210
+              ]
+            },
+            {
+              "label": "Objetivo",
+              "values": [
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300,
+                300
+              ],
+              "color": "#cf222e"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "title": "Objetivos de servicio",
+          "columns": [
+            "SLO",
+            "Objetivo",
+            "Ahora"
+          ],
+          "rows": [
+            [
+              "Disponibilidad",
+              "99,95 %",
+              {
+                "v": "99,97 %",
+                "tone": "good"
+              }
+            ],
+            [
+              "Latencia p95",
+              "300 ms",
+              {
+                "v": "268 ms",
+                "tone": "good"
+              }
+            ],
+            [
+              "Cobros fallidos",
+              "< 1 %",
+              {
+                "v": "0,8 %",
+                "tone": "warn"
+              }
+            ]
+          ]
+        },
+        {
+          "type": "code",
+          "lang": "sh",
+          "title": "Rollback manual",
+          "code": "# vuelve a la versión estable\nkubectl -n pagos rollout undo deploy/pagos-api\nkubectl -n pagos rollout status deploy/pagos-api --timeout=120s"
+        },
+        {
+          "type": "checklist",
+          "title": "Runbook: el proveedor no responde",
+          "items": [
+            {
+              "text": "Comprobar el estado del proveedor",
+              "done": true
+            },
+            {
+              "text": "Activar el proveedor de respaldo",
+              "done": true
+            },
+            {
+              "text": "Avisar en #incidentes",
+              "done": false
+            },
+            {
+              "text": "Abrir el postmortem",
+              "done": false
+            }
+          ]
+        },
+        {
+          "type": "timeline",
+          "title": "Últimos cambios",
+          "items": [
+            {
+              "time": "09:00",
+              "label": "Despliegue 4.2 al 10 % (canario)",
+              "tone": "info"
+            },
+            {
+              "time": "11:30",
+              "label": "Canario al 40 %",
+              "tone": "info"
+            },
+            {
+              "time": "13:05",
+              "label": "Latencia por encima del objetivo",
+              "tone": "crit"
+            },
+            {
+              "time": "15:00",
+              "label": "Rollback del modelo de Antifraude",
+              "tone": "good"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "antifraude",
+      "lane": "dominio",
+      "label": "Antifraude",
+      "kind": "shield",
+      "owner": "pagos",
+      "summary": "Puntúa cada pago con el modelo de riesgo.",
+      "blocks": [
+        {
+          "type": "callout",
+          "tone": "crit",
+          "title": "Punto caliente",
+          "text": "El modelo v7 tarda el doble con carritos de más de 20 líneas."
+        },
+        {
+          "type": "badges",
+          "items": [
+            {
+              "label": "modelo v7",
+              "tone": "warn"
+            },
+            {
+              "label": "GPU",
+              "tone": "neutral"
+            },
+            {
+              "label": "p99 1,1 s",
+              "tone": "crit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stock",
+      "lane": "dominio",
+      "label": "Stock",
+      "kind": "service",
+      "owner": "checkout",
+      "summary": "Reserva y libera unidades por almacén."
+    },
+    {
+      "id": "notif",
+      "lane": "dominio",
+      "label": "Notificaciones",
+      "kind": "mail",
+      "owner": "web",
+      "summary": "Envía el correo y el push de confirmación."
+    },
+    {
+      "id": "postgres",
+      "lane": "datos",
+      "label": "PostgreSQL",
+      "kind": "datastore",
+      "summary": "Pedidos, pagos y stock. Primaria y dos réplicas.",
+      "blocks": [
+        {
+          "type": "gauge",
+          "label": "CPU de la primaria",
+          "value": 62,
+          "unit": "%",
+          "thresholds": [
+            70,
+            85
+          ]
+        },
+        {
+          "type": "heatstrip",
+          "title": "Carga por hora, última semana",
+          "scheme": "heat",
+          "unit": "%",
+          "labels": [
+            "00:00",
+            "01:00",
+            "02:00",
+            "03:00",
+            "04:00",
+            "05:00",
+            "06:00",
+            "07:00",
+            "08:00",
+            "09:00",
+            "10:00",
+            "11:00",
+            "12:00",
+            "13:00",
+            "14:00",
+            "15:00",
+            "16:00",
+            "17:00",
+            "18:00",
+            "19:00",
+            "20:00",
+            "21:00",
+            "22:00",
+            "23:00"
+          ],
+          "rows": [
+            {
+              "label": "lun",
+              "values": [
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                34,
+                36,
+                40,
+                48,
+                58,
+                67,
+                71,
+                67,
+                59,
+                49,
+                43,
+                45,
+                56,
+                70,
+                76,
+                69,
+                55
+              ]
+            },
+            {
+              "label": "mar",
+              "values": [
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                34,
+                36,
+                40,
+                48,
+                58,
+                67,
+                71,
+                67,
+                59,
+                49,
+                43,
+                45,
+                56,
+                70,
+                76,
+                69,
+                55
+              ]
+            },
+            {
+              "label": "mié",
+              "values": [
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                34,
+                36,
+                40,
+                48,
+                58,
+                67,
+                71,
+                67,
+                59,
+                49,
+                43,
+                45,
+                56,
+                70,
+                76,
+                69,
+                55
+              ]
+            },
+            {
+              "label": "jue",
+              "values": [
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                34,
+                36,
+                40,
+                48,
+                58,
+                67,
+                91,
+                67,
+                59,
+                49,
+                43,
+                45,
+                56,
+                70,
+                76,
+                69,
+                55
+              ]
+            },
+            {
+              "label": "vie",
+              "values": [
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                33,
+                34,
+                36,
+                40,
+                48,
+                58,
+                67,
+                71,
+                67,
+                59,
+                49,
+                43,
+                45,
+                56,
+                70,
+                76,
+                69,
+                55
+              ]
+            },
+            {
+              "label": "sáb",
+              "values": [
+                29,
+                29,
+                29,
+                29,
+                29,
+                29,
+                29,
+                30,
+                31,
+                34,
+                40,
+                47,
+                53,
+                56,
+                53,
+                47,
+                40,
+                36,
+                38,
+                45,
+                55,
+                59,
+                55,
+                44
+              ]
+            },
+            {
+              "label": "dom",
+              "values": [
+                29,
+                29,
+                29,
+                29,
+                29,
+                29,
+                29,
+                30,
+                31,
+                34,
+                40,
+                47,
+                53,
+                56,
+                53,
+                47,
+                40,
+                36,
+                38,
+                45,
+                55,
+                59,
+                55,
+                44
+              ]
+            }
+          ]
+        },
+        {
+          "type": "kv",
+          "items": [
+            [
+              "Versión",
+              "16.4"
+            ],
+            [
+              "Tamaño",
+              "1,8 TB"
+            ],
+            [
+              "Conexiones",
+              "420 / 800"
+            ],
+            [
+              "Réplicas",
+              "2 (lag 40 ms)"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "lane": "datos",
+      "label": "Redis",
+      "kind": "cache",
+      "summary": "Sesiones, carritos y catálogo caliente."
+    },
+    {
+      "id": "kafka",
+      "lane": "datos",
+      "label": "Kafka",
+      "kind": "queue",
+      "summary": "El bus de eventos del checkout.",
+      "blocks": [
+        {
+          "type": "chart",
+          "title": "Mensajes por topic (miles/h)",
+          "kind": "stack",
+          "labels": [
+            "00:00",
+            "03:00",
+            "06:00",
+            "09:00",
+            "12:00",
+            "15:00",
+            "18:00",
+            "21:00"
+          ],
+          "series": [
+            {
+              "label": "pago.completado",
+              "values": [
+                41,
+                41,
+                41,
+                47,
+                71,
+                63,
+                52,
+                78
+              ]
+            },
+            {
+              "label": "pedido.creado",
+              "values": [
+                53,
+                53,
+                53,
+                60,
+                87,
+                79,
+                65,
+                96
+              ]
+            },
+            {
+              "label": "stock.reservado",
+              "values": [
+                47,
+                47,
+                47,
+                54,
+                79,
+                71,
+                59,
+                87
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "k-pedidos",
+      "lane": "panel",
+      "label": "Pedidos por hora",
+      "shape": "kpi",
+      "kind": "cart",
+      "value": 820,
+      "change": 4.2,
+      "summary": "Pedidos confirmados en la última hora."
+    },
+    {
+      "id": "k-budget",
+      "lane": "panel",
+      "label": "Presupuesto de error",
+      "shape": "gauge",
+      "kind": "gauge",
+      "value": 64,
+      "unit": "%",
+      "thresholds": [
+        40,
+        20
+      ],
+      "good": "high",
+      "summary": "Lo que queda del presupuesto de error del mes."
+    },
+    {
+      "id": "k-metodo",
+      "lane": "panel",
+      "label": "Pagos por método",
+      "shape": "donut",
+      "kind": "card",
+      "parts": [
+        {
+          "label": "Tarjeta",
+          "value": 61
+        },
+        {
+          "label": "Bizum",
+          "value": 22
+        },
+        {
+          "label": "PayPal",
+          "value": 12
+        },
+        {
+          "label": "Transferencia",
+          "value": 5
+        }
+      ],
+      "summary": "Reparto de los cobros de hoy."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-web-gw",
+      "from": "web",
+      "to": "gateway",
+      "kind": "http",
+      "rate": 600
+    },
+    {
+      "id": "e-app-gw",
+      "from": "app",
+      "to": "gateway",
+      "kind": "http",
+      "rate": 420
+    },
+    {
+      "id": "e-gw-auth",
+      "from": "gateway",
+      "to": "auth",
+      "kind": "rpc",
+      "rate": 900
+    },
+    {
+      "id": "e-gw-cat",
+      "from": "gateway",
+      "to": "catalogo",
+      "kind": "http",
+      "rate": 560
+    },
+    {
+      "id": "e-gw-co",
+      "from": "gateway",
+      "to": "checkout",
+      "kind": "http",
+      "rate": 200,
+      "emphasis": "hero",
+      "label": "POST /orders"
+    },
+    {
+      "id": "e-co-pay",
+      "from": "checkout",
+      "to": "pagos",
+      "kind": "rpc",
+      "rate": 120,
+      "emphasis": "hero",
+      "label": "cobrar"
+    },
+    {
+      "id": "e-pay-af",
+      "from": "pagos",
+      "to": "antifraude",
+      "kind": "rpc",
+      "rate": 120,
+      "label": "puntuar"
+    },
+    {
+      "id": "e-co-stk",
+      "from": "checkout",
+      "to": "stock",
+      "kind": "rpc",
+      "rate": 200,
+      "label": "reservar"
+    },
+    {
+      "id": "e-pay-kf",
+      "from": "pagos",
+      "to": "kafka",
+      "kind": "event",
+      "rate": 110,
+      "label": "pago.completado"
+    },
+    {
+      "id": "e-kf-mail",
+      "from": "kafka",
+      "to": "notif",
+      "kind": "event",
+      "rate": 110
+    },
+    {
+      "id": "e-cat-rd",
+      "from": "catalogo",
+      "to": "redis",
+      "kind": "data",
+      "rate": 500
+    },
+    {
+      "id": "e-auth-rd",
+      "from": "auth",
+      "to": "redis",
+      "kind": "data",
+      "rate": 800
+    },
+    {
+      "id": "e-co-pg",
+      "from": "checkout",
+      "to": "postgres",
+      "kind": "data",
+      "rate": 200
+    },
+    {
+      "id": "e-pay-pg",
+      "from": "pagos",
+      "to": "postgres",
+      "kind": "data",
+      "rate": 120
+    },
+    {
+      "id": "e-stk-pg",
+      "from": "stock",
+      "to": "postgres",
+      "kind": "data",
+      "rate": 200
+    }
+  ],
+  "timeline": {
+    "label": "Martes 6 de octubre · una fila por hora",
+    "data": "time\tgateway.heat\tcatalogo.heat\tcheckout.heat\tpagos.heat\tantifraude.heat\tstock.heat\tpostgres.heat\tredis.heat\te-web-gw\te-app-gw\te-gw-cat\te-gw-co\te-co-pay\te-pay-af\te-co-stk\te-pay-kf\te-kf-mail\tk-pedidos.value\tk-budget.value\tpagos.progress\tpagos.spark\tcheckout.spark\tevent\n00:00\t36\t42\t108\t172\t146\t41\t11\t2\t154\t120\t153\t56\t34\t32\t54\t31\t31\t144\t92\t1\t175\t40\t\n01:00\t35\t45\t111\t175\t151\t39\t11\t3\t169\t119\t156\t57\t36\t34\t56\t31\t31\t146\t91\t1\t179\t40\t\n02:00\t35\t42\t105\t172\t147\t36\t11\t2\t166\t120\t155\t56\t35\t36\t57\t30\t31\t146\t89\t1\t169\t39\t\n03:00\t38\t42\t111\t171\t155\t40\t11\t2\t159\t116\t151\t56\t34\t33\t56\t29\t31\t146\t88\t1\t169\t39\t\n04:00\t35\t47\t98\t170\t143\t35\t12\t2\t167\t120\t160\t55\t34\t35\t55\t33\t33\t151\t86\t1\t178\t41\t\n05:00\t35\t42\t98\t161\t151\t37\t11\t2\t167\t113\t157\t55\t35\t33\t55\t32\t30\t148\t85\t1\t163\t42\t\n06:00\t35\t48\t100\t182\t151\t40\t10\t2\t168\t123\t155\t59\t33\t36\t59\t33\t32\t147\t84\t1\t165\t42\t\n07:00\t40\t41\t112\t181\t160\t42\t11\t2\t169\t127\t159\t61\t37\t35\t58\t32\t34\t160\t82\t1\t171\t42\t\n08:00\t40\t45\t103\t173\t165\t43\t11\t3\t207\t142\t200\t68\t43\t40\t70\t39\t39\t190\t81\t1\t177\t43\t\n09:00\t42\t47\t114\t185\t172\t40\t13\t2\t261\t180\t237\t88\t51\t54\t86\t47\t49\t238\t79\t0.1\t177\t53\tDespliegue de Pagos 4.2 (canario)\n10:00\t47\t52\t131\t187\t190\t44\t14\t3\t375\t269\t338\t124\t74\t74\t123\t67\t72\t340\t78\t0.22\t192\t62\t\n11:00\t47\t53\t144\t214\t212\t48\t15\t3\t479\t357\t440\t163\t103\t105\t161\t96\t92\t440\t77\t0.34\t210\t81\t\n12:00\t51\t59\t145\t231\t242\t44\t17\t3\t590\t415\t525\t191\t120\t116\t196\t115\t114\t564\t75\t0.46\t230\t98\t\n13:00\t55\t59\t235\t415\t780\t50\t29\t4\t687\t481\t653\t237\t86\t87\t242\t81\t77\t419\t48\t0.58\t439\t105\t\n14:00\t51\t61\t248\t432\t823\t51\t26\t3\t601\t416\t576\t195\t76\t75\t206\t69\t67\t388\t46\t0.7\t436\t95\t\n15:00\t50\t53\t132\t208\t210\t44\t17\t3\t514\t344\t464\t175\t107\t99\t168\t98\t90\t441\t41\t0.82\t214\t77\t\n16:00\t42\t47\t131\t204\t179\t40\t14\t2\t379\t275\t371\t132\t80\t76\t129\t73\t75\t340\t40\t0.94\t201\t67\t\n17:00\t43\t44\t109\t193\t168\t42\t12\t2\t307\t219\t293\t106\t65\t61\t109\t55\t59\t272\t38\t1\t196\t58\t\n18:00\t46\t49\t125\t192\t186\t45\t14\t3\t337\t223\t319\t109\t69\t65\t108\t64\t64\t290\t37\t1\t185\t59\t\n19:00\t51\t50\t125\t200\t201\t46\t14\t3\t482\t341\t452\t160\t94\t94\t158\t92\t90\t429\t35\t1\t216\t77\t\n20:00\t54\t63\t153\t248\t239\t50\t19\t3\t651\t449\t578\t225\t134\t131\t221\t120\t121\t568\t34\t1\t225\t94\t\n21:00\t54\t62\t145\t233\t233\t54\t21\t3\t710\t505\t686\t239\t144\t152\t250\t127\t140\t645\t33\t1\t250\t107\t\n22:00\t55\t61\t141\t245\t242\t47\t18\t3\t605\t436\t559\t216\t130\t127\t208\t119\t118\t589\t31\t1\t241\t102\t\n23:00\t48\t51\t137\t201\t208\t46\t16\t3\t457\t312\t436\t159\t88\t90\t149\t81\t85\t416\t30\t1\t212\t77\t",
+    "window": 12,
+    "step": 1100,
+    "start": "end",
+    "events": [
+      {
+        "time": "13:00",
+        "label": "Antifraude supera los 700 ms",
+        "tone": "crit",
+        "nodes": [
+          "antifraude"
+        ]
+      },
+      {
+        "time": "15:00",
+        "label": "Rollback del modelo",
+        "tone": "good",
+        "nodes": [
+          "antifraude"
+        ]
+      }
+    ]
+  },
+  "flows": [
+    {
+      "id": "pago",
+      "title": "Un pago",
+      "summary": "De «Pagar» a la confirmación.",
+      "participants": [
+        "web",
+        "gateway",
+        "checkout",
+        "pagos",
+        "antifraude",
+        "kafka"
+      ],
+      "messages": [
+        {
+          "from": "web",
+          "to": "gateway",
+          "label": "POST /orders"
+        },
+        {
+          "from": "gateway",
+          "to": "checkout",
+          "label": "crear pedido"
+        },
+        {
+          "from": "checkout",
+          "to": "pagos",
+          "label": "cobrar 42,90 €"
+        },
+        {
+          "from": "pagos",
+          "to": "antifraude",
+          "label": "puntuar"
+        },
+        {
+          "from": "antifraude",
+          "to": "pagos",
+          "label": "riesgo 0,12",
+          "kind": "return"
+        },
+        {
+          "from": "pagos",
+          "to": "kafka",
+          "label": "pago.completado",
+          "kind": "async"
+        },
+        {
+          "from": "pagos",
+          "to": "checkout",
+          "label": "cobrado",
+          "kind": "return"
+        },
+        {
+          "from": "checkout",
+          "to": "web",
+          "label": "201 Created",
+          "kind": "return"
+        }
+      ]
+    }
+  ],
+  "tour": {
+    "title": "El incidente de las 13:00",
+    "steps": [
+      {
+        "title": "El camino de una compra",
+        "body_html": "<p>La pasarela manda cada compra a <b>Checkout</b>, que reserva stock y pide el cobro a <b>Pagos</b>.</p>",
+        "focus": {
+          "nodes": [
+            "gateway",
+            "checkout",
+            "stock",
+            "pagos"
+          ],
+          "edges": [
+            "e-gw-co",
+            "e-co-stk",
+            "e-co-pay"
+          ]
+        }
+      },
+      {
+        "title": "Antifraude se atasca",
+        "body_html": "<p>A mediodía el modelo de riesgo tarda más de 700 ms y arrastra a Pagos. Pulsa <b>✺ Impacto</b> en su panel para ver hasta dónde llega.</p>",
+        "focus": {
+          "nodes": [
+            "pagos",
+            "antifraude"
+          ],
+          "edges": [
+            "e-pay-af"
+          ]
+        },
+        "select": "antifraude"
+      },
+      {
+        "title": "El evento sigue saliendo",
+        "body_html": "<p>Los pagos que sí se cobran salen por <b>Kafka</b> y llegan a Notificaciones con normalidad.</p>",
+        "focus": {
+          "nodes": [
+            "pagos",
+            "kafka",
+            "notif"
+          ],
+          "edges": [
+            "e-pay-kf",
+            "e-kf-mail"
+          ]
+        }
+      }
+    ]
+  }
+}

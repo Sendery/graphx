@@ -272,7 +272,7 @@
   /* ---------- líneas: frontmatter, directivas, comentarios, accesibilidad ---------- */
   function prep(text) {
     let src = String(text == null ? '' : text).replace(/\r\n?/g, '\n').replace(/\t/g, '    ').replace(/^\uFEFF/, '');
-    const meta = { title: null, descr: null, config: '', init: [] };
+    const meta = { title: null, descr: null, config: '', init: [], gx: [] };
     const fm = /^\s*---\n([\s\S]*?)\n---[ \t]*(\n|$)/.exec(src);
     if (fm) {
       meta.config = fm[1];
@@ -284,6 +284,9 @@
     const lines = []; let inDescr = false, descr = [];
     src.split('\n').forEach((raw, i) => {
       let t = raw;
+      /* `%% @gx [id] {json}`: datos de GraphX dentro de un comentario (Mermaid lo ignora, el diagrama sigue valiendo) */
+      const gx = /^\s*%%\s*@gx\b\s*([^\s{]+)?\s*(\{.*\})\s*$/.exec(raw);
+      if (gx) { meta.gx.push({ n: i + 1, target: gx[1] || null, json: gx[2] }); return; }
       /* comentario: `%%` fuera de comillas hasta el final de la línea */
       let q = false; for (let k = 0; k < t.length - 1; k++) { if (t[k] === '"') q = !q; else if (!q && t[k] === '%' && t[k + 1] === '%') { t = t.slice(0, k); break; } }
       const trimmed = t.trim();
@@ -586,6 +589,7 @@
         const e = edgeById.get(nd.raw);
         const am = String(nd.meta.animate || nd.meta.animation || '');
         if (/^(true|fast|slow)$/i.test(am)) { e.animated = true; if (/^(fast|slow)$/i.test(am)) e.speed = am.toLowerCase(); }
+        richEdge(e, nd.meta);
         return null;
       }
       const props = {};
@@ -593,6 +597,7 @@
       if (nd.meta && nd.meta.label) props.label = clean(nd.meta.label);
       const shape = nd.meta && nd.meta.shape ? (NEW_SHAPES[nd.meta.shape.toLowerCase()] || 'rect') : nd.shape;
       const n = b.node(nd.raw, props);
+      if (nd.meta) richNode(n, nd.meta);
       if (shape) { n.shape = shape; n.kind = kindOfShape(shape); b.kinds.add(n.kind); }
       else if (!n.kind) { n.shape = 'rect'; n.kind = 'step'; b.kinds.add('step'); }
       if (nd.cls) nodeClass.set(n.id, (nodeClass.get(n.id) || []).concat(nd.cls));
@@ -1573,6 +1578,40 @@
     const first = P.lines[0];
     return { P, first, keyword: first ? first.t.split(/[\s:;]/)[0] : null };
   }
+  /* ---------- datos ricos: los mismos que una pieza de GraphX, desde Mermaid ---------- */
+  /* En `A@{ shape: rect, heat: 310, spark: "1 2 3", owner: pagos }` (las claves que Mermaid no conoce) o en un
+     comentario `%% @gx A { "blocks": [ … ] }` (JSON). `%% @gx { … }` sin id va a la raíz: fx, owners, timeline… */
+  const NODE_RICH = ['heat', 'spark', 'unit', 'progress', 'alert', 'owner', 'value', 'change', 'good', 'min', 'max', 'thresholds', 'decimals', 'parts', 'summary', 'subtitle', 'metrics', 'blocks', 'links', 'notes', 'status', 'color', 'tags', 'kind', 'files', 'delta'];
+  const EDGE_RICH = ['rate', 'speed', 'weight', 'emphasis', 'summary', 'data', 'trigger', 'animated', 'label', 'delta', 'color'];
+  const ROOT_RICH = ['fx', 'owners', 'timeline', 'statuses', 'tour', 'filters', 'legend', 'title', 'summary', 'initialDepth', 'focus', 'flows'];
+  const NUMERIC = { heat: 1, progress: 1, value: 1, change: 1, min: 1, max: 1, decimals: 1, rate: 1, weight: 1 };
+  const toNums = v => (Array.isArray(v) ? v : String(v).replace(/[[\]]/g, '').split(/[\s,;]+/)).map(Number).filter(x => isFinite(x));
+  function richVal(k, v) {
+    if (typeof v !== 'string') return v;
+    if (NUMERIC[k]) { const x = parseFloat(v.replace(',', '.')); return isFinite(x) ? x : undefined; }
+    if (k === 'spark' || k === 'thresholds') return toNums(v);
+    if (k === 'tags') return v.split(/[\s,;]+/).filter(Boolean);
+    if (k === 'animated') return /^(true|1|yes|sí|si)$/i.test(v);
+    return v;
+  }
+  function richNode(n, meta) { NODE_RICH.forEach(k => { if (meta[k] != null && k !== 'label') { const v = richVal(k, meta[k]); if (v !== undefined) n[k] = v; } }); }
+  function richEdge(e, meta) { EDGE_RICH.forEach(k => { if (meta[k] != null && !(k === 'animated' && e.animated)) { const v = richVal(k, meta[k]); if (v !== undefined) e[k] = v; } }); }
+  function applyGx(spec, list, warn) {
+    const fxs = [];
+    const byId = new Map(spec.nodes.map(n => [n.id, n])), lanes = new Map((spec.lanes || []).map(l => [l.id, l])), edges = new Map(spec.edges.map(e => [e.id, e]));
+    const safe = raw => String(raw).replace(/[^A-Za-z0-9._:/-]/g, '_');
+    for (const it of list) {
+      const o = parseLoose(it.json);
+      if (!o || typeof o !== 'object') { warn(`línea ${it.n}: %% @gx con JSON no válido`); continue; }
+      if (!it.target) { ROOT_RICH.forEach(k => { if (o[k] !== undefined && k !== 'fx') spec[k] = o[k]; }); if (o.fx !== undefined) fxs.push(o.fx); continue; }
+      const id = it.target, n = byId.get(id) || byId.get(safe(id)) || lanes.get(id), e = edges.get(id);
+      if (n) NODE_RICH.forEach(k => { if (o[k] !== undefined) n[k] = o[k]; });
+      else if (e) EDGE_RICH.forEach(k => { if (o[k] !== undefined) e[k] = o[k]; });
+      else warn(`línea ${it.n}: %% @gx apunta a «${id}», que no es ninguna pieza ni arista`);
+    }
+    return fxs;
+  }
+
   /* ---------- tema y look de Mermaid → tema y efectos de GraphX ---------- */
   /* `%%{init: { "theme": "forest", "themeVariables": {…} }}%%` o, en el frontmatter, `config: theme / look /
      themeVariables`. Los temas con nombre se traducen a tokens de GraphX (en claro y en oscuro); las
@@ -1656,10 +1695,12 @@
     if (opts.title) spec.title = opts.title;
     const look = lookOf(P.meta);
     if (look.theme) spec.theme = look.theme;
-    if (opts.fx === false || opts.fx === 'off') spec.fx = false;
+    /* efectos: los del tipo, los del look, los del propio código (`%% @gx { "fx": … }`) y, encima, los de quien convierte */
+    const fxs = P.meta.gx.length ? applyGx(spec, P.meta.gx, w => b.warnings.push(w)) : [];
+    if (opts.fx === false || opts.fx === 'off' || fxs.some(f => f === false || f === 'off')) spec.fx = false;
     else {
       const fx = Object.assign({}, FX_BY_TYPE[type] || {}, look.fx || {});
-      if (typeof opts.fx === 'string') fx.preset = opts.fx; else if (opts.fx && typeof opts.fx === 'object') Object.assign(fx, opts.fx);
+      fxs.concat(opts.fx != null ? [opts.fx] : []).forEach(f => { if (typeof f === 'string') fx.preset = f; else if (f && typeof f === 'object') Object.assign(fx, f); });
       if (Object.keys(fx).length) spec.fx = fx;
     }
     return { spec, type: sub, warnings: b.warnings };

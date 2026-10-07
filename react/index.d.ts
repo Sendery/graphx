@@ -49,7 +49,14 @@ export interface GraphXShapeNode {
   heat?: number;
   progress?: number;
   alert?: 'crit' | 'warn' | 'info' | 'ok';
+  /** Equipo dueño (una clave de `owners`) y bloques ricos para el panel (graphx-fx). */
+  owner?: string;
+  blocks?: GraphXBlock[];
 }
+
+/** Un bloque del panel: text, callout, quote, code, kv, list, checklist, steps, badges, table, stats, spark,
+    chart, bars, progress, gauge, donut, kpi, timeline, heatstrip, image, heading o divider. */
+export interface GraphXBlock { type: string; title?: string; [key: string]: unknown }
 
 /** Efectos de graphx-fx: un preset, un objeto con cada efecto o false (ninguno). */
 export type GraphXFxPreset = 'calm' | 'vivid' | 'neon' | 'blueprint' | 'glass' | 'present' | 'off';
@@ -64,6 +71,20 @@ export interface GraphXFxOptions {
   autoColor?: boolean | 'auto' | 'lanes' | 'groups' | 'kinds';
   skin?: 'neon' | 'blueprint' | 'glass' | null;
   sketch?: boolean;
+  owners?: boolean;
+  blast?: boolean | { mode?: 'auto' | 'callers' | 'downstream' | 'both' };
+  blocks?: boolean;
+  timeline?: boolean;
+  attach?: boolean;
+}
+/** La línea de tiempo de una instancia (si el JSON trae `timeline`). */
+export interface GraphXTimeline {
+  seek(index: number | string): void;
+  play(): void;
+  pause(): void;
+  readonly index: number;
+  readonly length: number;
+  readonly labels: string[];
 }
 export type GraphXFx = false | GraphXFxPreset | GraphXFxOptions;
 /** Cambios de datos en vivo para `setData`. */
@@ -136,6 +157,12 @@ export interface GraphXInstance {
   /** «▶ Flujo»: una onda que sale de los orígenes (o de `from`) y recorre el grafo. */
   playFlow(opts?: { from?: string | string[]; hop?: number; loop?: boolean }): Promise<void>;
   stopFlow(): void;
+  timeline: GraphXTimeline | null;
+  /** Radio de impacto de una pieza (qué deja de funcionar si falla). */
+  blast(id: string): void;
+  clearBlast(): void;
+  filterOwners(ids: string[]): void;
+  colorOwners(on: boolean): void;
   /** La configuración de efectos resuelta, o null sin efectos. */
   fx: Record<string, unknown> | null;
 }

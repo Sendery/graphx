@@ -72,7 +72,8 @@ G.warn.forEach(w => errors.push(w));
 
 const ids = new Set([...(spec.lanes || []).map(l => l.id), ...(spec.nodes || []).map(n => n.id)]);
 const eids = new Set((spec.edges || []).map(e => e.id).filter(Boolean));
-const KINDS = new Set(['service', 'app', 'module', 'function', 'method', 'class', 'file', 'folder', 'route', 'job', 'queue', 'datastore', 'cache', 'external', 'ui', 'config', 'test', 'package', 'other']);
+const KINDS = new Set(['service', 'app', 'module', 'function', 'method', 'class', 'file', 'folder', 'route', 'job', 'queue', 'datastore', 'cache', 'external', 'ui', 'config', 'test', 'package', 'other',
+  'user', 'mobile', 'cloud', 'lock', 'key', 'shield', 'card', 'cart', 'search', 'mail', 'bell', 'cpu', 'bug', 'branch', 'chart', 'gauge']);
 const DELTAS = new Set(['added', 'modified', 'removed', 'unchanged']);
 const EKINDS = new Set(['call', 'http', 'rpc', 'event', 'queue', 'data', 'dependency', 'render', 'async', 'other']);
 
@@ -150,6 +151,31 @@ for (const e of spec.edges || []) {
     if (n.thresholds != null && !(Array.isArray(n.thresholds) && n.thresholds.length === 2 && n.thresholds.every(v => typeof v === 'number'))) errors.push(`nodo ${n.id}: thresholds debe ser [aviso, crítico]`);
     if (n.parts) n.parts.forEach((p, i) => { if (p && p.color != null && !sandbox.GraphX.safeColor(p.color)) errors.push(`nodo ${n.id}: parts[${i}].color no válido`); });
   }
+  /* equipos, bloques del panel y línea de tiempo (1.9) */
+  const owners = spec.owners && typeof spec.owners === 'object' ? spec.owners : null;
+  if (spec.owners != null && !owners) errors.push('owners debe ser un objeto { id: { label, color, short, contact, url } }');
+  if (owners) Object.entries(owners).forEach(([k, o]) => { if (!o || typeof o !== 'object') errors.push(`owners.${k}: debe ser un objeto`); else if (o.color != null && !sandbox.GraphX.safeColor(typeof o.color === 'string' ? o.color : o.color.light || '')) errors.push(`owners.${k}: color no válido`); });
+  const BLOCKS = new Set(['text', 'heading', 'divider', 'callout', 'quote', 'code', 'kv', 'list', 'checklist', 'table', 'stat', 'stats', 'spark', 'chart', 'bars', 'progress', 'gauge', 'donut', 'kpi', 'timeline', 'events', 'heatstrip', 'badges', 'steps', 'image']);
+  for (const n of (spec.nodes || []).concat(spec.lanes || [])) {
+    if (n.owner != null && owners && !owners[n.owner]) warns.push(`${n.id}: owner «${n.owner}» no está en owners (se le pone un color automático)`);
+    if (n.blocks != null && !Array.isArray(n.blocks)) errors.push(`${n.id}: blocks debe ser una lista`);
+    (Array.isArray(n.blocks) ? n.blocks : []).forEach((b, i) => {
+      if (!b || !BLOCKS.has(b.type)) warns.push(`${n.id}: blocks[${i}] de tipo «${b && b.type}» desconocido (válidos: ${[...BLOCKS].join(', ')}); no se pinta`);
+      else if (b.type === 'image' && !/^(data:image\/(png|jpe?g|gif|webp|svg\+xml);|https:\/\/)/i.test(String(b.src || ''))) errors.push(`${n.id}: blocks[${i}] imagen sin src válido (data:image/… o https://)`);
+    });
+  }
+  if (spec.timeline != null) {
+    const t = spec.timeline;
+    const tab = typeof t.data === 'string' ? FX.parseTable(t.data) : Array.isArray(t.rows) ? { rows: t.rows, columns: [...new Set(t.rows.flatMap(r => Object.keys(r || {})))] } : Array.isArray(t.values) ? { rows: t.values, columns: t.columns || [] } : null;
+    if (!tab || tab.rows.length < 2) errors.push('timeline: necesita al menos dos filas (data en TSV/CSV, rows o columns + values)');
+    else {
+      const known = new Set([...ids, ...(spec.edges || []).map(e => e.id)]), lc = c => String(c).toLowerCase();
+      const skip = /^(time|t|timestamp|ts|fecha|hora|date|event|evento|id|target|node|edge|pieza|arista|value|valor|v|field|metric|campo|metrica|métrica)$/;
+      const unknown = tab.columns.filter(c => !skip.test(lc(c))).filter(c => { const d = String(c).lastIndexOf('.'); const id = d > 0 && /^(heat|rate|value|progress|change|spark|weight|alert)$/.test(String(c).slice(d + 1)) ? String(c).slice(0, d) : String(c); return !known.has(id); });
+      if (unknown.length) warns.push(`timeline: ${unknown.length} columnas no apuntan a ninguna pieza ni arista (se ignoran): ${unknown.slice(0, 5).join(', ')}`);
+    }
+  }
+  if (fx && typeof fx === 'object' && fx.blast && typeof fx.blast === 'object' && fx.blast.mode && !['auto', 'callers', 'downstream', 'both'].includes(fx.blast.mode)) warns.push(`fx.blast.mode «${fx.blast.mode}» desconocido (válidos: auto, callers, downstream, both)`);
   for (const e of spec.edges || []) {
     if (e.rate != null && (typeof e.rate !== 'number' || e.rate < 0)) errors.push(`arista ${e.id}: rate debe ser un número positivo (el caudal)`);
     if (e.speed != null && !(typeof e.speed === 'number' ? e.speed > 0 : ['fast', 'slow'].includes(e.speed))) warns.push(`arista ${e.id}: speed debe ser fast, slow o un número`);

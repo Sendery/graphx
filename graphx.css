@@ -92,7 +92,6 @@
 .gx-search-list small { display: block; color: var(--gx-muted); font-size: 11px; }
 .gx-nomatch { padding: 8px; color: var(--gx-muted); font-size: 12.5px; }
 .gx-flowview .gx-graphonly, .gx-flowview .gx-mini { display: none !important; }
-.gx-nomini .gx-mini { display: none !important; }
 
 /* ---------- escenario ---------- */
 .gx-stage { position: relative; height: var(--gx-h); border: 1px solid var(--gx-line); border-radius: 14px; overflow: hidden;
@@ -295,8 +294,23 @@
 .gx-lg-agg { font-size: 10.5px; padding: 1px 6px; border: 1px dashed var(--gx-line); border-radius: 5px; }
 
 .gx-mini { position: absolute; left: 12px; bottom: 12px; z-index: 10; width: 170px; height: 104px; border-radius: 9px; overflow: hidden;
-  background: color-mix(in srgb, var(--gx-card) 88%, transparent); border: 1px solid var(--gx-line); box-shadow: var(--gx-shadow); cursor: crosshair; }
-.gx-mini-svg { width: 100%; height: 100%; display: block; }
+  background: color-mix(in srgb, var(--gx-card) 88%, transparent); border: 1px solid var(--gx-line); box-shadow: var(--gx-shadow); cursor: crosshair;
+  transition: width .3s cubic-bezier(.2, .8, .2, 1), height .3s cubic-bezier(.2, .8, .2, 1), left .3s cubic-bezier(.2, .8, .2, 1), border-radius .3s; }
+.gx-mini-svg { width: 100%; height: 100%; display: block; transition: opacity .2s .08s; }
+/* plegado: una pestaña pegada al borde izquierdo; al pasar se despliega y la chincheta lo deja fijo */
+.gx-mini-tab { position: absolute; left: 0; bottom: 0; width: 26px; height: 44px; display: grid; place-items: center; color: var(--gx-muted); opacity: 0; pointer-events: none; transition: opacity .18s; }
+.gx-mini-tab svg, .gx-mini-pin svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.gx-mini-pin { position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--gx-line); background: color-mix(in srgb, var(--gx-card) 92%, transparent); color: var(--gx-muted); opacity: 0; transition: opacity .15s, color .15s; }
+.gx-mini-pin svg { width: 13px; height: 13px; }
+.gx-mini:hover .gx-mini-pin, .gx-mini-pin:focus-visible { opacity: 1; }
+.gx-mini-pin:hover { color: var(--gx-ink); }
+.gx-mini-pin.on { color: var(--gx-accent); background: var(--gx-accent-soft); border-color: color-mix(in srgb, var(--gx-accent) 45%, transparent); }
+.gx-mini-pin.on svg { fill: currentColor; fill-opacity: .3; }
+.gx-nomini .gx-mini:not(.peek) { left: 0; width: 26px; height: 44px; border-left: 0; border-radius: 0 10px 10px 0; cursor: pointer; }
+.gx-nomini .gx-mini:not(.peek) .gx-mini-svg, .gx-nomini .gx-mini:not(.peek) .gx-mini-pin { opacity: 0; pointer-events: none; }
+.gx-nomini .gx-mini:not(.peek) .gx-mini-tab { opacity: 1; }
+.gx-nomini .gx-mini:not(.peek):hover .gx-mini-tab { color: var(--gx-accent); }
 .gx-mini-n { fill: var(--gx-glyph-bg); } .gx-mini-n.grp { fill: none; stroke: var(--gx-line); stroke-width: 3; } .gx-mini-n.lane { fill: var(--gx-lane); stroke: none; }
 .gx-mini-n.d-added:not(.grp) { fill: var(--gx-add); opacity: .55; } .gx-mini-n.d-modified:not(.grp) { fill: var(--gx-mod); opacity: .55; }
 .gx-mini-v { fill: var(--gx-accent-soft); stroke: var(--gx-accent); }
@@ -332,6 +346,7 @@
 .gx.gx-present .gx-tour h3 { font-size: 19px; }
 .gx.gx-present .gx-tour-b { font-size: 14.5px; }
 .gx.gx-present .gx-mini { left: auto; right: 22px; bottom: 22px; }
+.gx.gx-present.gx-nomini .gx-mini:not(.peek) { right: 0; border-radius: 10px 0 0 10px; border-left: 1px solid var(--gx-line); border-right: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .gx-eflow, .gx-lg-e.flow { animation: none; }
@@ -881,3 +896,24 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 .gx-dn-dot.c0 { fill: var(--gx-p0); } .gx-dn-dot.c1 { fill: var(--gx-p1); } .gx-dn-dot.c2 { fill: var(--gx-p2); } .gx-dn-dot.c3 { fill: var(--gx-p3); }
 .gx-dn-dot.c4 { fill: var(--gx-p4); } .gx-dn-dot.c5 { fill: var(--gx-p5); } .gx-dn-dot.c6 { fill: var(--gx-p6); } .gx-dn-dot.c7 { fill: var(--gx-p7); }
 @media (prefers-reduced-motion: reduce) { .gx-g-v, .gx-dn-s { transition: none; } }
+
+/* ---------- panel: la vecindad como un mini-grafo (entradas · pieza · salidas) ---------- */
+.gx-egow { margin-top: 14px; }
+.gx-ego { width: 100%; height: auto; display: block; overflow: visible; }
+.gx-ego-e { fill: none; stroke: color-mix(in srgb, var(--gx-neu) 75%, transparent); stroke-width: 1.3; }
+.gx-ego-e.dashed { stroke-dasharray: 4 3; }
+.gx-ego-e.d-added { stroke: var(--gx-add); } .gx-ego-e.d-modified { stroke: var(--gx-mod); } .gx-ego-e.d-removed { stroke: var(--gx-del); }
+.gx-ego-c { cursor: pointer; outline: none; }
+.gx-ego-c rect { fill: var(--gx-bg); stroke: var(--gx-line); transition: fill .12s, stroke .12s; }
+.gx-ego-c:hover rect, .gx-ego-c:focus-visible rect { fill: var(--gx-accent-soft); stroke: var(--gx-accent); }
+.gx-ego-c text { font-size: 11.5px; font-weight: 500; fill: var(--gx-ink); }
+.gx-ego-c .gx-ego-n { font: 600 10px var(--gx-mono); fill: var(--gx-muted); text-anchor: end; }
+.gx-ego-i { fill: none; stroke: var(--gx-muted); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.gx-ego-me rect { fill: var(--gx-accent-soft); stroke: var(--gx-accent); stroke-width: 1.5; }
+.gx-ego-me .gx-ego-i { stroke: var(--gx-accent); }
+.gx-ego-k { font: 600 10px var(--gx-mono); fill: var(--gx-faint); letter-spacing: .03em; }
+.gx-ego-more { font: 600 11px var(--gx-mono); fill: var(--gx-muted); text-anchor: middle; }
+.gx-fold-s { margin-top: 6px; } .gx-fold-s > summary { padding: 6px 10px; }
+.gx-fold-s h5 { margin: 4px 10px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--gx-faint); }
+.gx-fold-s .gx-conn { padding: 0 10px 8px; }
+@media (prefers-reduced-motion: reduce) { .gx-mini, .gx-mini-svg { transition: none; } }
