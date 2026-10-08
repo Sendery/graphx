@@ -1,0 +1,2044 @@
+{
+  "schema": "graphx/1",
+  "title": "202 Accepted for moving and deleting teams",
+  "summary": "Stack #101 → #102 → #103: the public API learns to answer 202, a kit stores the operation in Redis and a job replays it with the same synchronous verb.",
+  "lang": "en",
+  "initialDepth": 1,
+  "links": {
+    "repo": "acme/platform",
+    "sha": "4b7d2f1a9c3e8056d41b7ea25c9f0318ab6d5e72",
+    "pr": 103,
+    "related": [
+      {
+        "kind": "pr",
+        "number": 101,
+        "label": "#101 · accepted_verbs engine",
+        "note": "Base of the stack: the platform learns to answer 202."
+      },
+      {
+        "kind": "pr",
+        "number": 102,
+        "label": "#102 · AsyncOperations kit",
+        "note": "State in Redis, lock and actor."
+      },
+      {
+        "kind": "pr",
+        "number": 103,
+        "label": "#103 · teams.operation",
+        "note": "The first consumer, behind dev_teams_async_operations."
+      },
+      {
+        "kind": "artifact",
+        "url": "https://claude.ai/artifact/example-stack-review",
+        "label": "Stack review (v3)",
+        "note": "19 findings, 21 verified, and an English explainer."
+      }
+    ]
+  },
+  "levels": [
+    {
+      "depth": 0,
+      "label": "Lane"
+    },
+    {
+      "depth": 1,
+      "label": "Concept"
+    },
+    {
+      "depth": 2,
+      "label": "Class"
+    },
+    {
+      "depth": 3,
+      "label": "Method"
+    }
+  ],
+  "lanes": [
+    {
+      "id": "client",
+      "label": "Integrator",
+      "subtitle": "public API client"
+    },
+    {
+      "id": "api",
+      "label": "Public API platform",
+      "subtitle": "public_api · resource_catalog · oas"
+    },
+    {
+      "id": "teams",
+      "label": "Teams component",
+      "subtitle": "components/teams"
+    },
+    {
+      "id": "infra",
+      "label": "Infrastructure",
+      "subtitle": "Redis · Sidekiq"
+    },
+    {
+      "id": "domain",
+      "label": "Teams domain",
+      "subtitle": "unchanged"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "integrador",
+      "lane": "client",
+      "label": "Integrator",
+      "kind": "external",
+      "delta": "unchanged",
+      "subtitle": "x-api-key or OAuth",
+      "summary": "Whoever calls the public API. It used to get a 200 saying \"done\" about something that wasn't; now it gets a 202 with an identifier and polls for how it ended."
+    },
+    {
+      "id": "c-motor",
+      "lane": "api",
+      "label": "202 engine",
+      "kind": "module",
+      "subtitle": "PR #101",
+      "summary": "Teaches the platform to answer 202 when an RPC verb declares it. Nothing uses it in this PR: the generated OpenAPI comes out identical, which is its safety argument.",
+      "links": [
+        {
+          "kind": "pr",
+          "number": 101,
+          "label": "#101"
+        }
+      ]
+    },
+    {
+      "id": "k-controller",
+      "parent": "c-motor",
+      "label": "ResourcesController",
+      "kind": "route",
+      "delta": "modified",
+      "subtitle": "public_api",
+      "summary": "The public API's generic controller. The success code was hardwired: create 201, everything else 200.",
+      "files": [
+        {
+          "path": "backend/components/public_api/app/controllers/public_api/resources_controller.rb",
+          "lines": "81-100",
+          "additions": 6,
+          "deletions": 1,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-809087e2e98a55702b3452b707b5f5c6fb1ff13d10cbc88c38576d370712fec2"
+        }
+      ]
+    },
+    {
+      "id": "m-rpc",
+      "parent": "k-controller",
+      "label": "#rpc",
+      "kind": "method",
+      "delta": "modified",
+      "subtitle": "POST …/:resource/:verb",
+      "summary": "Runs the repository's RPC verb and renders the entity. The status now comes from rpc_status instead of always being 200."
+    },
+    {
+      "id": "m-rpc-status",
+      "parent": "k-controller",
+      "label": "#rpc_status",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "→ :accepted | :ok",
+      "summary": "Asks the resource's rest capability whether the verb is in accepted_verbs. The decision lives in the .yml, not here, so no existing endpoint changes."
+    },
+    {
+      "id": "m-show",
+      "parent": "k-controller",
+      "label": "#index · #show",
+      "kind": "method",
+      "delta": "unchanged",
+      "subtitle": "GET …/operations",
+      "summary": "The usual read path, untouched. It's how the client polls for the result of an accepted operation."
+    },
+    {
+      "id": "k-rest-cap",
+      "parent": "c-motor",
+      "label": "rest capability",
+      "kind": "config",
+      "delta": "modified",
+      "subtitle": "resource_catalog",
+      "summary": "The .yml block that exposes a resource over REST. It gains the accepted_verbs list.",
+      "files": [
+        {
+          "path": "backend/lib/resource_catalog/public/capabilities/rest.rb",
+          "lines": "12-66",
+          "additions": 6,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-ba993aa087a129ed805d51118a0aa47dba07ff53710d3a0d1253643eccec49ab"
+        },
+        {
+          "path": "backend/lib/resource_catalog/public/capabilities/rest/verb.rb",
+          "additions": 5,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-e599ebb9f1ec929ebdf9c51e02b9c48fe00872c767a115f56822888fc26bc2ab"
+        }
+      ]
+    },
+    {
+      "id": "m-accepted-verb",
+      "parent": "k-rest-cap",
+      "label": "#accepted_verb?",
+      "kind": "method",
+      "delta": "added",
+      "summary": "The only question the rest of the engine asks the resource: does this verb answer 202?"
+    },
+    {
+      "id": "k-rest-resource",
+      "parent": "c-motor",
+      "label": "Rest::Resource",
+      "kind": "class",
+      "delta": "modified",
+      "subtitle": "resource_catalog",
+      "summary": "A resource's REST view, built when the application boots.",
+      "files": [
+        {
+          "path": "backend/lib/resource_catalog/public/capabilities/rest/resource.rb",
+          "lines": "111-128",
+          "additions": 23,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-b3810668e330829fad5703b5869dfb00a23906a2faa1f782af5c56f43b716726"
+        }
+      ]
+    },
+    {
+      "id": "m-validate",
+      "parent": "k-rest-resource",
+      "label": "#validate_accepted_verbs!",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "fails at boot",
+      "summary": "At boot, rejects a CRUD verb (already published as 200/201 in frozen versions), a verb the resource doesn't implement, and one that returns a collection. An error here breaks boot in CI; it never reaches production as a 500."
+    },
+    {
+      "id": "k-oas",
+      "parent": "c-motor",
+      "label": "OpenAPI generator",
+      "kind": "module",
+      "delta": "modified",
+      "subtitle": "lib/oas · public_api/oas",
+      "summary": "The part that documents the 202 in the OpenAPI and the part that reads it back in the contract specs.",
+      "files": [
+        {
+          "path": "backend/lib/oas/rest/verb/rpc.rb",
+          "additions": 2,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-a6c57e608d7d8380e18c179526e753f6d5f3031219f082c5964b0d672660628e"
+        },
+        {
+          "path": "backend/lib/oas/response/accepted.rb",
+          "additions": 21,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-e8eb34e36bcc12ae513c9e35204bddb41d60abaa63e117e35e638359e55750a5"
+        },
+        {
+          "path": "backend/components/public_api/lib/public_api/oas/operation.rb",
+          "lines": "51-76",
+          "additions": 16,
+          "deletions": 4,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-863a0c04eb6692db5e46a404faeafdc46b0359231431b00c0ac5ad62ef18445d"
+        }
+      ]
+    },
+    {
+      "id": "m-response-class",
+      "parent": "k-oas",
+      "label": "Rpc#response_class",
+      "kind": "method",
+      "delta": "modified",
+      "summary": "Picks Response::Accepted when the verb is marked as accepted."
+    },
+    {
+      "id": "m-accepted-resp",
+      "parent": "k-oas",
+      "label": "Response::Accepted",
+      "kind": "class",
+      "delta": "added",
+      "subtitle": "202 / ACCEPTED",
+      "summary": "The 202 response as it appears in the OpenAPI."
+    },
+    {
+      "id": "m-successful",
+      "parent": "k-oas",
+      "label": "Operation#successful_response",
+      "kind": "method",
+      "delta": "added",
+      "summary": "It used to assume a 200 or a 201 and blew up with a meaningless NoMethodError. Now it looks for the first of 200/201/202 and, if there is none, says which ones are documented."
+    },
+    {
+      "id": "c-kit",
+      "lane": "api",
+      "label": "AsyncOperations kit",
+      "kind": "package",
+      "subtitle": "public_api/async_operations",
+      "summary": "Where an accepted operation lives, how two are kept from stepping on the same target, and how it remembers who requested it. It started in backend/lib, with no owner; it moved to the component that owns the 202.",
+      "notes": [
+        {
+          "tone": "good",
+          "text": "Resolved in the second round: the kit no longer lives in backend/lib (an unowned area in CODEOWNERS) but in components/public_api."
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 102,
+          "label": "#102"
+        }
+      ]
+    },
+    {
+      "id": "k-state",
+      "parent": "c-kit",
+      "label": "State",
+      "kind": "class",
+      "delta": "added",
+      "subtitle": "TTL 24 h",
+      "summary": "An operation's lifecycle in Redis: pending → processing → completed | failed.",
+      "files": [
+        {
+          "path": "backend/components/public_api/app/public/public_api/async_operations/state.rb",
+          "additions": 143,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-667e88c5bba291293c32a7a45bd85d64ff897e797e428101185fa915c37a8790"
+        }
+      ]
+    },
+    {
+      "id": "m-create",
+      "parent": "k-state",
+      "label": "#create!",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "SET … EX 86400",
+      "summary": "Writes the record as pending and sets the 24-hour TTL. It's the only write that sets a TTL."
+    },
+    {
+      "id": "m-processing",
+      "parent": "k-state",
+      "label": "#processing!",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Marks the operation as in progress and records started_at, which is now exposed to the client."
+    },
+    {
+      "id": "m-completed",
+      "parent": "k-state",
+      "label": "#completed! · #failed!",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Closes the operation with its result or its reason, plus finished_at."
+    },
+    {
+      "id": "m-transition",
+      "parent": "k-state",
+      "label": "#transition!",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "SET XX KEEPTTL",
+      "summary": "Every transition goes through here. KEEPTTL keeps the 24 h window from stretching with each change; XX prevents resurrecting an operation that expired between the read and the write.",
+      "notes": [
+        {
+          "tone": "info",
+          "text": "Validated over HTTP: the TTL measured before and after completed holds. SET XX KEEPTTL requires Redis ≥ 6; every environment in the repository runs 7.0."
+        }
+      ]
+    },
+    {
+      "id": "m-get-many",
+      "parent": "k-state",
+      "label": ".get_many",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "MGET",
+      "summary": "Reads a batch of operations in a single round trip to Redis.",
+      "notes": [
+        {
+          "tone": "good",
+          "text": "Resolved: polling used to do one GET per id, up to 100 sequential round trips."
+        }
+      ]
+    },
+    {
+      "id": "m-parse",
+      "parent": "k-state",
+      "label": ".parse",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Deserializes a record and treats one it can't read as missing, instead of taking down the whole batch with a 500. This matters because for 24 h records written by two revisions of the code coexist."
+    },
+    {
+      "id": "k-guard",
+      "parent": "c-kit",
+      "label": "InFlightGuard",
+      "kind": "class",
+      "delta": "added",
+      "subtitle": "TTL 15 min",
+      "summary": "Only one in-flight operation per target. The second one gets a 409.",
+      "files": [
+        {
+          "path": "backend/components/public_api/app/public/public_api/async_operations/in_flight_guard.rb",
+          "additions": 80,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-1e3433c646225bd8325735834582f01226e2c1a27946b294ed1a7c8ad80ee6d9"
+        }
+      ]
+    },
+    {
+      "id": "m-acquire",
+      "parent": "k-guard",
+      "label": "#acquire",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "SET NX EX 900",
+      "summary": "Takes the lock only if it doesn't exist. Returns false if another operation holds it, and the repository turns that into a 409 Conflict."
+    },
+    {
+      "id": "m-renew",
+      "parent": "k-guard",
+      "label": "#renew",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Restarts the lock window when the job starts, instead of counting it from acceptance.",
+      "notes": [
+        {
+          "tone": "good",
+          "text": "Resolves the most serious finding of the first round: the lock expired after 15 minutes while the work was still queued or running, and a second operation on the same team was accepted."
+        }
+      ]
+    },
+    {
+      "id": "m-release",
+      "parent": "k-guard",
+      "label": "#release",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "compare-and-delete",
+      "summary": "Releases the lock only if it's still ours, using WATCH/MULTI on the connection that yields WATCH. Lua wasn't used because MockRedis implements eval as a no-op and the specs would have passed without testing anything."
+    },
+    {
+      "id": "k-actor",
+      "parent": "c-kit",
+      "label": "Actor",
+      "kind": "class",
+      "delta": "added",
+      "summary": "A snapshot of who requested the operation, to replay it with the same permissions.",
+      "files": [
+        {
+          "path": "backend/components/public_api/app/public/public_api/async_operations/actor.rb",
+          "additions": 89,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-c407f7c6c5df020fce98e06daa215b6645b63a4894d91e7381519e578a5040ce"
+        }
+      ]
+    },
+    {
+      "id": "m-serialize",
+      "parent": "k-actor",
+      "label": ".serialize",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Stores the type and id of the permission context (Access or Company) and the OAuth and api key contexts. It never stores tokens or permissions: only identities."
+    },
+    {
+      "id": "m-deserialize",
+      "parent": "k-actor",
+      "label": ".deserialize",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "becomer_id: nil",
+      "summary": "Rebuilds the context by looking up the record by id, so a deleted account makes the operation fail instead of running with zombie permissions. Permissions are reread from the database.",
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "OAuth scopes are not revalidated: their check is a controller before_action and the job doesn't go through it. A token revoked between acceptance and replay doesn't stop it."
+        }
+      ],
+      "links": [
+        {
+          "kind": "node",
+          "target": "k-scopes",
+          "note": "The check the replay doesn't repeat."
+        }
+      ]
+    },
+    {
+      "id": "k-record",
+      "parent": "c-kit",
+      "label": "Record · Status",
+      "kind": "class",
+      "delta": "added",
+      "summary": "What gets stored: what was requested, by whom, how it ended, and the four possible states.",
+      "files": [
+        {
+          "path": "backend/components/public_api/app/public/public_api/async_operations/record.rb",
+          "additions": 23,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-74778f71e2a6ac767ee81e5e54fe8a066c7b0f37292a1a48d0069bcfd1c1eab5"
+        },
+        {
+          "path": "backend/components/public_api/app/public/public_api/async_operations/status.rb",
+          "additions": 23,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-168cf0da7743fd0ee76b9c1eea48eb67d4475d266552e6577511a93a96fe931c"
+        }
+      ]
+    },
+    {
+      "id": "c-hooks",
+      "lane": "api",
+      "label": "Existing gates",
+      "kind": "module",
+      "delta": "unchanged",
+      "subtitle": "unchanged",
+      "summary": "Three pieces the stack doesn't touch but its safety depends on."
+    },
+    {
+      "id": "k-policy-hook",
+      "parent": "c-hooks",
+      "label": "PolicyHook",
+      "kind": "module",
+      "delta": "unchanged",
+      "subtitle": "repository hook",
+      "summary": "It hangs off the repository, not the controller. That's why the job also goes through it and verb permissions are checked again on replay.",
+      "files": [
+        {
+          "path": "backend/app/services/repositories/base.rb",
+          "lines": "40-44"
+        }
+      ]
+    },
+    {
+      "id": "k-endpoint-checker",
+      "parent": "c-hooks",
+      "label": "EndpointChecker",
+      "kind": "module",
+      "delta": "unchanged",
+      "summary": "Decides whether an endpoint exists in the version the client requests. Turns version_changes into a 404 on stable versions."
+    },
+    {
+      "id": "k-scopes",
+      "parent": "c-hooks",
+      "label": "validate_api_scopes",
+      "kind": "module",
+      "delta": "unchanged",
+      "subtitle": "before_action",
+      "summary": "The only OAuth scope validation, and it's a controller filter: the replay doesn't go through here.",
+      "links": [
+        {
+          "kind": "node",
+          "target": "m-deserialize",
+          "note": "Where the actor is rehydrated without revalidating the token."
+        }
+      ]
+    },
+    {
+      "id": "c-resource",
+      "lane": "teams",
+      "label": "teams.operation resource",
+      "kind": "config",
+      "subtitle": "PR #103",
+      "summary": "The file that is the API: verbs, permissions, scopes, response schema, and which versions each thing exists in.",
+      "links": [
+        {
+          "kind": "pr",
+          "number": 103,
+          "label": "#103"
+        }
+      ]
+    },
+    {
+      "id": "k-yml",
+      "parent": "c-resource",
+      "label": "operation.yml",
+      "kind": "file",
+      "delta": "added",
+      "summary": "Declares read and the three RPC verbs. The descriptions are the contract the client sees in the portal.",
+      "files": [
+        {
+          "path": "backend/components/teams/app/resources/teams/operation.yml",
+          "additions": 225,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-8eb43132c0a5b4b69139eae45c0d678446976b61639ff8c5aebeb901db05513b"
+        },
+        {
+          "path": "backend/components/teams/app/resources/teams/version_changes/operation/add_move_team_endpoint.rb",
+          "additions": 11,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-7ca24d0dd83a6759bf8d4470231ee9e2047b66757a246b1758cb68b13d5fb113"
+        },
+        {
+          "path": "backend/components/teams/app/resources/teams/version_changes/operation/add_delete_team_endpoint.rb",
+          "additions": 11,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-bf29a4a9ff3635d94828ce80663e07df8cc3ef01482f978e2ebf282fa094adfb"
+        },
+        {
+          "path": "backend/components/teams/app/resources/teams/version_changes/operation/add_delete_membership_endpoint.rb",
+          "additions": 11,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-f814adeef56e495aa4e8d625ca9a01c44528d89a360a22ff5d11c6649d22538c"
+        },
+        {
+          "path": "backend/components/teams/app/resources/teams/version_changes/operation/add_read_endpoint.rb",
+          "additions": 11,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-fc3d4fb799bc47511a04fefc9105e125e73908784f4a45ec8f76e0ad095dd222"
+        },
+        {
+          "path": "backend/components/teams/app/resources/teams/version_changes/operation/add_find_endpoint.rb",
+          "additions": 11,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-eaeb841b26d3f14b2ac65677a64249fdd87a42b124850e04cee8e6bdeb05acf4"
+        }
+      ]
+    },
+    {
+      "id": "m-accepted-list",
+      "parent": "k-yml",
+      "label": "accepted_verbs",
+      "kind": "config",
+      "delta": "added",
+      "subtitle": "move · delete · delete_membership",
+      "summary": "The three RPC verbs that answer 202. read isn't there and couldn't be: the boot validation would reject it."
+    },
+    {
+      "id": "m-version",
+      "parent": "k-yml",
+      "label": "endpoint_added ×5",
+      "kind": "config",
+      "delta": "added",
+      "subtitle": "under '2026-07-01'",
+      "summary": "Registered after the last stable version: the resulting range is 2026-07-02..∞, so they exist from the 2026-10-01 beta onward and answer 404 on the four stable ones. Validated over HTTP."
+    },
+    {
+      "id": "k-flag",
+      "parent": "c-resource",
+      "label": "dev_teams_async_operations",
+      "kind": "config",
+      "delta": "added",
+      "summary": "The per-company switch. Without it, the four verbs answer 403 even if the client requests the beta.",
+      "files": [
+        {
+          "path": "backend/components/features/app/public/features/catalog.rb",
+          "additions": 9,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-df7fe82a50b6e98294db14f31568b032c5d0a7a232ef26fe2bd45a73721baaf5"
+        },
+        {
+          "path": "mobile/src/generated/featureIds.generated.ts",
+          "additions": 1,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-860aec2ecce4b44eb4e7944d0e52be994364498f2a84dbd949f8b4383641e6ff"
+        }
+      ]
+    },
+    {
+      "id": "c-repo",
+      "lane": "teams",
+      "label": "Repositories::Operations",
+      "kind": "service",
+      "delta": "added",
+      "subtitle": "mutates nothing",
+      "summary": "Quickly decides whether the request deserves a 202 and records it. Nothing is mutated here.",
+      "files": [
+        {
+          "path": "backend/components/teams/app/public/teams/repositories/operations.rb",
+          "additions": 330,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-b8f0d91197ac308a3ffce0489f28e473cb4476f3ae0e27be8b1432dca0e3dc14"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 103,
+          "label": "#103"
+        }
+      ]
+    },
+    {
+      "id": "m-move",
+      "parent": "c-repo",
+      "label": "#move_team",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Validates the cheap things (the team exists, the destination exists and is manageable, the flags are on) and delegates to #accept. The expensive parts (the 4-level cap, the hierarchy) are deferred to the replay."
+    },
+    {
+      "id": "m-delete",
+      "parent": "c-repo",
+      "label": "#delete_team",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Same as the move, with no destination to resolve."
+    },
+    {
+      "id": "m-delete-m",
+      "parent": "c-repo",
+      "label": "#delete_membership",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Accepts deleting a membership. It now takes the lock of the team it belongs to, not the row's.",
+      "notes": [
+        {
+          "tone": "good",
+          "text": "Resolved: delete_team and delete_membership on the same team used to be accepted at once because the lock was per row. Validated over HTTP: it now returns 409 both ways."
+        }
+      ]
+    },
+    {
+      "id": "m-accept",
+      "parent": "c-repo",
+      "label": "#accept",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Actor snapshot, lock, Redis record and enqueue. If the record or the enqueue fails, it releases the lock before propagating the error, so the team isn't left locked for a quarter of an hour."
+    },
+    {
+      "id": "m-gate",
+      "parent": "c-repo",
+      "label": "#operations_gate",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "403 · 403",
+      "summary": "The two feature gates: async operations and nested teams.",
+      "notes": [
+        {
+          "tone": "info",
+          "text": "Validated over HTTP: each disabled flag gives its own, correct message. But no test asserts the text and none runs with dev_nested_teams off: swapping them wouldn't break the suite."
+        }
+      ]
+    },
+    {
+      "id": "m-read",
+      "parent": "c-repo",
+      "label": "#read",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "1..100 ids",
+      "summary": "The poll. It bounds and deduplicates before touching Redis and resolves the company from the permission context, never from the client."
+    },
+    {
+      "id": "m-entity",
+      "parent": "c-repo",
+      "label": "#entity_from_record",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Turns the record into the public entity, including started_at and expires_at."
+    },
+    {
+      "id": "c-job",
+      "lane": "teams",
+      "label": "RunOperationJob",
+      "kind": "job",
+      "delta": "added",
+      "subtitle": "retry: 0",
+      "summary": "Replays the mutation by calling the same method on the same repository as the synchronous endpoint. No retries: a failure is reported to the client, not repeated blindly.",
+      "files": [
+        {
+          "path": "backend/components/teams/app/jobs/teams/run_operation_job.rb",
+          "additions": 286,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-0c8634a56643748a570e6c715c419c6c56dd51223f195ea78efb6f1667b8fa80"
+        }
+      ],
+      "links": [
+        {
+          "kind": "pr",
+          "number": 103,
+          "label": "#103"
+        },
+        {
+          "kind": "artifact",
+          "url": "https://claude.ai/artifact/example-stack-review",
+          "label": "Review findings",
+          "note": "The lock and the false failed were addressed in the first round."
+        }
+      ]
+    },
+    {
+      "id": "m-perform",
+      "parent": "c-job",
+      "label": "#perform",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Reads the record (if it's gone, it mutates nothing), marks processing, renews the lock, replays and reports. Only the replay goes inside the rescue."
+    },
+    {
+      "id": "m-replay",
+      "parent": "c-job",
+      "label": "#replay",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Rehydrates the actor, validates the stored input (it travels as JSON and another revision may have written it) and dispatches to the matching synchronous verb."
+    },
+    {
+      "id": "m-job-move",
+      "parent": "c-job",
+      "label": "#move_team",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Builds a Dtos::Team::Move with the stored id and destination and calls Repositories::Teams#move.",
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "It never passes source_parent_team_id, so it forces the source parent to be inferred from the people groups graph, which refreshes asynchronously. With Sidekiq draining a backlog, the move failed twice with invalid_parent_team; the same move with an explicit parent worked."
+        }
+      ],
+      "links": [
+        {
+          "kind": "node",
+          "target": "m-teams-move",
+          "note": "The synchronous verb it delegates to; source_parent_team_id is missing there."
+        }
+      ]
+    },
+    {
+      "id": "m-report",
+      "parent": "c-job",
+      "label": "#report",
+      "kind": "method",
+      "delta": "added",
+      "summary": "Writes completed or failed and logs the result.",
+      "notes": [
+        {
+          "tone": "good",
+          "text": "Resolved: it used to live inside the replay's rescue, and a log call failing after an applied mutation rewrote it as failed. The client retried something already done."
+        }
+      ]
+    },
+    {
+      "id": "m-team-result",
+      "parent": "c-job",
+      "label": "#team_result",
+      "kind": "method",
+      "delta": "added",
+      "summary": "What the job stores as the result of a move: team_id, parent_team_id and depth.",
+      "notes": [
+        {
+          "tone": "warn",
+          "text": "Validated over HTTP: parent_team_id and depth come out null in 100% of completed moves, even though the database has a parent and depth. The .yml documents them as part of the result."
+        }
+      ],
+      "links": [
+        {
+          "kind": "node",
+          "target": "m-entity-ar",
+          "note": "This is where the nulls come from: it reads caches that only #read fills."
+        }
+      ]
+    },
+    {
+      "id": "m-release-guard",
+      "parent": "c-job",
+      "label": "#release_guard",
+      "kind": "method",
+      "delta": "added",
+      "subtitle": "ensure",
+      "summary": "Releases the lock no matter what. A worker that dies hard (OOM, SIGKILL) never gets here: the lock expires on its own."
+    },
+    {
+      "id": "c-sync",
+      "lane": "teams",
+      "label": "Synchronous verbs",
+      "kind": "service",
+      "delta": "modified",
+      "subtitle": "the existing ones",
+      "summary": "The repositories the replay calls again. They only change because of the refactor."
+    },
+    {
+      "id": "k-teams-repo",
+      "parent": "c-sync",
+      "label": "Repositories::Teams",
+      "kind": "service",
+      "delta": "modified",
+      "summary": "Moves and deletes teams. It now uses the two extracted concerns.",
+      "files": [
+        {
+          "path": "backend/components/teams/app/public/teams/repositories/teams.rb",
+          "lines": "136-192",
+          "additions": 22,
+          "deletions": 41,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-6a00fdcf1728dce4cf2ab0c7bb73531445094ac3e6715633d80f7a70889387bc"
+        }
+      ]
+    },
+    {
+      "id": "m-teams-move",
+      "parent": "k-teams-repo",
+      "label": "#move",
+      "kind": "method",
+      "delta": "modified",
+      "subtitle": "line 162",
+      "summary": "The actual move: resolves source and destination with ParentResolution and calls Interactors::MoveTeam."
+    },
+    {
+      "id": "m-teams-delete",
+      "parent": "k-teams-repo",
+      "label": "#delete",
+      "kind": "method",
+      "delta": "modified",
+      "subtitle": "line 136",
+      "summary": "The actual delete, with Interactors::DeleteTeam."
+    },
+    {
+      "id": "m-entity-ar",
+      "parent": "k-teams-repo",
+      "label": "#entity_from_active_record",
+      "kind": "method",
+      "delta": "unchanged",
+      "subtitle": "line 385",
+      "summary": "Builds the Team entity. It reads depth and parent_team_id from two caches that only #read populates; on any other path, #move included, they are nil.",
+      "links": [
+        {
+          "kind": "node",
+          "target": "m-team-result",
+          "note": "What stores that result as if it were the final position."
+        }
+      ]
+    },
+    {
+      "id": "k-memberships-repo",
+      "parent": "c-sync",
+      "label": "Repositories::Memberships",
+      "kind": "service",
+      "delta": "modified",
+      "summary": "Deletes memberships, direct or inherited.",
+      "files": [
+        {
+          "path": "backend/components/teams/app/public/teams/repositories/memberships.rb",
+          "lines": "371-380",
+          "additions": 2,
+          "deletions": 21,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-42a36d5e99668e08b6969b895c30d73eabd83e8247280fa0a550a85d9523d06c"
+        }
+      ]
+    },
+    {
+      "id": "m-mem-delete",
+      "parent": "k-memberships-repo",
+      "label": "#delete",
+      "kind": "method",
+      "delta": "unchanged",
+      "subtitle": "line 371",
+      "summary": "Deleting an inherited membership removes the employee from the subteams it comes from, and requires permission on each one."
+    },
+    {
+      "id": "c-refactor",
+      "lane": "teams",
+      "label": "Shared refactor",
+      "kind": "module",
+      "delta": "added",
+      "summary": "Two copies that weren't identical, and the part that was actually extracted. Each repository keeps its own wrapper with its cache and its failure policy."
+    },
+    {
+      "id": "k-nested",
+      "parent": "c-refactor",
+      "label": "Concerns::NestedTeamsFlag",
+      "kind": "module",
+      "delta": "added",
+      "summary": "The nested teams flag read.",
+      "files": [
+        {
+          "path": "backend/components/teams/app/public/teams/repositories/concerns/nested_teams_flag.rb",
+          "additions": 56,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-cb24a989acb6063a4c06d6f805748227683c66bfb56939a6eba8b6185d3e0ec0"
+        }
+      ],
+      "notes": [
+        {
+          "tone": "info",
+          "text": "This read bypasses the feature cache: it materializes the whole catalog (~700 flags) to check one. During polling it's paid on every call."
+        }
+      ]
+    },
+    {
+      "id": "k-parent",
+      "parent": "c-refactor",
+      "label": "Concerns::ParentResolution",
+      "kind": "module",
+      "delta": "added",
+      "summary": "Resolves the parent team the DTO carries and checks manage permission on it.",
+      "files": [
+        {
+          "path": "backend/components/teams/app/public/teams/repositories/concerns/parent_resolution.rb",
+          "additions": 44,
+          "deletions": 0,
+          "diff_url": "https://github.com/acme/platform/pull/103/files#diff-bda268aa8c0167f216f29e3a477a66a97ef3575911f87fbe9aafcb6a91d80f8e"
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "lane": "infra",
+      "label": "Redis",
+      "kind": "datastore",
+      "delta": "modified",
+      "subtitle": "$redis · persistent",
+      "summary": "The backend instance, deliberately separate from the evictable cache. It gains a new namespace. It shares the instance with the Sidekiq queues."
+    },
+    {
+      "id": "redis-op",
+      "parent": "redis",
+      "label": "Operation record",
+      "kind": "datastore",
+      "delta": "added",
+      "subtitle": "…:{co}:teams.operation:{uuid}",
+      "summary": "A 400-600 byte JSON per operation, with a 24-hour TTL. After that, polling returns 404, indistinguishable from an id that never existed.",
+      "metrics": [
+        {
+          "label": "TTL",
+          "value": "86,400 s"
+        },
+        {
+          "label": "size",
+          "value": "~0.5 KB"
+        }
+      ]
+    },
+    {
+      "id": "redis-guard",
+      "parent": "redis",
+      "label": "In-flight lock",
+      "kind": "cache",
+      "delta": "added",
+      "subtitle": "…:inflight:{co}:teams.team:{id}",
+      "summary": "One key per team holding the id of the operation that has it.",
+      "metrics": [
+        {
+          "label": "TTL",
+          "value": "900 s"
+        }
+      ]
+    },
+    {
+      "id": "sidekiq",
+      "lane": "infra",
+      "label": "Sidekiq",
+      "kind": "queue",
+      "delta": "unchanged",
+      "subtitle": "within_30_seconds queue",
+      "summary": "The background job system. The SLO the job declares picks the queue, and the one picked is the low-latency queue for work that can take minutes."
+    },
+    {
+      "id": "d-move",
+      "lane": "domain",
+      "label": "Interactors::MoveTeam",
+      "kind": "service",
+      "delta": "unchanged",
+      "summary": "Moves the team with the 4-level cap and the hierarchy checks. The replay reaches it through the same path as the synchronous endpoint."
+    },
+    {
+      "id": "d-delete",
+      "lane": "domain",
+      "label": "Interactors::DeleteTeam",
+      "kind": "service",
+      "delta": "unchanged",
+      "summary": "Detaches the team from its parent, deletes its people groups and ends its memberships, in one transaction."
+    },
+    {
+      "id": "d-pg",
+      "lane": "domain",
+      "label": "people_groups_v2",
+      "kind": "datastore",
+      "delta": "unchanged",
+      "subtitle": "closure table",
+      "summary": "The hierarchy table. Changing a reference deletes and reinserts every edge of the group and its dependents.",
+      "notes": [
+        {
+          "tone": "info",
+          "text": "The people_groups_v2:edges:<company_id> lock spans the whole tenant and has no wait timeout. Getting it off the HTTP thread is the underlying reason for the whole stack."
+        }
+      ]
+    },
+    {
+      "id": "d-refresh",
+      "lane": "domain",
+      "label": "RefreshGroupJob",
+      "kind": "job",
+      "delta": "unchanged",
+      "summary": "Re-propagates inherited memberships upward, up to 5 levels, with two Kafka messages per employee and level. It keeps running after completed."
+    },
+    {
+      "id": "d-webhooks",
+      "lane": "domain",
+      "label": "Webhooks teams/team/*",
+      "kind": "external",
+      "delta": "unchanged",
+      "summary": "The existing webhooks. Since the replay calls the real repository, they fire with the real entity."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-post",
+      "from": "integrador",
+      "to": "m-rpc",
+      "kind": "http",
+      "delta": "added",
+      "label": "POST operations/move_team",
+      "animated": true,
+      "summary": "The client asks to move a team in the beta version.",
+      "data": "{ id, destination_parent_team_id }",
+      "trigger": "POST /api/2026-10-01/resources/teams/operations/move_team"
+    },
+    {
+      "id": "e-202",
+      "from": "m-rpc",
+      "to": "integrador",
+      "kind": "http",
+      "delta": "added",
+      "label": "202 · id, pending",
+      "emphasis": "hero",
+      "animated": true,
+      "summary": "The change in one arrow: the API stops claiming the work is done and returns an identifier the client can poll.",
+      "data": "{ id: uuid, status: pending, kind, target_id, accepted_at, expires_at }",
+      "trigger": "render …, status: rpc_status"
+    },
+    {
+      "id": "e-status",
+      "from": "m-rpc",
+      "to": "m-rpc-status",
+      "kind": "call",
+      "delta": "added",
+      "summary": "The controller decides the success code."
+    },
+    {
+      "id": "e-ask-cap",
+      "from": "m-rpc-status",
+      "to": "m-accepted-verb",
+      "kind": "call",
+      "delta": "added",
+      "label": "202?",
+      "trigger": "resource_rest_capability.accepted_verb?(verb)"
+    },
+    {
+      "id": "e-declare",
+      "from": "m-accepted-list",
+      "to": "m-accepted-verb",
+      "kind": "dependency",
+      "delta": "added",
+      "label": "declares",
+      "summary": "The resource's .yml feeds the list the controller checks."
+    },
+    {
+      "id": "e-validate",
+      "from": "m-validate",
+      "to": "m-accepted-verb",
+      "kind": "dependency",
+      "delta": "added",
+      "label": "validates at boot",
+      "summary": "Three guardrails that run when the resource registry is built."
+    },
+    {
+      "id": "e-oas-ask",
+      "from": "m-response-class",
+      "to": "m-accepted-verb",
+      "kind": "dependency",
+      "delta": "added"
+    },
+    {
+      "id": "e-oas-202",
+      "from": "m-response-class",
+      "to": "m-accepted-resp",
+      "kind": "dependency",
+      "delta": "added",
+      "label": "documents 202"
+    },
+    {
+      "id": "e-oas-read",
+      "from": "m-accepted-resp",
+      "to": "m-successful",
+      "kind": "dependency",
+      "delta": "added",
+      "label": "200 / 201 / 202"
+    },
+    {
+      "id": "e-version",
+      "from": "m-version",
+      "to": "k-endpoint-checker",
+      "kind": "dependency",
+      "delta": "added",
+      "label": "404 on stable",
+      "summary": "The version range comes from the version_changes registry."
+    },
+    {
+      "id": "e-policy",
+      "from": "m-rpc",
+      "to": "k-policy-hook",
+      "kind": "call",
+      "delta": "unchanged",
+      "label": "verb_policies"
+    },
+    {
+      "id": "e-scopes",
+      "from": "m-rpc",
+      "to": "k-scopes",
+      "kind": "call",
+      "delta": "unchanged",
+      "label": "api_scopes"
+    },
+    {
+      "id": "e-policy-repo",
+      "from": "k-policy-hook",
+      "to": "m-move",
+      "kind": "call",
+      "delta": "added",
+      "label": "Manage on the target",
+      "summary": "The hook checks that the caller can manage the team before entering the verb."
+    },
+    {
+      "id": "e-gate-move",
+      "from": "m-move",
+      "to": "m-gate",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-gate-del",
+      "from": "m-delete",
+      "to": "m-gate",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-gate-delm",
+      "from": "m-delete-m",
+      "to": "m-gate",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-flag",
+      "from": "m-gate",
+      "to": "k-flag",
+      "kind": "dependency",
+      "delta": "added",
+      "label": "403 if disabled"
+    },
+    {
+      "id": "e-nested",
+      "from": "m-gate",
+      "to": "k-nested",
+      "kind": "call",
+      "delta": "added",
+      "label": "nested teams"
+    },
+    {
+      "id": "e-parent",
+      "from": "m-move",
+      "to": "k-parent",
+      "kind": "call",
+      "delta": "added",
+      "label": "resolves the destination"
+    },
+    {
+      "id": "e-acc-move",
+      "from": "m-move",
+      "to": "m-accept",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-acc-del",
+      "from": "m-delete",
+      "to": "m-accept",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-acc-delm",
+      "from": "m-delete-m",
+      "to": "m-accept",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-actor",
+      "from": "m-accept",
+      "to": "m-serialize",
+      "kind": "call",
+      "delta": "added",
+      "label": "snapshot of the caller",
+      "data": "{ type: access | company, id, oauth, api_key }",
+      "trigger": "AsyncOperations::Actor.serialize(policy_context)"
+    },
+    {
+      "id": "e-acquire",
+      "from": "m-accept",
+      "to": "m-acquire",
+      "kind": "call",
+      "delta": "added",
+      "label": "409 if one exists",
+      "summary": "If the lock is already taken, the verb returns Outcome.invalid_state and the client gets a 409.",
+      "trigger": "guard.acquire(operation_id:)"
+    },
+    {
+      "id": "e-lock",
+      "from": "m-acquire",
+      "to": "redis-guard",
+      "kind": "data",
+      "delta": "added",
+      "label": "SET NX EX 900",
+      "animated": true
+    },
+    {
+      "id": "e-record",
+      "from": "m-accept",
+      "to": "m-create",
+      "kind": "call",
+      "delta": "added",
+      "label": "records"
+    },
+    {
+      "id": "e-write",
+      "from": "m-create",
+      "to": "redis-op",
+      "kind": "data",
+      "delta": "added",
+      "label": "TTL 24 h",
+      "animated": true,
+      "data": "Record as JSON: operation_id, company_id, kind, target_id, status, actor, input"
+    },
+    {
+      "id": "e-enqueue",
+      "from": "m-accept",
+      "to": "sidekiq",
+      "kind": "queue",
+      "delta": "added",
+      "label": "perform_later",
+      "animated": true,
+      "data": "{ operation_id, company_id }",
+      "trigger": "RunOperationJob.perform_later"
+    },
+    {
+      "id": "e-dequeue",
+      "from": "sidekiq",
+      "to": "m-perform",
+      "kind": "event",
+      "delta": "added",
+      "label": "dequeues",
+      "animated": true
+    },
+    {
+      "id": "e-processing",
+      "from": "m-perform",
+      "to": "m-processing",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-tr1",
+      "from": "m-processing",
+      "to": "m-transition",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-keepttl",
+      "from": "m-transition",
+      "to": "redis-op",
+      "kind": "data",
+      "delta": "added",
+      "label": "SET XX KEEPTTL",
+      "summary": "No transition stretches the window or resurrects an expired operation."
+    },
+    {
+      "id": "e-renew",
+      "from": "m-perform",
+      "to": "m-renew",
+      "kind": "call",
+      "delta": "added",
+      "label": "restarts the window"
+    },
+    {
+      "id": "e-renew-w",
+      "from": "m-renew",
+      "to": "redis-guard",
+      "kind": "data",
+      "delta": "added"
+    },
+    {
+      "id": "e-replay",
+      "from": "m-perform",
+      "to": "m-replay",
+      "kind": "call",
+      "delta": "added",
+      "label": "only this goes in the rescue"
+    },
+    {
+      "id": "e-rehydrate",
+      "from": "m-replay",
+      "to": "m-deserialize",
+      "kind": "call",
+      "delta": "added",
+      "label": "rehydrates permissions"
+    },
+    {
+      "id": "e-dispatch",
+      "from": "m-replay",
+      "to": "m-job-move",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-same-verb",
+      "from": "m-job-move",
+      "to": "m-teams-move",
+      "kind": "call",
+      "delta": "added",
+      "label": "the same synchronous verb",
+      "emphasis": "hero",
+      "animated": true,
+      "summary": "The decision that removes the most risk: the job reimplements nothing; it calls the method the existing endpoint calls. That's why permissions are revalidated and the webhooks fire on their own.",
+      "data": "Dtos::Team::Move(id, destination_parent_team_id) — without source_parent_team_id",
+      "trigger": "Repositories::Teams.new(policy_context:).move(dto:)"
+    },
+    {
+      "id": "e-job-del",
+      "from": "m-replay",
+      "to": "m-teams-delete",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-job-delm",
+      "from": "m-replay",
+      "to": "m-mem-delete",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-revalidate",
+      "from": "m-teams-move",
+      "to": "k-policy-hook",
+      "kind": "call",
+      "delta": "unchanged",
+      "label": "revalidated"
+    },
+    {
+      "id": "e-interactor",
+      "from": "m-teams-move",
+      "to": "d-move",
+      "kind": "call",
+      "delta": "unchanged"
+    },
+    {
+      "id": "e-interactor-d",
+      "from": "m-teams-delete",
+      "to": "d-delete",
+      "kind": "call",
+      "delta": "unchanged"
+    },
+    {
+      "id": "e-parent-res",
+      "from": "m-teams-move",
+      "to": "k-parent",
+      "kind": "dependency",
+      "delta": "added",
+      "label": "extracted"
+    },
+    {
+      "id": "e-closure",
+      "from": "d-move",
+      "to": "d-pg",
+      "kind": "data",
+      "delta": "unchanged",
+      "label": "company-wide lock",
+      "animated": true,
+      "summary": "Rebuilds the closure table under an advisory lock that spans the whole tenant."
+    },
+    {
+      "id": "e-closure-d",
+      "from": "d-delete",
+      "to": "d-pg",
+      "kind": "data",
+      "delta": "unchanged",
+      "label": "one event per member"
+    },
+    {
+      "id": "e-mem-pg",
+      "from": "m-mem-delete",
+      "to": "d-pg",
+      "kind": "data",
+      "delta": "unchanged"
+    },
+    {
+      "id": "e-cascade",
+      "from": "d-pg",
+      "to": "d-refresh",
+      "kind": "event",
+      "delta": "unchanged",
+      "label": "continues after completed",
+      "animated": true
+    },
+    {
+      "id": "e-webhook",
+      "from": "m-teams-delete",
+      "to": "d-webhooks",
+      "kind": "event",
+      "delta": "unchanged",
+      "label": "the existing ones"
+    },
+    {
+      "id": "e-result",
+      "from": "m-job-move",
+      "to": "m-team-result",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-entity-ar",
+      "from": "m-teams-move",
+      "to": "m-entity-ar",
+      "kind": "call",
+      "delta": "unchanged",
+      "label": "depth: nil"
+    },
+    {
+      "id": "e-report",
+      "from": "m-perform",
+      "to": "m-report",
+      "kind": "call",
+      "delta": "added",
+      "label": "outside the rescue"
+    },
+    {
+      "id": "e-complete",
+      "from": "m-report",
+      "to": "m-completed",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-tr2",
+      "from": "m-completed",
+      "to": "m-transition",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-ensure",
+      "from": "m-perform",
+      "to": "m-release-guard",
+      "kind": "call",
+      "delta": "added",
+      "label": "ensure"
+    },
+    {
+      "id": "e-release",
+      "from": "m-release-guard",
+      "to": "m-release",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-cad",
+      "from": "m-release",
+      "to": "redis-guard",
+      "kind": "data",
+      "delta": "added",
+      "label": "compare-and-delete"
+    },
+    {
+      "id": "e-poll",
+      "from": "integrador",
+      "to": "m-show",
+      "kind": "http",
+      "delta": "added",
+      "label": "GET operations?ids[]=…",
+      "trigger": "GET /api/2026-10-01/resources/teams/operations/{id}"
+    },
+    {
+      "id": "e-poll-read",
+      "from": "m-show",
+      "to": "m-read",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-poll-gate",
+      "from": "m-read",
+      "to": "m-gate",
+      "kind": "call",
+      "delta": "added",
+      "label": "on reads too",
+      "summary": "Reads go through the same gate as writes: turning the flag off as a kill switch leaves the client unable to poll operations already accepted."
+    },
+    {
+      "id": "e-mget",
+      "from": "m-read",
+      "to": "m-get-many",
+      "kind": "call",
+      "delta": "added",
+      "label": "MGET"
+    },
+    {
+      "id": "e-mget-r",
+      "from": "m-get-many",
+      "to": "redis-op",
+      "kind": "data",
+      "delta": "added",
+      "label": "a single round trip",
+      "animated": true
+    },
+    {
+      "id": "e-parse",
+      "from": "m-get-many",
+      "to": "m-parse",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-entity",
+      "from": "m-read",
+      "to": "m-entity",
+      "kind": "call",
+      "delta": "added"
+    },
+    {
+      "id": "e-checker",
+      "from": "m-show",
+      "to": "k-endpoint-checker",
+      "kind": "call",
+      "delta": "unchanged",
+      "label": "exists in this version?"
+    }
+  ],
+  "flows": [
+    {
+      "id": "aceptar",
+      "title": "Accept",
+      "summary": "Inside the HTTP request: decide and record, nothing more.",
+      "participants": [
+        {
+          "node": "integrador"
+        },
+        {
+          "node": "k-controller",
+          "label": "Public API"
+        },
+        {
+          "node": "c-repo",
+          "label": "Operations"
+        },
+        {
+          "node": "k-guard"
+        },
+        {
+          "node": "k-state"
+        },
+        {
+          "node": "sidekiq"
+        }
+      ],
+      "messages": [
+        {
+          "id": "a1",
+          "from": "integrador",
+          "to": "k-controller",
+          "label": "POST operations/move_team",
+          "kind": "sync",
+          "delta": "added",
+          "animated": true
+        },
+        {
+          "id": "a2",
+          "from": "k-controller",
+          "to": "c-repo",
+          "label": "permission, flags, destination",
+          "kind": "sync",
+          "delta": "added",
+          "note": "If a gate fails, it ends here: 403 or 400 and nothing is enqueued."
+        },
+        {
+          "id": "a3",
+          "from": "c-repo",
+          "to": "k-guard",
+          "label": "acquire · SET NX EX 900",
+          "kind": "sync",
+          "delta": "added"
+        },
+        {
+          "id": "a4",
+          "from": "k-guard",
+          "to": "c-repo",
+          "label": "acquired, or 409",
+          "kind": "return",
+          "delta": "added"
+        },
+        {
+          "id": "a5",
+          "from": "c-repo",
+          "to": "k-state",
+          "label": "create! · TTL 24 h",
+          "kind": "sync",
+          "delta": "added"
+        },
+        {
+          "id": "a6",
+          "from": "c-repo",
+          "to": "sidekiq",
+          "label": "perform_later",
+          "kind": "async",
+          "delta": "added",
+          "animated": true
+        },
+        {
+          "id": "a7",
+          "from": "k-controller",
+          "to": "integrador",
+          "label": "202 · id, pending",
+          "kind": "return",
+          "delta": "added",
+          "note": "Two Redis commands and one enqueue. The request doesn't wait for the work."
+        }
+      ]
+    },
+    {
+      "id": "reejecutar",
+      "title": "Replay",
+      "summary": "The job repeats the synchronous call; everything expensive happens here.",
+      "participants": [
+        {
+          "node": "sidekiq"
+        },
+        {
+          "node": "c-job"
+        },
+        {
+          "node": "k-state"
+        },
+        {
+          "node": "k-guard"
+        },
+        {
+          "node": "k-teams-repo",
+          "label": "Repositories::Teams"
+        },
+        {
+          "node": "d-pg"
+        }
+      ],
+      "messages": [
+        {
+          "id": "b1",
+          "from": "sidekiq",
+          "to": "c-job",
+          "label": "dequeues",
+          "kind": "async",
+          "delta": "added"
+        },
+        {
+          "id": "b2",
+          "from": "c-job",
+          "to": "k-state",
+          "label": "get · processing!",
+          "kind": "sync",
+          "delta": "added",
+          "note": "If the record is gone, it mutates nothing."
+        },
+        {
+          "id": "b3",
+          "from": "c-job",
+          "to": "k-guard",
+          "label": "renew",
+          "kind": "sync",
+          "delta": "added",
+          "note": "The lock window is counted from here, not from acceptance."
+        },
+        {
+          "id": "b4",
+          "from": "c-job",
+          "to": "k-teams-repo",
+          "label": "#move, the existing one",
+          "kind": "sync",
+          "delta": "added",
+          "animated": true,
+          "note": "Verb permissions are revalidated here."
+        },
+        {
+          "id": "b5",
+          "from": "k-teams-repo",
+          "to": "d-pg",
+          "label": "company-wide lock",
+          "kind": "sync",
+          "delta": "unchanged",
+          "note": "No wait timeout: this is what moves off the HTTP thread."
+        },
+        {
+          "id": "b6",
+          "from": "d-pg",
+          "to": "k-teams-repo",
+          "label": "applied",
+          "kind": "return",
+          "delta": "unchanged"
+        },
+        {
+          "id": "b7",
+          "from": "k-teams-repo",
+          "to": "c-job",
+          "label": "Team · depth: nil",
+          "kind": "return",
+          "delta": "added"
+        },
+        {
+          "id": "b8",
+          "from": "c-job",
+          "to": "k-state",
+          "label": "completed!",
+          "kind": "sync",
+          "delta": "added"
+        },
+        {
+          "id": "b9",
+          "from": "c-job",
+          "to": "k-guard",
+          "label": "release (ensure)",
+          "kind": "sync",
+          "delta": "added"
+        },
+        {
+          "id": "b10",
+          "from": "d-pg",
+          "to": "d-pg",
+          "label": "keeps propagating memberships",
+          "kind": "self",
+          "delta": "unchanged",
+          "note": "After completed."
+        }
+      ]
+    },
+    {
+      "id": "sondear",
+      "title": "Poll",
+      "summary": "The endpoint the client calls in a loop.",
+      "participants": [
+        {
+          "node": "integrador"
+        },
+        {
+          "node": "k-controller",
+          "label": "Public API"
+        },
+        {
+          "node": "c-repo",
+          "label": "Operations"
+        },
+        {
+          "node": "k-state"
+        },
+        {
+          "node": "redis"
+        }
+      ],
+      "messages": [
+        {
+          "id": "c1",
+          "from": "integrador",
+          "to": "k-controller",
+          "label": "GET operations?ids[]=…",
+          "kind": "sync",
+          "delta": "added"
+        },
+        {
+          "id": "c2",
+          "from": "k-controller",
+          "to": "c-repo",
+          "label": "read",
+          "kind": "sync",
+          "delta": "added"
+        },
+        {
+          "id": "c3",
+          "from": "c-repo",
+          "to": "c-repo",
+          "label": "flags: whole catalog",
+          "kind": "self",
+          "delta": "added",
+          "note": "3 queries and ~700 structs per poll."
+        },
+        {
+          "id": "c4",
+          "from": "c-repo",
+          "to": "k-state",
+          "label": "get_many",
+          "kind": "sync",
+          "delta": "added"
+        },
+        {
+          "id": "c5",
+          "from": "k-state",
+          "to": "redis",
+          "label": "MGET · one round trip",
+          "kind": "sync",
+          "delta": "added",
+          "animated": true
+        },
+        {
+          "id": "c6",
+          "from": "k-controller",
+          "to": "integrador",
+          "label": "200 · completed",
+          "kind": "return",
+          "delta": "added"
+        }
+      ]
+    }
+  ],
+  "tour": {
+    "title": "How the 202 works",
+    "summary": "Ten steps from concept to method. Each one opens only what's needed.",
+    "steps": [
+      {
+        "title": "The verb can now answer 202",
+        "depth": 1,
+        "focus": {
+          "nodes": [
+            "integrador",
+            "c-motor",
+            "c-resource"
+          ]
+        },
+        "body_html": "<p>Everything used to be <code>200</code>, which means \"done\". Now an RPC verb can declare that it has only <b>accepted</b> the work.</p><p>The engine lives in the platform and nothing uses it in its own PR: the first consumer is <code>teams.operation</code>.</p>"
+      },
+      {
+        "title": "Three guardrails at boot",
+        "select": "m-validate",
+        "focus": {
+          "nodes": [
+            "m-validate",
+            "m-accepted-verb",
+            "m-accepted-list"
+          ],
+          "edges": [
+            "e-validate",
+            "e-declare"
+          ]
+        },
+        "body_html": "<p><b>What happens:</b> when the resource registry is built, <code>#validate_accepted_verbs!</code> rejects a CRUD verb, a nonexistent one and one that returns a collection.</p><p><b>Why it matters:</b> an error here breaks boot in CI; it never reaches production as a 500.</p>"
+      },
+      {
+        "title": "Beta only, and only with the flag",
+        "focus": {
+          "nodes": [
+            "m-version",
+            "k-endpoint-checker",
+            "m-gate",
+            "k-flag"
+          ],
+          "edges": [
+            "e-version",
+            "e-flag"
+          ]
+        },
+        "body_html": "<p><b>What travels:</b> the version the client requests, checked against the <code>2026-07-02..∞</code> range that comes from <code>endpoint_added</code>.</p><p>Outside the beta, 404. Inside it, without <code>dev_teams_async_operations</code>, 403. Both validated over HTTP.</p>"
+      },
+      {
+        "title": "Accepting is deciding and recording",
+        "view": "flow:aceptar",
+        "focus": {
+          "messages": [
+            "a3",
+            "a5",
+            "a6",
+            "a7"
+          ]
+        },
+        "body_html": "<p>Inside the request only <b>two Redis commands and one enqueue</b> happen. The expensive work doesn't happen here.</p><p><b>What triggers it:</b> <code>Operations#accept</code>, which also releases the lock if the record or the enqueue fails.</p>"
+      },
+      {
+        "title": "One lock per team, now renewed",
+        "focus": {
+          "nodes": [
+            "m-acquire",
+            "m-renew",
+            "redis-guard",
+            "m-release"
+          ],
+          "edges": [
+            "e-lock",
+            "e-renew-w",
+            "e-cad"
+          ]
+        },
+        "body_html": "<p><b>What travels:</b> a <code>…:inflight:{co}:teams.team:{id}</code> key holding the operation id, with a 15-minute lifetime.</p><p>The second round added <code>#renew</code>: the window restarts when the job starts, so a slow job sitting in the queue no longer lets a second operation on the same team through.</p>"
+      },
+      {
+        "title": "The job repeats the synchronous verb",
+        "select": "m-job-move",
+        "focus": {
+          "nodes": [
+            "m-job-move",
+            "m-teams-move",
+            "k-policy-hook"
+          ],
+          "edges": [
+            "e-same-verb",
+            "e-revalidate"
+          ]
+        },
+        "body_html": "<p>Nothing is reimplemented: <code>RunOperationJob#move_team</code> calls <code>Repositories::Teams#move</code>, the existing one. That's why verb permissions are <b>revalidated</b> and the webhooks fire on their own.</p><p><b>Watch out:</b> it doesn't pass <code>source_parent_team_id</code>. Under load the move failed twice with <code>invalid_parent_team</code>.</p>"
+      },
+      {
+        "title": "The lock moves off the HTTP thread",
+        "view": "flow:reejecutar",
+        "focus": {
+          "messages": [
+            "b4",
+            "b5",
+            "b10"
+          ]
+        },
+        "body_html": "<p>Rebuilding the hierarchy takes a lock that spans <b>the whole company</b> and has no wait timeout. That no longer happens inside the request.</p><p>And <code>completed</code> doesn't mean \"fully propagated\": the cascade of inherited memberships continues afterwards.</p>"
+      },
+      {
+        "title": "The result doesn't include the position",
+        "select": "m-team-result",
+        "focus": {
+          "nodes": [
+            "m-team-result",
+            "m-entity-ar",
+            "m-teams-move"
+          ],
+          "edges": [
+            "e-result",
+            "e-entity-ar"
+          ]
+        },
+        "body_html": "<p><b>What travels:</b> <code>{ team_id, parent_team_id, depth }</code>. The last two always come out <code>null</code>: <code>#entity_from_active_record</code> reads them from caches that only <code>#read</code> fills.</p><p>The <code>.yml</code> promises them. Confirmed over HTTP in 100% of cases.</p>"
+      },
+      {
+        "title": "Polling, in a single round trip",
+        "focus": {
+          "nodes": [
+            "m-read",
+            "m-get-many",
+            "redis-op",
+            "m-gate"
+          ],
+          "edges": [
+            "e-mget",
+            "e-mget-r",
+            "e-poll-gate"
+          ]
+        },
+        "body_html": "<p>Before: one <code>GET</code> per id, up to 100 in sequence. Now a single <code>MGET</code>.</p><p>One thing remains: reads go through the same flag gate as writes. Turning the flag off leaves the client with no way to know how already-accepted work ended.</p>"
+      },
+      {
+        "title": "What doesn't change",
+        "depth": 1,
+        "focus": {
+          "nodes": [
+            "d-move",
+            "d-delete",
+            "d-pg",
+            "d-refresh",
+            "d-webhooks",
+            "c-hooks"
+          ]
+        },
+        "body_html": "<p>The teams domain and the platform gates don't have a single line of diff. Neither do the four stable OpenAPI specs.</p><p>Everything new lives in three lanes and is fenced in twice: beta version and flag.</p>"
+      }
+    ]
+  }
+}

@@ -1,0 +1,899 @@
+{
+  "title": "Parts gallery",
+  "summary": "Every kind of part with its data. Click one to see its panel: each one carries a different block type.",
+  "lang": "en",
+  "direction": "right",
+  "initialDepth": 1,
+  "layout": {
+    "mode": "grid",
+    "columns": 1
+  },
+  "fx": {
+    "heat": {
+      "label": "p95 latency",
+      "unit": "ms",
+      "domain": [
+        0,
+        500
+      ]
+    },
+    "spotlight": true,
+    "glow": true,
+    "entrance": "cascade",
+    "particles": false
+  },
+  "owners": {
+    "core": {
+      "label": "Core team",
+      "short": "CR"
+    },
+    "growth": {
+      "label": "Growth team",
+      "short": "GR"
+    },
+    "sre": {
+      "label": "SRE",
+      "short": "SR"
+    }
+  },
+  "statuses": {
+    "live": {
+      "label": "In production",
+      "color": {
+        "light": "#1a7f37",
+        "dark": "#3fb950"
+      },
+      "pulse": false
+    }
+  },
+  "nodes": [
+    {
+      "id": "g-cards",
+      "label": "Cards with data",
+      "kind": "module",
+      "gridCols": 4,
+      "summary": "The usual card, plus what the data adds to it."
+    },
+    {
+      "id": "c-basic",
+      "parent": "g-cards",
+      "label": "Accounts service",
+      "subtitle": "accounts-api",
+      "kind": "user",
+      "summary": "A plain card: icon, title and subtitle.",
+      "blocks": [
+        {
+          "type": "text",
+          "style": "lead",
+          "text": "Text with **bold**, *italics*, `code` and a [link](https://example.com)."
+        },
+        {
+          "type": "text",
+          "style": "muted",
+          "text": "A secondary, more subdued paragraph."
+        },
+        {
+          "type": "quote",
+          "text": "Simple first; rich when the data calls for it.",
+          "by": "Style guide"
+        }
+      ]
+    },
+    {
+      "id": "c-heat",
+      "parent": "g-cards",
+      "label": "Rules engine",
+      "subtitle": "heat: latency",
+      "kind": "function",
+      "heat": 380,
+      "summary": "Heat tints the card and puts the figure in a pill.",
+      "blocks": [
+        {
+          "type": "stats",
+          "items": [
+            {
+              "label": "p95",
+              "value": 380,
+              "unit": "ms",
+              "change": 22,
+              "good": "down",
+              "spark": [
+                290,
+                342,
+                377,
+                384,
+                362,
+                318,
+                268,
+                229,
+                216,
+                233,
+                275,
+                329
+              ]
+            },
+            {
+              "label": "Requests",
+              "value": 12400,
+              "change": 4.1
+            },
+            {
+              "label": "Errors",
+              "value": "0.4",
+              "unit": "%",
+              "change": -0.2,
+              "good": "down"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c-spark",
+      "parent": "g-cards",
+      "label": "Email queue",
+      "subtitle": "series: msg/s",
+      "kind": "queue",
+      "spark": [
+        85,
+        112,
+        131,
+        135,
+        125,
+        104,
+        80,
+        62,
+        56,
+        65,
+        87,
+        115,
+        141,
+        155
+      ],
+      "unit": "msg/s",
+      "summary": "A series: the pace of the last hour.",
+      "blocks": [
+        {
+          "type": "chart",
+          "kind": "line",
+          "title": "Messages per second",
+          "unit": "msg/s",
+          "labels": [
+            "00",
+            "03",
+            "06",
+            "09",
+            "12",
+            "15",
+            "18",
+            "21"
+          ],
+          "series": [
+            {
+              "label": "in",
+              "values": [
+                85,
+                112,
+                131,
+                135,
+                125,
+                104,
+                80,
+                62
+              ]
+            },
+            {
+              "label": "out",
+              "values": [
+                70,
+                100,
+                114,
+                106,
+                81,
+                55,
+                42,
+                52
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c-prog",
+      "parent": "g-cards",
+      "label": "Customer migration",
+      "subtitle": "progress 72%",
+      "kind": "job",
+      "progress": 0.72,
+      "summary": "A progress ring around the icon.",
+      "blocks": [
+        {
+          "type": "progress",
+          "items": [
+            {
+              "label": "Spain",
+              "value": 1
+            },
+            {
+              "label": "Portugal",
+              "value": 0.86
+            },
+            {
+              "label": "France",
+              "value": 0.41
+            },
+            {
+              "label": "Italy",
+              "value": 0.12,
+              "tone": "warn"
+            }
+          ]
+        },
+        {
+          "type": "steps",
+          "items": [
+            {
+              "label": "Copy the data",
+              "state": "done"
+            },
+            {
+              "label": "Dual write",
+              "state": "active"
+            },
+            {
+              "label": "Switch reads",
+              "state": "todo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c-alert",
+      "parent": "g-cards",
+      "label": "SMS provider",
+      "subtitle": "critical alert",
+      "kind": "mobile",
+      "alert": "crit",
+      "heat": 470,
+      "summary": "A pulsing alert: critical.",
+      "blocks": [
+        {
+          "type": "callout",
+          "tone": "crit",
+          "title": "Down since 10:42",
+          "text": "Verification texts go out through the backup provider."
+        },
+        {
+          "type": "timeline",
+          "items": [
+            {
+              "time": "10:42",
+              "label": "First timeouts",
+              "tone": "crit"
+            },
+            {
+              "time": "10:44",
+              "label": "Automatic failover to the backup",
+              "tone": "warn"
+            },
+            {
+              "time": "11:10",
+              "label": "The provider confirms the incident",
+              "tone": "info"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c-owner",
+      "parent": "g-cards",
+      "label": "Admin panel",
+      "subtitle": "Growth team",
+      "kind": "ui",
+      "owner": "growth",
+      "summary": "The team's initials over the icon.",
+      "blocks": [
+        {
+          "type": "kv",
+          "items": [
+            [
+              "Team",
+              "Growth"
+            ],
+            [
+              "On-call",
+              "@lucia.mena"
+            ],
+            [
+              "Channel",
+              "#growth"
+            ],
+            [
+              "Repository",
+              "`growth/admin`"
+            ]
+          ]
+        },
+        {
+          "type": "badges",
+          "items": [
+            {
+              "label": "React 18",
+              "tone": "neutral"
+            },
+            {
+              "label": "a11y AA",
+              "tone": "good"
+            },
+            {
+              "label": "high debt",
+              "tone": "warn"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c-diff",
+      "parent": "g-cards",
+      "label": "Order validation",
+      "subtitle": "new in the diff",
+      "kind": "function",
+      "delta": "added",
+      "files": [
+        {
+          "path": "orders/validate.ts",
+          "additions": 84,
+          "deletions": 3
+        }
+      ],
+      "summary": "A new part in a diff, with its files.",
+      "blocks": [
+        {
+          "type": "code",
+          "lang": "ts",
+          "code": "// rejects orders with no lines or with negative amounts\nexport function validate(o: Order): Result {\n  if (!o.lines.length) return fail(\"empty\");\n  return o.total >= 0 ? ok(o) : fail(\"amount\");\n}"
+        }
+      ]
+    },
+    {
+      "id": "c-links",
+      "parent": "g-cards",
+      "label": "Billing",
+      "subtitle": "links and a note",
+      "kind": "card",
+      "links": [
+        {
+          "kind": "jira",
+          "key": "FAC-218"
+        },
+        {
+          "kind": "url",
+          "url": "https://example.com/dash",
+          "label": "Dashboard"
+        }
+      ],
+      "notes": [
+        {
+          "tone": "info",
+          "text": "Switches PDF provider in November."
+        }
+      ],
+      "summary": "Link icons and a note.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": [
+            "Invoice",
+            "Customer",
+            "Amount",
+            "Status"
+          ],
+          "rows": [
+            [
+              "F-1042",
+              "Acme",
+              1240.5,
+              {
+                "v": "paid",
+                "tone": "good"
+              }
+            ],
+            [
+              "F-1043",
+              "Globex",
+              380,
+              {
+                "v": "overdue",
+                "tone": "crit"
+              }
+            ],
+            [
+              "F-1044",
+              "Initech",
+              920,
+              {
+                "v": "sent",
+                "tone": "warn"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "g-charts",
+      "label": "Charts as parts",
+      "kind": "module",
+      "gridCols": 4,
+      "summary": "Parts that are a single data point."
+    },
+    {
+      "id": "k-kpi",
+      "parent": "g-charts",
+      "label": "Sign-ups today",
+      "shape": "kpi",
+      "kind": "user",
+      "value": 1842,
+      "change": 12.4,
+      "spark": [
+        1350,
+        1602,
+        1769,
+        1798,
+        1677,
+        1450,
+        1192,
+        991,
+        916,
+        992,
+        1194,
+        1456
+      ],
+      "summary": "A figure, its change and its series.",
+      "blocks": [
+        {
+          "type": "chart",
+          "kind": "bar",
+          "title": "Sign-ups by channel",
+          "labels": [
+            "Web",
+            "App",
+            "Partners",
+            "Store"
+          ],
+          "series": [
+            {
+              "label": "today",
+              "values": [
+                820,
+                640,
+                240,
+                142
+              ]
+            },
+            {
+              "label": "yesterday",
+              "values": [
+                760,
+                600,
+                260,
+                120
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "k-kpi2",
+      "parent": "g-charts",
+      "label": "Response time",
+      "shape": "kpi",
+      "kind": "other",
+      "value": 212,
+      "unit": "ms",
+      "change": -8.5,
+      "good": "down",
+      "summary": "Lower is better: a negative change shows in green.",
+      "blocks": [
+        {
+          "type": "spark",
+          "values": [
+            215,
+            236,
+            251,
+            255,
+            248,
+            232,
+            214,
+            200,
+            196,
+            204,
+            221,
+            244,
+            264,
+            275,
+            275,
+            265,
+            247,
+            230,
+            219,
+            219
+          ],
+          "unit": "ms"
+        }
+      ]
+    },
+    {
+      "id": "k-gauge",
+      "parent": "g-charts",
+      "label": "CPU usage",
+      "shape": "gauge",
+      "kind": "cpu",
+      "value": 78,
+      "unit": "%",
+      "thresholds": [
+        70,
+        90
+      ],
+      "summary": "A gauge with thresholds.",
+      "blocks": [
+        {
+          "type": "gauge",
+          "label": "Memory",
+          "value": 54,
+          "unit": "%",
+          "thresholds": [
+            75,
+            90
+          ]
+        }
+      ]
+    },
+    {
+      "id": "k-donut",
+      "parent": "g-charts",
+      "label": "Browsers",
+      "shape": "donut",
+      "kind": "other",
+      "parts": [
+        {
+          "label": "Chrome",
+          "value": 58
+        },
+        {
+          "label": "Safari",
+          "value": 24
+        },
+        {
+          "label": "Firefox",
+          "value": 9
+        },
+        {
+          "label": "Edge",
+          "value": 6
+        },
+        {
+          "label": "Other",
+          "value": 3
+        }
+      ],
+      "summary": "A breakdown.",
+      "blocks": [
+        {
+          "type": "heatstrip",
+          "title": "Visits by day and hour",
+          "scheme": "viridis",
+          "labels": [
+            "00",
+            "03",
+            "06",
+            "09",
+            "12",
+            "15",
+            "18",
+            "21"
+          ],
+          "rows": [
+            {
+              "label": "Mon",
+              "values": [
+                60,
+                84,
+                101,
+                105,
+                96,
+                78,
+                57,
+                41
+              ]
+            },
+            {
+              "label": "Tue",
+              "values": [
+                66,
+                92,
+                108,
+                109,
+                95,
+                72,
+                51,
+                41
+              ]
+            },
+            {
+              "label": "Wed",
+              "values": [
+                72,
+                100,
+                115,
+                112,
+                93,
+                67,
+                48,
+                47
+              ]
+            },
+            {
+              "label": "Thu",
+              "values": [
+                78,
+                108,
+                122,
+                114,
+                89,
+                63,
+                50,
+                60
+              ]
+            },
+            {
+              "label": "Fri",
+              "values": [
+                84,
+                115,
+                128,
+                115,
+                86,
+                61,
+                57,
+                78
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "g-shapes",
+      "label": "Mermaid shapes, just as rich",
+      "kind": "module",
+      "gridCols": 4,
+      "summary": "Shapes that come from Mermaid accept the same data: series, progress, heat, team and alerts."
+    },
+    {
+      "id": "s-dec",
+      "parent": "g-shapes",
+      "label": "Payment approved?",
+      "shape": "decision",
+      "kind": "other",
+      "spark": [
+        88,
+        94,
+        98,
+        101,
+        101,
+        99,
+        97,
+        95,
+        96,
+        99
+      ],
+      "unit": "%",
+      "heat": 60,
+      "summary": "A diamond with its series below.",
+      "blocks": [
+        {
+          "type": "bars",
+          "title": "Decline reasons",
+          "items": [
+            {
+              "label": "Funds",
+              "value": 412
+            },
+            {
+              "label": "Fraud",
+              "value": 188
+            },
+            {
+              "label": "Expired",
+              "value": 96
+            },
+            {
+              "label": "Other",
+              "value": 41
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s-db",
+      "parent": "g-shapes",
+      "label": "Orders",
+      "shape": "datastore",
+      "kind": "datastore",
+      "progress": 0.64,
+      "owner": "core",
+      "heat": 140,
+      "summary": "A cylinder with its progress bar (a backup in progress).",
+      "blocks": [
+        {
+          "type": "checklist",
+          "title": "Nightly backup",
+          "items": [
+            {
+              "text": "Dump the primary",
+              "done": true
+            },
+            {
+              "text": "Copy to another region",
+              "done": true
+            },
+            {
+              "text": "Restore test",
+              "done": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s-hex",
+      "parent": "g-shapes",
+      "label": "Normalize data",
+      "shape": "hexagon",
+      "kind": "function",
+      "spark": [
+        35,
+        45,
+        53,
+        56,
+        54,
+        48,
+        41,
+        37,
+        36,
+        40
+      ],
+      "progress": 0.3,
+      "unit": "k/s",
+      "summary": "A hexagon with a series and progress."
+    },
+    {
+      "id": "s-circ",
+      "parent": "g-shapes",
+      "label": "Cache",
+      "shape": "circle",
+      "kind": "cache",
+      "heat": 12,
+      "owner": "sre",
+      "summary": "A circle tinted by its latency."
+    },
+    {
+      "id": "s-tile",
+      "parent": "g-shapes",
+      "label": "Storage",
+      "shape": "tile",
+      "kind": "cloud",
+      "spark": [
+        70,
+        78,
+        83,
+        86,
+        85,
+        82,
+        78,
+        76,
+        76,
+        80
+      ],
+      "unit": "TB",
+      "summary": "An architecture tile with its series."
+    },
+    {
+      "id": "s-person",
+      "parent": "g-shapes",
+      "label": "Customer",
+      "shape": "person",
+      "kind": "external",
+      "subtitle": "[Person]",
+      "summary": "A C4 person.",
+      "alert": "info"
+    },
+    {
+      "id": "s-table",
+      "parent": "g-shapes",
+      "label": "ORDER",
+      "shape": "table",
+      "kind": "datastore",
+      "rows": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "keys": "PK"
+        },
+        {
+          "name": "cliente_id",
+          "type": "uuid",
+          "keys": "FK"
+        },
+        {
+          "name": "total",
+          "type": "decimal"
+        }
+      ],
+      "progress": 0.9,
+      "summary": "An ER entity with its progress (schema migration)."
+    },
+    {
+      "id": "s-note",
+      "parent": "g-shapes",
+      "label": "Amounts are stored in cents to avoid rounding errors",
+      "shape": "note",
+      "kind": "other",
+      "summary": "A note."
+    },
+    {
+      "id": "g-marks",
+      "label": "Marks, tasks and cards",
+      "kind": "module",
+      "gridCols": 4,
+      "summary": "The small shapes: start and end, commits, tickets, scores and bars."
+    },
+    {
+      "id": "m-ticket",
+      "parent": "g-marks",
+      "label": "Export to CSV",
+      "shape": "ticket",
+      "kind": "other",
+      "badge": "FAC-221",
+      "avatar": "LM",
+      "summary": "A kanban ticket."
+    },
+    {
+      "id": "m-score",
+      "parent": "g-marks",
+      "label": "Pay with Bizum",
+      "shape": "score",
+      "kind": "other",
+      "score": 4,
+      "summary": "A journey task with its score."
+    },
+    {
+      "id": "m-commit",
+      "parent": "g-marks",
+      "label": "v4.2.0",
+      "shape": "commit-highlight",
+      "kind": "other",
+      "badge": "v4.2.0",
+      "head": true,
+      "summary": "A commit with its tag."
+    },
+    {
+      "id": "m-block",
+      "parent": "g-marks",
+      "label": "Europe",
+      "shape": "block",
+      "kind": "other",
+      "value": 68,
+      "subtitle": "68%",
+      "summary": "A treemap leaf."
+    }
+  ],
+  "edges": []
+}

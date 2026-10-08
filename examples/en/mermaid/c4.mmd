@@ -1,0 +1,15 @@
+C4Context
+    title Online banking system
+    Person(cliente, "Customer", "A customer of the bank")
+    Enterprise_Boundary(b0, "Bank") {
+        System(banca, "Online banking", "Views accounts and makes payments")
+        System_Boundary(b1, "Core") {
+            SystemDb(mainframe, "Mainframe", "Stores the accounts")
+        }
+    }
+    System_Ext(correo, "Email", "External email system")
+    Rel(cliente, banca, "Uses", "HTTPS")
+    Rel(banca, mainframe, "Reads and writes", "XML/HTTPS")
+    Rel_Back(cliente, correo, "Sends emails to")
+    BiRel(banca, correo, "Notifies", "SMTP")
+    UpdateElementStyle(cliente, $bgColor="#08427b", $borderColor="#073b6f")

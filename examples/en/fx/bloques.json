@@ -1,0 +1,44 @@
+[
+  { "type": "text", "what": "formatted paragraphs", "blocks": [
+    { "type": "text", "style": "lead", "text": "A larger lead paragraph: the first thing you read." },
+    { "type": "text", "text": "Text with **bold**, *italics*, `code` and a [link](https://example.com)." },
+    { "type": "text", "style": "small", "text": "A footnote, small and subdued." } ] },
+  { "type": "callout", "what": "callouts with a tone", "blocks": [
+    { "type": "callout", "tone": "info", "title": "Good to know", "text": "Retries wait 200 ms, 400 ms and 800 ms." },
+    { "type": "callout", "tone": "warn", "title": "Heads up", "text": "The queue grows if the consumer takes more than **2 s**." },
+    { "type": "callout", "tone": "good", "title": "Resolved", "text": "The rollback brought p95 back to 180 ms." },
+    { "type": "callout", "tone": "crit", "title": "Blocker", "text": "Without this certificate the service won't start." } ] },
+  { "type": "stats", "what": "figures with their change and series", "blocks": [
+    { "type": "stats", "items": [ { "label": "Requests", "value": 128400, "change": 6.2, "spark": [80, 92, 88, 101, 110, 108, 121, 128] }, { "label": "p95", "value": 212, "unit": "ms", "change": -8.5, "good": "down", "spark": [260, 248, 240, 236, 225, 220, 214, 212] }, { "label": "Errors", "value": "0.3", "unit": "%", "change": 0.1, "good": "down" } ] } ] },
+  { "type": "chart · line", "what": "two series with their axis", "blocks": [
+    { "type": "chart", "kind": "line", "unit": "ms", "labels": ["00", "04", "08", "12", "16", "20"], "series": [ { "label": "p50", "values": [42, 40, 61, 88, 74, 66] }, { "label": "p95", "values": [120, 110, 190, 310, 260, 210] } ] } ] },
+  { "type": "chart · area", "what": "an area under the curve", "blocks": [
+    { "type": "chart", "kind": "area", "unit": "GB", "labels": ["M", "T", "W", "T", "F", "S", "S"], "series": [ { "label": "Storage used", "values": [410, 422, 431, 445, 452, 458, 470] } ] } ] },
+  { "type": "chart · bar / stack", "what": "grouped and stacked bars", "blocks": [
+    { "type": "chart", "kind": "bar", "labels": ["Q1", "Q2", "Q3", "Q4"], "series": [ { "label": "2025", "values": [32, 41, 38, 52] }, { "label": "2026", "values": [40, 48, 55, 61] } ] },
+    { "type": "chart", "kind": "stack", "labels": ["Mon", "Tue", "Wed", "Thu", "Fri"], "series": [ { "label": "web", "values": [12, 14, 13, 16, 18] }, { "label": "app", "values": [8, 9, 11, 10, 12] }, { "label": "api", "values": [4, 5, 5, 6, 7] } ] } ] },
+  { "type": "bars", "what": "a ranking", "blocks": [
+    { "type": "bars", "unit": "ms", "items": [ { "label": "POST /orders", "value": 212 }, { "label": "POST /payments", "value": 188 }, { "label": "GET /search", "value": 96 }, { "label": "GET /cart", "value": 64 }, { "label": "PUT /cart/items", "value": 41 } ] } ] },
+  { "type": "progress", "what": "progress by part", "blocks": [
+    { "type": "progress", "items": [ { "label": "Backend", "value": 1 }, { "label": "Frontend", "value": 0.74 }, { "label": "Testing", "value": 0.45 }, { "label": "Documentation", "value": 0.12, "tone": "warn" } ] } ] },
+  { "type": "gauge · donut · kpi", "what": "the chart shapes, inside the panel", "blocks": [
+    { "type": "gauge", "label": "Disk", "value": 81, "unit": "%", "thresholds": [75, 90] },
+    { "type": "donut", "label": "Cost by team", "unit": "k€", "parts": [ { "label": "Payments", "value": 42 }, { "label": "Search", "value": 31 }, { "label": "Data", "value": 18 } ] } ] },
+  { "type": "table", "what": "table with numbers and statuses", "blocks": [
+    { "type": "table", "columns": ["Service", "Version", "p95", "Status"], "rows": [ ["checkout", "3.8.1", 212, { "v": "stable", "tone": "good" }], ["payments", "4.2.0", 268, { "v": "canary", "tone": "warn" }], ["antifraud", "7.0.2", 780, { "v": "degraded", "tone": "crit" }] ] } ] },
+  { "type": "code", "what": "highlighted code", "blocks": [
+    { "type": "code", "lang": "sql", "code": "-- orders from the last hour\nselect estado, count(*) as n\nfrom pedidos\nwhere creado > now() - interval '1 hour'\ngroup by estado;" } ] },
+  { "type": "kv", "what": "key-value pairs", "blocks": [
+    { "type": "kv", "items": [ ["Repository", "`checkout/api`"], ["Language", "Kotlin"], ["On-call", "@ana.ruiz"], ["SLO", "99.9%"] ] } ] },
+  { "type": "checklist · steps", "what": "lists with state", "blocks": [
+    { "type": "checklist", "items": [ { "text": "Create the release branch", "done": true }, { "text": "Pass the load tests", "done": true }, { "text": "Approve the change", "done": false } ] },
+    { "type": "steps", "items": [ { "label": "Design", "state": "done" }, { "label": "Implementation", "state": "active" }, { "label": "Launch", "state": "todo" } ] } ] },
+  { "type": "timeline", "what": "a line of events", "blocks": [
+    { "type": "timeline", "items": [ { "time": "09:00", "label": "Deploy 4.2 to 10%", "tone": "info" }, { "time": "13:05", "label": "Latency exceeds the target", "tone": "crit" }, { "time": "13:20", "label": "Model rollback", "tone": "warn" }, { "time": "15:00", "label": "All green", "tone": "good" } ] } ] },
+  { "type": "heatstrip", "what": "activity by day and hour", "blocks": [
+    { "type": "heatstrip", "scheme": "heat", "unit": "%", "labels": ["00", "03", "06", "09", "12", "15", "18", "21"], "rows": [ { "label": "Mon", "values": [12, 8, 10, 45, 78, 66, 82, 40] }, { "label": "Tue", "values": [10, 7, 12, 52, 84, 70, 88, 44] }, { "label": "Wed", "values": [11, 9, 11, 48, 96, 72, 80, 42] }, { "label": "Thu", "values": [13, 8, 14, 50, 80, 69, 85, 46] } ] } ] },
+  { "type": "quote · badges · spark", "what": "quotes, badges and a standalone series", "blocks": [
+    { "type": "quote", "text": "If you can't measure it, you can't fix it calmly.", "by": "On-call guide" },
+    { "type": "badges", "items": [ { "label": "PCI", "tone": "warn" }, { "label": "GDPR", "tone": "info" }, { "label": "99.95%", "tone": "good" }, "kotlin", "postgres" ] },
+    { "type": "spark", "values": [3, 5, 4, 7, 6, 9, 8, 11, 10, 13], "unit": "k/min" } ] }
+]

@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "es2023", "lib": ["es2023"], "types": [],
+    "module": "esnext", "moduleResolution": "bundler",
+    "strict": true, "noUncheckedIndexedAccess": true,
+    "noEmit": true, "skipLibCheck": true,
+    "jsx": "react", "jsxFactory": "h", "jsxFragmentFactory": "Fragment"
+  },
+  "include": ["/private/tmp/claude-502/bundled-skills/2.1.289/c174cb28ae13def2929cbd9ef93c5162/plugin-authoring/types/claude-code.d.ts", "../graphx/hooks", "../graphx/types", "../graphx/tests"]
+}

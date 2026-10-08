@@ -1,0 +1,29 @@
+---
+title: Alta de un pedido
+---
+flowchart LR
+    %% comentario que se ignora
+    cliente([Cliente]) -->|hace un pedido| web[Tienda web]
+    subgraph backend [Backend]
+        direction TB
+        api{{API de pedidos}} --> valida{¿Stock?}
+        valida -- Sí --> reserva[[Reservar stock]]
+        valida -- No --> aviso>Avisar al cliente]
+        reserva ==> pago[/Cobro con tarjeta/]
+        subgraph datos [Datos]
+            db[(PostgreSQL)]
+            cache((Redis))
+        end
+        reserva --> db
+        api -.-> cache
+    end
+    web --> api
+    pago --> fin(((Fin))) & correo@{ shape: doc, label: "Correo de confirmación" }
+    aviso --x cliente
+    web e9@--> analitica[Analítica]
+    e9@{ animate: true }
+    classDef critico fill:#fdd,stroke:#c00,stroke-width:2px
+    class valida,pago critico
+    style db fill:#9cf,stroke:#036
+    linkStyle 0 stroke:#0a0
+    click web "https://example.com/tienda" "La tienda online"

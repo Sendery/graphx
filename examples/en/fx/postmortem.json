@@ -1,0 +1,487 @@
+{
+  "title": "Postmortem: the October 2 login outage",
+  "summary": "For 34 minutes, 70% of logins failed. The tour explains what happened; the timeline shows it minute by minute.",
+  "lang": "en",
+  "direction": "right",
+  "initialDepth": 1,
+  "fx": {
+    "particles": true,
+    "heat": {
+      "label": "p95 latency",
+      "unit": "ms",
+      "domain": [
+        0,
+        2000
+      ],
+      "scheme": "traffic"
+    },
+    "spotlight": true,
+    "glow": true,
+    "play": true
+  },
+  "legend": {
+    "kinds": {
+      "ui": "interface",
+      "mobile": "app",
+      "route": "gateway",
+      "lock": "identity",
+      "cache": "cache",
+      "datastore": "database",
+      "external": "third party",
+      "test": "improvements",
+      "user": "users",
+      "gauge": "indicator"
+    }
+  },
+  "owners": {
+    "identidad": {
+      "label": "Identity team",
+      "short": "ID",
+      "contact": "#identity-oncall"
+    },
+    "plataforma": {
+      "label": "Platform",
+      "short": "PL",
+      "contact": "#platform"
+    },
+    "web": {
+      "label": "Web team",
+      "short": "WB"
+    }
+  },
+  "lanes": [
+    {
+      "id": "clientes",
+      "label": "Clients",
+      "owner": "web"
+    },
+    {
+      "id": "borde",
+      "label": "Edge",
+      "owner": "plataforma"
+    },
+    {
+      "id": "identidad",
+      "label": "Identity",
+      "owner": "identidad"
+    },
+    {
+      "id": "datos",
+      "label": "Data",
+      "owner": "plataforma"
+    },
+    {
+      "id": "terceros",
+      "label": "Third parties"
+    },
+    {
+      "id": "impacto",
+      "label": "Impact"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "web",
+      "lane": "clientes",
+      "label": "Web",
+      "kind": "ui",
+      "summary": "The login form."
+    },
+    {
+      "id": "app",
+      "lane": "clientes",
+      "label": "App",
+      "kind": "mobile",
+      "summary": "iOS and Android."
+    },
+    {
+      "id": "gateway",
+      "lane": "borde",
+      "label": "API Gateway",
+      "kind": "route",
+      "summary": "Routes /login to the identity service."
+    },
+    {
+      "id": "auth",
+      "lane": "identidad",
+      "label": "Identity service",
+      "kind": "lock",
+      "summary": "Validates credentials, creates the session and asks for the second factor.",
+      "blocks": [
+        {
+          "type": "callout",
+          "tone": "crit",
+          "title": "Root cause",
+          "text": "Version **5.4** removed the session cache by mistake: every login hit the database and exhausted the connection pool."
+        },
+        {
+          "type": "timeline",
+          "title": "Timeline",
+          "items": [
+            {
+              "time": "10:40",
+              "label": "auth 5.4 is deployed",
+              "tone": "info"
+            },
+            {
+              "time": "10:42",
+              "label": "First 503 errors on /login",
+              "tone": "crit"
+            },
+            {
+              "time": "10:47",
+              "label": "The alert fires; on-call is paged",
+              "tone": "warn"
+            },
+            {
+              "time": "10:56",
+              "label": "Rollback to 5.3",
+              "tone": "info"
+            },
+            {
+              "time": "11:02",
+              "label": "Redis saturates under the retry storm",
+              "tone": "crit"
+            },
+            {
+              "time": "11:08",
+              "label": "Redis fails over to the replica",
+              "tone": "warn"
+            },
+            {
+              "time": "11:16",
+              "label": "The error rate drops below 5%",
+              "tone": "good"
+            }
+          ]
+        },
+        {
+          "type": "quote",
+          "text": "The rollback fixed the cause, but not the storm: clients retried without waiting.",
+          "by": "Incident review"
+        }
+      ]
+    },
+    {
+      "id": "redis",
+      "lane": "datos",
+      "label": "Session Redis",
+      "kind": "cache",
+      "summary": "Sessions and login attempt limits."
+    },
+    {
+      "id": "users-db",
+      "lane": "datos",
+      "label": "User database",
+      "kind": "datastore",
+      "summary": "PostgreSQL with the credentials.",
+      "blocks": [
+        {
+          "type": "chart",
+          "kind": "area",
+          "title": "Connections in use",
+          "unit": "connections",
+          "labels": [
+            "10:36",
+            "10:42",
+            "10:48",
+            "10:54",
+            "11:00",
+            "11:06",
+            "11:12",
+            "11:18",
+            "11:24"
+          ],
+          "series": [
+            {
+              "label": "in use",
+              "values": [
+                80,
+                400,
+                400,
+                390,
+                120,
+                90,
+                80,
+                75,
+                70
+              ]
+            },
+            {
+              "label": "maximum",
+              "values": [
+                400,
+                400,
+                400,
+                400,
+                400,
+                400,
+                400,
+                400,
+                400
+              ],
+              "color": "#cf222e"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sms",
+      "lane": "terceros",
+      "label": "SMS provider",
+      "kind": "external",
+      "summary": "The SMS second factor."
+    },
+    {
+      "id": "k-logins",
+      "lane": "impacto",
+      "label": "Logins per minute",
+      "shape": "kpi",
+      "kind": "user",
+      "value": 1240,
+      "summary": "Successful logins per minute."
+    },
+    {
+      "id": "k-error",
+      "lane": "impacto",
+      "label": "Error rate",
+      "shape": "gauge",
+      "kind": "gauge",
+      "value": 0.4,
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "decimals": 1,
+      "thresholds": [
+        5,
+        20
+      ],
+      "summary": "Percentage of attempts that fail."
+    },
+    {
+      "id": "acciones",
+      "lane": "impacto",
+      "label": "Postmortem actions",
+      "kind": "test",
+      "summary": "What we are doing so it does not happen again.",
+      "blocks": [
+        {
+          "type": "checklist",
+          "items": [
+            {
+              "text": "Login load test in CI",
+              "done": true
+            },
+            {
+              "text": "Retries with exponential backoff in web and app",
+              "done": true
+            },
+            {
+              "text": "Alert when the connection pool reaches 80%",
+              "done": false
+            },
+            {
+              "text": "Automatic canary for auth",
+              "done": false
+            }
+          ]
+        },
+        {
+          "type": "stats",
+          "items": [
+            {
+              "label": "Duration",
+              "value": 34,
+              "unit": "min"
+            },
+            {
+              "label": "Failed logins",
+              "value": 41200
+            },
+            {
+              "label": "Tickets",
+              "value": 312
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-web-gw",
+      "from": "web",
+      "to": "gateway",
+      "kind": "http",
+      "rate": 1800
+    },
+    {
+      "id": "e-app-gw",
+      "from": "app",
+      "to": "gateway",
+      "kind": "http",
+      "rate": 1300
+    },
+    {
+      "id": "e-gw-auth",
+      "from": "gateway",
+      "to": "auth",
+      "kind": "http",
+      "rate": 1700,
+      "emphasis": "hero",
+      "label": "POST /login"
+    },
+    {
+      "id": "e-auth-redis",
+      "from": "auth",
+      "to": "redis",
+      "kind": "data",
+      "rate": 1600,
+      "label": "sessions"
+    },
+    {
+      "id": "e-auth-db",
+      "from": "auth",
+      "to": "users-db",
+      "kind": "data",
+      "rate": 300,
+      "label": "credentials"
+    },
+    {
+      "id": "e-auth-sms",
+      "from": "auth",
+      "to": "sms",
+      "kind": "http",
+      "rate": 120,
+      "label": "2FA"
+    }
+  ],
+  "timeline": {
+    "label": "October 2 · every 2 minutes",
+    "data": "time\tgateway.heat\tauth.heat\tredis.heat\tusers-db.heat\tsms.heat\te-web-gw\te-app-gw\te-gw-auth\te-auth-redis\te-auth-db\te-auth-sms\tk-logins.value\tk-error.value\tauth.alert\tredis.alert\n10:36\t41\t59\t3\t12\t192\t1760\t1323\t1747\t1643\t305\t131\t1263\t0.4\t-\t-\n10:38\t39\t61\t3\t13\t175\t1769\t1280\t1666\t1523\t287\t130\t1246\t0.4\t-\t-\n10:40\t42\t60\t3\t11\t176\t1830\t1282\t1752\t1590\t299\t115\t1256\t0.4\t-\t-\n10:42\t378\t1900\t135\t88\t600\t2563\t1885\t4212\t298\t2325\t37\t142\t61.4\tcrit\t-\n10:44\t379\t1913\t133\t96\t572\t2654\t1904\t4127\t296\t2386\t39\t142\t61.1\tcrit\t-\n10:46\t369\t1906\t149\t89\t608\t2674\t1932\t4197\t307\t2489\t42\t138\t64.8\tcrit\t-\n10:48\t395\t1838\t135\t97\t564\t2566\t1917\t4302\t308\t2367\t42\t142\t65.2\tcrit\t-\n10:50\t367\t1854\t131\t93\t609\t2673\t1876\t4230\t295\t2329\t42\t138\t62.6\tcrit\t-\n10:52\t386\t1992\t149\t81\t593\t2630\t1963\t4246\t291\t2325\t37\t139\t66.1\tcrit\t-\n10:54\t391\t1873\t140\t93\t629\t2683\t1856\t4331\t287\t2415\t42\t139\t61\tcrit\t-\n10:56\t396\t1864\t144\t82\t609\t2595\t1939\t4169\t311\t2440\t42\t142\t62.2\tcrit\t-\n10:58\t384\t1821\t133\t99\t611\t2667\t1968\t4200\t299\t2445\t40\t141\t65.4\tcrit\t-\n11:00\t214\t893\t462\t13\t185\t1839\t1294\t1752\t929\t290\t113\t522\t22.7\twarn\tcrit\n11:02\t213\t898\t498\t13\t177\t1838\t1284\t1671\t901\t287\t123\t521\t22.9\twarn\tcrit\n11:04\t225\t895\t506\t12\t176\t1806\t1292\t1718\t943\t286\t112\t514\t22.2\twarn\tcrit\n11:06\t230\t941\t466\t13\t177\t1733\t1322\t1693\t925\t291\t109\t525\t21.4\twarn\tcrit\n11:08\t39\t258\t3\t12\t169\t1826\t1274\t1647\t1581\t309\t126\t982\t3.9\t-\t-\n11:10\t40\t252\t3\t13\t174\t1815\t1288\t1748\t1656\t300\t112\t967\t4.1\t-\t-\n11:12\t40\t251\t3\t12\t192\t1831\t1289\t1737\t1638\t295\t108\t997\t4.1\t-\t-\n11:14\t39\t249\t3\t13\t176\t1792\t1278\t1697\t1657\t305\t121\t958\t3.9\t-\t-\n11:16\t40\t266\t3\t12\t185\t1754\t1270\t1642\t1611\t307\t115\t980\t4.1\t-\t-\n11:18\t39\t58\t3\t12\t176\t1768\t1333\t1751\t1527\t305\t110\t1255\t0.4\t-\t-\n11:20\t39\t61\t3\t12\t183\t1746\t1300\t1636\t1648\t301\t122\t1264\t0.4\t-\t-\n11:22\t39\t57\t3\t11\t179\t1738\t1298\t1710\t1576\t302\t125\t1259\t0.4\t-\t-\n11:24\t40\t58\t3\t13\t174\t1776\t1323\t1719\t1618\t294\t116\t1223\t0.4\t-\t-\n11:26\t41\t60\t3\t11\t190\t1841\t1327\t1718\t1623\t289\t112\t1254\t0.4\t-\t-\n11:28\t40\t58\t3\t12\t192\t1854\t1260\t1756\t1595\t311\t115\t1230\t0.4\t-\t-",
+    "step": 900,
+    "window": 12,
+    "start": "start",
+    "events": [
+      {
+        "time": "10:40",
+        "label": "auth 5.4 deployed",
+        "tone": "info",
+        "nodes": [
+          "auth"
+        ]
+      },
+      {
+        "time": "10:42",
+        "label": "First 503s on /login",
+        "tone": "crit",
+        "nodes": [
+          "auth",
+          "gateway"
+        ]
+      },
+      {
+        "time": "10:56",
+        "label": "Rollback to 5.3",
+        "tone": "warn",
+        "nodes": [
+          "auth"
+        ]
+      },
+      {
+        "time": "11:02",
+        "label": "Redis saturated by retries",
+        "tone": "crit",
+        "nodes": [
+          "redis"
+        ]
+      },
+      {
+        "time": "11:08",
+        "label": "Redis failover",
+        "tone": "warn",
+        "nodes": [
+          "redis"
+        ]
+      },
+      {
+        "time": "11:16",
+        "label": "Errors below 5%",
+        "tone": "good",
+        "nodes": [
+          "auth"
+        ]
+      }
+    ]
+  },
+  "tour": {
+    "title": "What happened",
+    "steps": [
+      {
+        "title": "The path of a login",
+        "body_html": "<p>The web and the app call the gateway, which sends each <code>POST /login</code> to the identity service. It checks the session in Redis and the credentials in the user database.</p>",
+        "focus": {
+          "nodes": [
+            "web",
+            "app",
+            "gateway",
+            "auth"
+          ],
+          "edges": [
+            "e-web-gw",
+            "e-app-gw",
+            "e-gw-auth"
+          ]
+        }
+      },
+      {
+        "title": "10:42 · the pool runs dry",
+        "body_html": "<p>Version 5.4 stopped using the cache: every login goes to the database and the 400-connection pool fills up in two minutes.</p>",
+        "focus": {
+          "nodes": [
+            "auth",
+            "users-db"
+          ],
+          "edges": [
+            "e-auth-db"
+          ]
+        },
+        "select": "users-db"
+      },
+      {
+        "title": "How far it reaches",
+        "body_html": "<p>Press <b>✺ Impact</b> on the identity service: everything that needs to log in goes down with it.</p>",
+        "focus": {
+          "nodes": [
+            "auth"
+          ]
+        },
+        "select": "auth"
+      },
+      {
+        "title": "11:02 · the storm",
+        "body_html": "<p>After the rollback, clients retry without waiting and saturate Redis. The failover to the replica resolves it at 11:08.</p>",
+        "focus": {
+          "nodes": [
+            "auth",
+            "redis"
+          ],
+          "edges": [
+            "e-auth-redis"
+          ]
+        }
+      },
+      {
+        "title": "What changes",
+        "body_html": "<p>Load testing in CI, retries with exponential backoff, a pool alert and an automatic canary.</p>",
+        "focus": {
+          "nodes": [
+            "acciones"
+          ]
+        },
+        "select": "acciones"
+      }
+    ]
+  }
+}

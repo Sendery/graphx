@@ -1,0 +1,29 @@
+---
+title: CI/CD de pagos-api
+config:
+  theme: neutral
+---
+flowchart LR
+  %% Mermaid válido con datos de GraphX: duración de cada etapa como calor, progreso del canario, equipos y paneles.
+  %% @gx { "owners": { "plataforma": { "label": "Plataforma", "short": "PL" }, "qa": { "label": "Calidad", "short": "QA" }, "pagos": { "label": "Equipo Pagos", "short": "PG" } } }
+  %% @gx { "fx": { "particles": true, "heat": { "label": "Duración", "unit": "min", "domain": [0, 20], "scheme": "heat" } } }
+  commit([Push a main]) e1@--> build[Build]
+  build@{ heat: 4, owner: plataforma, spark: "6 5 5 4 4 5 4 4", unit: "min" }
+  build e2@--> unit[[Tests unitarios]]
+  build e3@--> integ[[Tests de integración]]
+  unit@{ heat: 3, owner: qa }
+  integ@{ heat: 14, owner: qa, alert: warn }
+  unit --> scan{¿Seguridad OK?}
+  integ --> scan
+  scan -->|sí| staging[(Staging)]
+  scan -->|no| bloqueo>Bloqueado]
+  staging e4@--> canary[/Canario 10 %/]
+  canary@{ progress: 0.4, owner: pagos, heat: 9 }
+  canary e5@==> prod[(Producción)]
+  e1@{ rate: 30 }
+  e2@{ rate: 30, speed: fast }
+  e3@{ rate: 30 }
+  e4@{ rate: 12 }
+  e5@{ rate: 12, animation: slow }
+  %% @gx integ { "summary": "Levanta Postgres y Kafka en contenedores y ejecuta 1 840 pruebas.", "blocks": [ { "type": "table", "columns": ["Suite", "Pruebas", "Fallos"], "rows": [["pagos", 920, 0], ["webhooks", 510, { "v": 2, "tone": "warn" }], ["conciliación", 410, 0]] }, { "type": "chart", "kind": "bar", "title": "Duración de las últimas ejecuciones (min)", "labels": ["#481", "#482", "#483", "#484", "#485", "#486"], "series": [ { "label": "integración", "values": [11, 12, 12, 13, 15, 14] } ] } ] }
+  %% @gx canary { "blocks": [ { "type": "progress", "items": [ { "label": "Tráfico al canario", "value": 0.1 }, { "label": "Tiempo de observación", "value": 0.4 } ] }, { "type": "stats", "items": [ { "label": "Errores canario", "value": "0,2", "unit": "%" }, { "label": "Errores estable", "value": "0,3", "unit": "%" } ] } ] }

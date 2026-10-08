@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GraphX</title>
+<link rel="stylesheet" href="/viewer/viewer.css">
+<script src="/vendor/graphx.bundle.min.js"></script>
+</head>
+<body>
+<header class="lv-bar">
+  <span class="lv-dot" id="lv-dot" title="Sin conexión"></span>
+  <strong class="lv-title" id="lv-title">GraphX</strong>
+  <span class="lv-meta" id="lv-meta">esperando a Claude…</span>
+  <span class="lv-sp"></span>
+  <button type="button" class="lv-btn" id="lv-signs" aria-pressed="true" title="Mostrar u ocultar los carteles (S)">Carteles</button>
+  <button type="button" class="lv-btn" id="lv-theme" title="Tema claro u oscuro (T)">◐</button>
+</header>
+<div class="lv-banner" id="lv-banner" hidden></div>
+<main class="lv-stage" id="lv-stage">
+  <div class="lv-host" id="lv-host"></div>
+  <svg class="lv-leaders" id="lv-leaders" aria-hidden="true"></svg>
+  <div class="lv-signs" id="lv-layer"></div>
+  <aside class="lv-board" id="lv-board" hidden></aside>
+  <div class="lv-empty" id="lv-empty">
+    <div class="lv-empty-in">
+      <h1>Lienzo en vivo</h1>
+      <p>Pide a Claude que dibuje algo: un diagrama de arquitectura, un flujo en Mermaid, el árbol de un repo…
+        Aparecerá aquí al momento, con sus carteles y su recorrido.</p>
+    </div>
+  </div>
+  <div class="lv-err" id="lv-err" hidden></div>
+</main>
+<script src="/viewer/board.js"></script>
+<script src="/viewer/viewer.js"></script>
+</body>
+</html>

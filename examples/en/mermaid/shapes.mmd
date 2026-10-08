@@ -1,0 +1,25 @@
+---
+title: Flowchart shapes
+---
+flowchart LR
+    inicio@{ shape: sm-circ, label: "Start" } --> pedido@{ shape: rect, label: "Receive order" }
+    pedido --> revisar@{ shape: rounded, label: "Review details" }
+    revisar --> ok@{ shape: diam, label: "Complete?" }
+    ok -- No --> pedir@{ shape: lean-r, label: "Request what is missing" }
+    pedir --> espera@{ shape: delay, label: "Wait for reply" }
+    espera --> revisar
+    ok -- Yes --> preparar@{ shape: hex, label: "Prepare shipment" }
+    preparar --> stock@{ shape: cyl, label: "Stock" }
+    preparar --> cola@{ shape: h-cyl, label: "Shipping queue" }
+    cola --> reparto@{ shape: fr-rect, label: "Delivery" }
+    reparto --> manual@{ shape: trap-t, label: "Manual signature" }
+    manual --> fusion@{ shape: fork, label: "Join" }
+    reparto --> albaran@{ shape: doc, label: "Delivery note" }
+    albaran --> fusion
+    fusion --> extraer@{ shape: tri, label: "Extract data" }
+    extraer --> cotejar@{ shape: hourglass, label: "Cross-check" }
+    cotejar --> nube@{ shape: cloud, label: "Cloud backup" }
+    cotejar --> fin@{ shape: fr-circ, label: "End" }
+    nube -.- aviso@{ shape: comment, label: "Kept for 30 days, then deleted" }
+    classDef entrada stroke:#1a7f37,fill:#e6f4ea
+    class inicio,pedido entrada

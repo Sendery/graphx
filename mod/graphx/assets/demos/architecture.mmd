@@ -1,0 +1,11 @@
+architecture-beta
+    group api(cloud)[API]
+    service db(database)[Base de datos] in api
+    service disk1(disk)[Almacenamiento] in api
+    service server(server)[Servidor] in api
+    service gw(internet)[Pasarela]
+    junction j1
+    db:L -- R:server
+    disk1:T -- B:server
+    gw:R --> L:j1
+    j1:R --> L:server

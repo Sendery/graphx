@@ -153,8 +153,12 @@ for (const f of fs.readdirSync(EX).filter(f => f.endsWith('.mmd')).sort()) {
   const text = fs.readFileSync(path.join(EX, f), 'utf8');
   console.log(`— ${name} —`);
   if (name === 'pie') {
-    let msg = ''; try { conv(text); } catch (e) { msg = e.message; }
-    ok(/gráfico de datos/.test(msg), 'pie se rechaza con un motivo');
+    const r = conv(text), n = r.spec.nodes[0];
+    ok(r.spec.nodes.length === 1 && n.shape === 'donut' && n.parts.length === 2 && n.parts[0].value === 386, 'pie → una pieza donut con sus partes');
+    ok(r.spec.title === 'Mascotas' && n.label === 'Mascotas', 'pie: el título da nombre al donut');
+    ok(n.blocks[0].type === 'bars' && n.blocks[0].items[0].label === 'Perros', 'pie: el panel lleva el ranking completo');
+    let msg = ''; try { conv('xychart-beta\n  bar [1, 2]'); } catch (e) { msg = e.message; }
+    ok(/gráfico de datos/.test(msg), 'xychart se rechaza con un motivo');
     continue;
   }
   let r;
@@ -197,7 +201,7 @@ if (process.argv.includes('--mount')) {
   console.log('— montaje en jsdom —');
   const { JSDOM } = await import('jsdom');
   const R = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
-  const blocks = fs.readdirSync(EX).filter(f => f.endsWith('.mmd') && f !== 'pie.mmd').sort()
+  const blocks = fs.readdirSync(EX).filter(f => f.endsWith('.mmd')).sort()
     .map(f => `<div data-gx data-name="${f}"><script type="text/plain" class="gx-mermaid">${R('examples/mermaid/' + f).replace(/<\/script/gi, '<\\/script')}</script></div>`).join('\n');
   const html = `<!doctype html><html><head><style>${R('graphx.css')}</style></head><body>${blocks}
 <script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx-layouts.js')}</script><script>${R('graphx.js')}</script><script>${R('graphx-mermaid.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;

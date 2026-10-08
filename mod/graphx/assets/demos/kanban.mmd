@@ -1,0 +1,13 @@
+---
+config:
+  kanban:
+    ticketBaseUrl: 'https://example.atlassian.net/browse/#TICKET#'
+---
+kanban
+  todo[Por hacer]
+    t1[Diseñar la API]@{ ticket: PRJ-1, assigned: 'ana', priority: 'High' }
+    t2[Escribir tests]
+  doing[En curso]
+    t3[Conversor de Mermaid]@{ ticket: PRJ-7, priority: 'Very High' }
+  done[Hecho]
+    t4[Layout con ELK]@{ assigned: 'luis', priority: 'Low' }

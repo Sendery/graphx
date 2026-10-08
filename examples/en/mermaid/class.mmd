@@ -1,0 +1,28 @@
+classDiagram
+    direction TB
+    namespace Domain {
+        class Animal {
+            <<abstract>>
+            +String name
+            +int age
+            +makeSound()* void
+        }
+        class Perro["Dog"]
+        class Gato["Cat"]
+    }
+    class Collar~T~
+    class Veterinario["Veterinary clinic"]
+    class Hueso["Bone"]
+    class Nadador["Swimmer"]
+    Animal <|-- Perro
+    Animal <|-- Gato
+    Perro "1" *-- "0..1" Collar : wears
+    Veterinario "1" o-- "*" Animal : treats
+    Perro ..> Hueso : uses
+    Nadador <|.. Perro
+    <<interface>> Nadador
+    Perro : +bark() void
+    Perro : +String breed
+    Nadador : +swim()
+    note for Perro "Man's best friend"
+    style Gato fill:#f9f,stroke:#333

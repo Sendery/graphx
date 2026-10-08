@@ -78,18 +78,73 @@ section { display: flex; flex-direction: column; gap: 18px; }
 .stage-host { --gx-h: min(64vh, 580px); }
 .stage-host.short { --gx-h: min(58vh, 520px); }
 
-/* Mermaid */
-.mmd { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 18px; align-items: stretch; }
-.panes { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* Diagramas: tipos, vistas, código y colores */
+.dg-pick { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 14px; align-items: center; }
+.lab { font: 600 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.tchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tchip { font: 500 12.5px var(--f-mono); padding: 5px 11px; border-radius: 99px; border: 1px solid var(--hairline); background: var(--panel); color: var(--ink); cursor: pointer; }
+.tchip:hover { border-color: var(--muted); }
+.tchip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+.tchip.rich { font-family: var(--f-body); font-size: 13px; }
+.tchip.rich::before { content: "◆ "; color: var(--signal); }
+.tchip.rich[aria-pressed="true"]::before { color: inherit; }
+.dg-work { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.dg-work.nocode { grid-template-columns: minmax(0, 1fr); }
 .src { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.src textarea { flex: 1; min-height: 420px; resize: vertical; font: 12.5px/1.55 var(--f-mono); color: var(--ink); background: var(--code); border: 1px solid var(--hairline); border-radius: 12px; padding: 12px; }
-.src select { font: 500 14px var(--f-body); padding: 7px 9px; border-radius: 10px; border: 1px solid var(--hairline); background: var(--panel); color: var(--ink); }
+.src-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.src textarea { min-height: 460px; resize: vertical; font: 12px/1.55 var(--f-mono); color: var(--ink); background: var(--code); border: 1px solid var(--hairline); border-radius: 12px; padding: 12px; tab-size: 4; }
+.btn.run { background: var(--accent-ink); border-color: var(--accent-ink); color: var(--panel); padding: 6px 12px; }
+.msgs { display: flex; flex-direction: column; gap: 6px; }
+.msg { font-size: 12.5px; padding: 7px 10px; border-radius: 8px; background: color-mix(in srgb, var(--signal) 12%, var(--panel)); color: var(--signal); overflow-wrap: anywhere; }
+.dg-stage { container-type: inline-size; min-width: 0; --dg-h: min(70vh, 640px); }
+.dg-panes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@container (min-width: 760px) { .dg-stage[data-view="both"] .dg-panes, .dg-stage[data-view="fx"] .dg-panes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.dg-stage:not([data-view="fx"]) .pane-off, .dg-stage[data-view="fx"] .pane-mmd, .dg-stage[data-view="graphx"] .pane-mmd, .dg-stage[data-view="mermaid"] .pane-gx { display: none; }
 .pane { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.pane h3 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
-.pane h3 .seg button { font-size: 12.5px; padding: 5px 10px; }
+.pane h3 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: baseline; }
 .pane h3 small { font: 500 12px var(--f-mono); color: var(--muted); }
-.pane .gx-host { --gx-h: 340px; }
+.dg-panes .gx-host { --gx-h: var(--dg-h); }
+.mmd-body { height: var(--dg-h); box-sizing: border-box; overflow: auto; background: var(--panel); border: 1px solid var(--hairline); border-radius: 14px; padding: 16px; display: grid; place-items: center; }
+.mmd-body svg { max-width: 100%; height: auto; }
+.mmd-note { max-width: 46ch; text-align: center; font-size: 14px; color: var(--muted); }
+.mmd-note.err { color: var(--signal); text-align: left; font: 12px/1.5 var(--f-mono); white-space: pre-wrap; }
+.gx-empty { height: var(--dg-h); box-sizing: border-box; display: grid; place-items: center; text-align: center; padding: 24px; border: 1px dashed var(--hairline); border-radius: 14px; color: var(--muted); font-size: 14px; }
 .err { color: var(--signal); font: 13px var(--f-mono); }
+.colors { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; background: var(--surface-2); border-radius: 12px; padding: 14px; }
+.cgroup { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cgroup-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cgroup p { font-size: 13px; color: var(--muted); }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+.sw { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 8px 5px 5px; border-radius: 8px; background: var(--panel); font-size: 13px; }
+.sw input[type="color"] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--hairline); border-radius: 6px; background: none; cursor: pointer; }
+.sw .hex { font: 11px var(--f-mono); color: var(--muted); }
+.sw.set .hex { color: var(--accent-ink); }
+kbd { font: 500 11.5px var(--f-mono); padding: 1px 6px; border-radius: 5px; border: 1px solid var(--hairline); background: var(--panel); color: var(--ink); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+/* Formas: el catálogo de React */
+.dots { display: inline-flex; gap: 7px; align-items: center; min-height: 34px; }
+.cdot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--hairline); cursor: pointer; padding: 0; }
+.cdot[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent-ink); }
+.cdot.none { background: repeating-linear-gradient(45deg, var(--surface-2) 0 4px, var(--panel) 4px 8px); }
+.catalog, .catalog > .gx.gx-scope { display: flex; flex-direction: column; gap: 40px; }
+.cat-group { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 80px; }
+.cat-group h3 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; display: flex; gap: 10px; align-items: baseline; }
+.cat-group h3 small { font: 500 12px var(--f-mono); color: var(--muted); }
+.cat-group > p { color: var(--muted); font-size: 14.5px; max-width: 80ch; }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; }
+.cat-item { margin: 0; background: var(--panel); border: 1px solid var(--hairline); border-radius: 14px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cat-fig { min-height: 124px; display: grid; place-items: center; overflow-x: auto; }
+.cat-fig svg { max-width: 100%; height: auto; overflow: visible; }
+.cat-name { font: 600 12.5px var(--f-mono); color: var(--accent-ink); }
+.cat-hint { font: 11.5px var(--f-mono); color: var(--muted); overflow-wrap: anywhere; }
+.gx.gx-scope { display: block; gap: 0; font: inherit; color: inherit; }
+
+/* Árbol */
+.keys { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); min-height: 34px; align-items: center; }
+.tree-host { min-width: 0; }
+.tree-host .gx-host { --gx-h: min(76vh, 760px); }
 
 /* notas de uso */
 .how { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 0; margin: 0; list-style: none; color: var(--muted); font-size: 14.5px; }
@@ -115,7 +170,7 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
 
 @media (max-width: 980px) {
   .hero, .sh, .ref { grid-template-columns: minmax(0, 1fr); }
-  .mmd { grid-template-columns: minmax(0, 1fr); }
+  .dg-work, .dg-pick { grid-template-columns: minmax(0, 1fr); }
   .src textarea { min-height: 220px; }
 }
 @media (max-width: 520px) {
@@ -132,13 +187,15 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
 .tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-block: 10px; margin-block: -10px;
   background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
 .tabs::-webkit-scrollbar { display: none; }
-.tabs button { flex: none; font: 600 14.5px var(--f-body); padding: 9px 16px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
-.tabs button small { font: 500 11px var(--f-mono); color: var(--muted); opacity: .8; }
+.tabs button { flex: none; font: 600 14.5px var(--f-body); padding: 9px 13px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.tabs button small { font: 500 11px var(--f-mono); color: var(--muted); opacity: .8; padding: 1px 6px; border-radius: 99px; background: var(--surface-2); }
 .tabs button:hover { color: var(--ink); background: var(--surface-2); }
 .tabs button[aria-selected="true"] { color: var(--panel); background: var(--ink); }
-.tabs button[aria-selected="true"] small { color: var(--panel); }
+.tabs button[aria-selected="true"] small { color: var(--panel); background: color-mix(in srgb, var(--panel) 18%, transparent); }
 .tabpanel { display: flex; flex-direction: column; gap: 56px; }
 .tabpanel[hidden] { display: none; }
+/* el atributo hidden manda sobre el display de cada bloque (.colors, .src…), también fuera del artifact */
+[hidden] { display: none !important; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; }
 /* Mermaid enriquecido: el código al lado del dibujo */
 .split { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 18px; align-items: stretch; }
@@ -175,7 +232,7 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
 .ex code { font-size: 11.5px; color: var(--accent-ink); }
 .tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .tags i { font: 500 11px var(--f-mono); font-style: normal; padding: 1px 7px; border-radius: 99px; background: var(--accent-wash); color: var(--accent-ink); }
-.exview { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.exview { display: flex; flex-direction: column; gap: 10px; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); }
 .exview .gx-host { --gx-h: min(66vh, 600px); }
 /* guía */
 .guide { display: flex; flex-direction: column; gap: 14px; }
@@ -186,33 +243,36 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
 .grpn { font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); }
 .goto { font: 600 12.5px var(--f-body); color: var(--accent-ink); background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; }
 .goto:hover { text-decoration: underline; }
-@media (max-width: 980px) { .split { grid-template-columns: minmax(0, 1fr); } .split pre { max-height: 260px; } .exs { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 980px) { .exview { position: static; } .split { grid-template-columns: minmax(0, 1fr); } .split pre { max-height: 260px; } .exs { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .icon:hover svg path { animation: none; } }
 </style>
 
 <div class="wrap">
   <header class="hero">
     <div>
-      <div class="eyebrow">GraphX 1.9 · efectos, datos en vivo y piezas ricas</div>
+      <div class="eyebrow">GraphX 1.9 · showcase</div>
       <h1>Diagramas que se mueven <em>con sus datos</em></h1>
     </div>
     <div>
-      <p class="lede">Un mapa de servicios con su día de tráfico, equipos, radio de impacto y paneles con gráficos; una galería con cada clase de pieza; Mermaid igual de rico. Todo sale del mismo JSON y cada efecto se enciende o se apaga con <code>fx</code>.</p>
+      <p class="lede">Todo lo que dibuja GraphX en una página: casos de uso reales, los 19 tipos de Mermaid frente a Mermaid, cada forma y cada pieza, árboles de ficheros y efectos en vivo. Todo sale del mismo JSON y cada efecto se enciende o se apaga con <code>fx</code>.</p>
       <ul class="facts">
-        <li><b>__FXKB__ KB</b><span>los efectos, minificados · __FXGZ__ KB con gzip</span></li>
-        <li><b>0</b><span>dependencias nuevas</span></li>
-        <li><b>fx: false</b><span>el diagrama de siempre</span></li>
+        <li><b>19</b><span>tipos de diagrama Mermaid</span></li>
+        <li><b>__NSHAPES__</b><span>formas y piezas</span></li>
+        <li><b>24</b><span>bloques para el panel</span></li>
+        <li><b>__FXKB__ KB</b><span>los efectos · __FXGZ__ KB con gzip</span></li>
       </ul>
     </div>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Secciones">
-    <button type="button" role="tab" id="t-software" aria-controls="p-software" aria-selected="true">Software <small>servicios · tiempo · impacto</small></button>
-    <button type="button" role="tab" id="t-galeria" aria-controls="p-galeria" aria-selected="false">Galería <small>piezas · bloques · iconos</small></button>
-    <button type="button" role="tab" id="t-vivo" aria-controls="p-vivo" aria-selected="false">En vivo <small>efectos y presets</small></button>
-    <button type="button" role="tab" id="t-ejemplos" aria-controls="p-ejemplos" aria-selected="false">Ejemplos <small>del repositorio</small></button>
-    <button type="button" role="tab" id="t-mermaid" aria-controls="p-mermaid" aria-selected="false">Mermaid</button>
-    <button type="button" role="tab" id="t-referencia" aria-controls="p-referencia" aria-selected="false">Guía <small>assets · efectos</small></button>
+    <button type="button" role="tab" id="t-software" aria-controls="p-software" aria-selected="true">Software <small>mapa</small></button>
+    <button type="button" role="tab" id="t-ejemplos" aria-controls="p-ejemplos" aria-selected="false">Casos de uso <small>__NEX__</small></button>
+    <button type="button" role="tab" id="t-diagramas" aria-controls="p-diagramas" aria-selected="false">Diagramas <small>19</small></button>
+    <button type="button" role="tab" id="t-galeria" aria-controls="p-galeria" aria-selected="false">Piezas <small>24</small></button>
+    <button type="button" role="tab" id="t-formas" aria-controls="p-formas" aria-selected="false">Formas <small>__NSHAPES__</small></button>
+    <button type="button" role="tab" id="t-arbol" aria-controls="p-arbol" aria-selected="false">Árbol <small>repo</small></button>
+    <button type="button" role="tab" id="t-vivo" aria-controls="p-vivo" aria-selected="false">En vivo <small>fx</small></button>
+    <button type="button" role="tab" id="t-referencia" aria-controls="p-referencia" aria-selected="false">Guía <small>ref</small></button>
   </nav>
 
   <!-- ===================== SOFTWARE ===================== -->
@@ -313,8 +373,8 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
   <div class="tabpanel" role="tabpanel" id="p-ejemplos" aria-labelledby="t-ejemplos" hidden>
     <section aria-labelledby="h-ex">
       <div class="sh">
-        <div><span class="kicker">Ejemplos del repositorio</span><h2 id="h-ex">Un caso de uso por diagrama</h2></div>
-        <p>Cada ejemplo está en <code>examples/</code> y se construye con <code>node graphx-build.mjs &lt;fichero&gt;</code>. Elige uno: se monta aquí al lado, con sus datos, su recorrido y sus efectos.</p>
+        <div><span class="kicker">Casos de uso</span><h2 id="h-ex">Problemas reales, un diagrama cada uno</h2></div>
+        <p>Un postmortem, un pipeline de datos, un clúster, un despliegue, un almacén, un proceso de RR. HH., la revisión de una PR… Cada ejemplo está en <code>examples/</code> y se construye con <code>node graphx-build.mjs &lt;fichero&gt;</code>. Elige uno: se monta aquí al lado, con sus datos, su recorrido y sus efectos.</p>
       </div>
       <div class="exs">
         <div class="exlist" id="ex-list" role="group" aria-label="Ejemplos"></div>
@@ -323,23 +383,106 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
     </section>
   </div>
 
-  <!-- ===================== MERMAID ===================== -->
-  <div class="tabpanel" role="tabpanel" id="p-mermaid" aria-labelledby="t-mermaid" hidden>
-    <section aria-labelledby="h-mmd">
+  <!-- ===================== DIAGRAMAS ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-diagramas" aria-labelledby="t-diagramas" hidden>
+    <section aria-labelledby="h-dg">
       <div class="sh">
-        <div><span class="kicker">Desde Mermaid</span><h2 id="h-mmd">El mismo Mermaid, con y sin efectos</h2></div>
-        <p>El conversor lee el tema de la cabecera, dibuja a mano con <code>look: handDrawn</code>, respeta la velocidad de <code>animation: fast</code> y acepta datos ricos en <code>@{…}</code> y <code>%% @gx</code>. Edita el código: los dos lados se rehacen.</p>
+        <div><span class="kicker">Desde Mermaid</span><h2 id="h-dg">Los 19 tipos de Mermaid, dibujados por GraphX</h2></div>
+        <p>El mismo código, por GraphX y por Mermaid. Elige un tipo, compáralos lado a lado o con y sin efectos, cambia los colores en vivo o pega tu propio diagrama y conviértelo con <kbd>Ctrl</kbd> + <kbd>Enter</kbd>. Los de «Con datos» llevan calor, series, equipos y paneles en <code>@{…}</code> y <code>%% @gx</code>, y siguen siendo Mermaid válido.</p>
       </div>
-      <div class="mmd">
-        <div class="src">
-          <label class="kicker" for="mmd-pick" style="margin:0">Ejemplo</label>
-          <select id="mmd-pick"></select>
-          <textarea id="mmd-src" spellcheck="false" aria-label="Código de Mermaid"></textarea>
-          <div class="err" id="mmd-err" role="status"></div>
+      <div class="console">
+        <div class="dg-pick">
+          <span class="lab">Tipos</span><div class="tchips" id="dg-types" role="group" aria-label="Tipos de diagrama"></div>
+          <span class="lab">Con datos</span><div class="tchips" id="dg-rich" role="group" aria-label="Diagramas con datos de GraphX"></div>
         </div>
-        <div class="panes">
-          <div class="pane"><h3>Sin efectos <small>fx: false</small></h3><div class="gx-host" id="g-mmd-off"></div></div>
-          <div class="pane"><h3>Con efectos <small id="mmd-fx">fx: "neon"</small><span class="seg" role="group" aria-label="Preset del panel con efectos" id="mmd-presets" style="margin-left:auto"></span></h3><div class="gx-host" id="g-mmd-on"></div></div>
+        <div class="ctl">
+          <div class="grp"><span class="lab" id="l-dgv">Vista</span><div class="seg" role="group" aria-labelledby="l-dgv" id="dg-view">
+            <button type="button" data-v="graphx">GraphX</button><button type="button" data-v="both">GraphX y Mermaid</button><button type="button" data-v="fx">Con y sin efectos</button><button type="button" data-v="mermaid">Mermaid</button>
+          </div></div>
+          <div class="grp"><span class="lab" id="l-dgp">Efectos de GraphX</span><div class="seg" role="group" aria-labelledby="l-dgp" id="dg-presets"></div></div>
+          <div class="grp"><span class="lab">Paneles</span><div class="row">
+            <button type="button" class="btn" id="dg-tcode" aria-expanded="false" aria-controls="dg-src">Editar el código</button>
+            <button type="button" class="btn" id="dg-tcolors" aria-expanded="false" aria-controls="dg-colors">Colores</button>
+          </div></div>
+        </div>
+        <div class="cfg"><code id="dg-stat"></code><span id="dg-kind">flowchart</span></div>
+        <div class="colors" id="dg-colors" hidden>
+          <div class="cgroup">
+            <div class="cgroup-h"><span class="lab">Tema</span><button type="button" class="goto" id="dg-reset-theme">Restablecer</button></div>
+            <p>Los tokens de GraphX: se aplican al instante y valen para todos los diagramas.</p>
+            <div class="swatches" id="dg-theme-sw"></div>
+          </div>
+          <div class="cgroup">
+            <div class="cgroup-h"><span class="lab">Tipos de pieza de este diagrama</span><button type="button" class="goto" id="dg-reset-kinds">Restablecer</button></div>
+            <p id="dg-kinds-help">Tiñen la barra, el icono y el borde de cada pieza de ese tipo.</p>
+            <div class="swatches" id="dg-kind-sw"></div>
+          </div>
+        </div>
+        <div class="dg-work nocode" id="dg-work">
+          <div class="src" id="dg-src" hidden>
+            <div class="src-h"><label class="lab" for="dg-code">Código Mermaid</label><button type="button" class="btn run" id="dg-run">Convertir</button></div>
+            <textarea id="dg-code" spellcheck="false"></textarea>
+            <div class="msgs" id="dg-msgs" role="status"></div>
+          </div>
+          <div class="dg-stage" id="dg-stage" data-view="both">
+            <div class="dg-panes">
+              <div class="pane pane-off"><h3>GraphX <small>fx: false</small></h3><div class="gx-host" id="g-dg-off"></div></div>
+              <div class="pane pane-gx"><h3>GraphX <small id="dg-fxlab"></small></h3><div class="gx-host" id="g-dg"></div></div>
+              <div class="pane pane-mmd"><h3>Mermaid <small>11.17.0</small></h3><div class="mmd-body" id="dg-mmd"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== FORMAS ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-formas" aria-labelledby="t-formas" hidden>
+    <section aria-labelledby="h-fm">
+      <div class="sh">
+        <div><span class="kicker">Catálogo de formas</span><h2 id="h-fm">Cada forma, suelta y en React</h2></div>
+        <p>Las __NSHAPES__ formas de GraphX dibujadas con <code>GraphXShape</code> (<code>react/graphx-react.js</code>) a partir del mismo árbol SVG que usa el motor: se ven igual dentro y fuera de un diagrama. Debajo de cada una, cómo se pide desde Mermaid o desde el JSON. React se carga de cdnjs al abrir esta pestaña.</p>
+      </div>
+      <div class="console">
+        <div class="ctl">
+          <div class="grp"><span class="lab" id="l-fst">Estado</span><div class="seg" role="group" aria-labelledby="l-fst" id="fm-state">
+            <button type="button" data-v="">Normal</button><button type="button" data-v="lit">Iluminada</button><button type="button" data-v="sel">Seleccionada</button></div></div>
+          <div class="grp"><span class="lab" id="l-fdl">Cambio</span><div class="seg" role="group" aria-labelledby="l-fdl" id="fm-delta">
+            <button type="button" data-v="unchanged">Sin cambios</button><button type="button" data-v="added">Nueva</button><button type="button" data-v="removed">Eliminada</button></div></div>
+          <div class="grp"><span class="lab" id="l-fcl">Color</span><div class="dots" role="group" aria-labelledby="l-fcl" id="fm-color"></div></div>
+          <div class="grp"><span class="lab" id="l-fdr">Sentido</span><div class="seg" role="group" aria-labelledby="l-fdr" id="fm-dir">
+            <button type="button" data-v="right" aria-label="Horizontal">→</button><button type="button" data-v="down" aria-label="Vertical">↓</button></div></div>
+        </div>
+        <nav class="tchips" id="fm-nav" aria-label="Familias de formas"></nav>
+      </div>
+      <div id="catalog" class="catalog"><p class="muted">Cargando React…</p></div>
+    </section>
+  </div>
+
+  <!-- ===================== ÁRBOL ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-arbol" aria-labelledby="t-arbol" hidden>
+    <section aria-labelledby="h-tr">
+      <div class="sh">
+        <div><span class="kicker">Árbol de ficheros</span><h2 id="h-tr">Un repositorio que se navega como carpetas</h2></div>
+        <p>Una carpeta plegada agrupa (cuántos ficheros, de qué tipo, cuánto ha cambiado); abierta, es una cabecera de la que cuelgan sus hijos. Buscar o «Solo cambios» filtra el árbol y deja abiertas solo las ramas que llevan a lo que coincide. Aquí, este repositorio con los cambios de la rama; o pega la salida de <code>tree</code>, una ruta por línea o un <code>git diff --numstat</code>.</p>
+      </div>
+      <div class="console">
+        <div class="ctl">
+          <div class="grp"><span class="lab" id="l-trs">Qué árbol</span><div class="seg" role="group" aria-labelledby="l-trs" id="tr-src">
+            <button type="button" data-v="repo">Este repositorio</button><button type="button" data-v="paste">Pegar un árbol</button></div></div>
+          <div class="grp"><span class="lab" id="l-trp">Piel</span><div class="seg" role="group" aria-labelledby="l-trp" id="tr-skin">
+            <button type="button" data-v="calm">Normal</button><button type="button" data-v="neon">Neon</button><button type="button" data-v="blueprint">Blueprint</button><button type="button" data-v="glass">Glass</button></div></div>
+          <div class="grp"><span class="lab">Atajos</span><div class="keys"><span><kbd>↑</kbd> <kbd>↓</kbd> moverse</span><span><kbd>→</kbd> abrir</span><span><kbd>←</kbd> plegar</span><span><kbd>espacio</kbd> detalle</span><span><kbd>/</kbd> buscar</span></div></div>
+        </div>
+        <div class="cfg"><code id="tr-stat"></code><span>layout: tree</span></div>
+        <div class="dg-work nocode" id="tr-work">
+          <div class="src" id="tr-box" hidden>
+            <div class="src-h"><label class="lab" for="tr-code">Árbol de entrada</label><button type="button" class="btn run" id="tr-run">Dibujar</button></div>
+            <textarea id="tr-code" spellcheck="false"></textarea>
+            <p class="muted small">Acepta la salida de <code>tree</code> (también <code>tree -h</code>), una ruta por línea, o <code>git diff --name-status</code> / <code>--numstat</code>.</p>
+            <div class="msgs" id="tr-msgs" role="status"></div>
+          </div>
+          <div class="tree-host"><div class="gx-host" id="g-tree"></div></div>
         </div>
       </div>
     </section>
@@ -350,7 +493,7 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
     <section aria-labelledby="h-assets">
       <div class="sh">
         <div><span class="kicker">Guía · 1</span><h2 id="h-assets">Qué se puede dibujar</h2></div>
-        <p>Los assets del motor, por familia. Cada fila dice para qué sirve y dónde verla en esta página; el detalle de cada campo está en <code>README.md</code> y en <code>docs/catalogo.md</code>.</p>
+        <p>Los assets del motor, por familia. Cada fila dice para qué sirve y dónde verla en esta página; el detalle de cada campo está en <code>docs/referencia.md</code> y en <code>docs/catalogo.md</code>.</p>
       </div>
       <div class="tbl"><table class="cls"><thead><tr><th>Familia</th><th>Qué incluye</th><th>Para qué</th><th></th></tr></thead><tbody id="cls-assets"></tbody></table></div>
     </section>
@@ -408,14 +551,16 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
     </section>
   </div>
 
-  <footer>GraphX 1.9 · motor de diagramas navegables. Todo el código de esta página, el motor y ELK van dentro: funciona sin red.</footer>
+  <footer>GraphX 1.9 · motor de diagramas navegables. El motor, ELK y los datos van dentro de esta página; solo la comparación con Mermaid (jsDelivr) y el catálogo de React (cdnjs) se cargan de la red al abrir sus pestañas.</footer>
 </div>
 
 <script>__ENGINE__</script>
+<script>__REACT_BRIDGE__</script>
 <script>
 (function () {
   'use strict';
   var DATA = __DATA__;
+  var LANG = '__LANG__';
   var GX = window.GraphX;
   if (GX.injectCSS) GX.injectCSS();
   if (GX.fx && GX.fx.injectCSS) GX.fx.injectCSS();
@@ -426,8 +571,15 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
   var visible = function (id) { return !$(id).hidden && !document.hidden; };
 
   /* ---------- pestañas: cada una se monta la primera vez que se abre ---------- */
-  var TABS = ['software', 'galeria', 'vivo', 'ejemplos', 'mermaid', 'referencia'], inited = {};
-  var INIT = { software: initSoftware, galeria: initGaleria, vivo: initVivo, ejemplos: initEjemplos, mermaid: initMermaid, referencia: initRef };
+  var TABS = ['software', 'ejemplos', 'diagramas', 'galeria', 'formas', 'arbol', 'vivo', 'referencia'], inited = {};
+  var INIT = { software: initSoftware, ejemplos: initEjemplos, diagramas: initDiagramas, galeria: initGaleria, formas: initFormas, arbol: initArbol, vivo: initVivo, referencia: initRef };
+  /* direcciones de versiones anteriores de la página */
+  var ALIAS = { mermaid: 'diagramas', shapes: 'formas', tree: 'arbol', casos: 'ejemplos', piezas: 'galeria' };
+  /* preferencias del lector (la vista, el tema de colores): solo comodidad, la página funciona sin ellas */
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem('gx-show-' + k); return v ? JSON.parse(v) : d; } catch (_) { return d; } },
+    set: function (k, v) { try { localStorage.setItem('gx-show-' + k, JSON.stringify(v)); } catch (_) { } }
+  };
   /* «Ver →» en la guía: abre la pestaña y baja a la sección */
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest && ev.target.closest('[data-goto]'); if (!b) return;
@@ -435,6 +587,7 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
     setTimeout(function () { var el = t[1] && $(t[1]); if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }, 60);
   });
   function show(name, focus) {
+    if (ALIAS[name]) name = ALIAS[name];
     if (TABS.indexOf(name) < 0) name = 'software';
     TABS.forEach(function (t) { var on = t === name; $('t-' + t).setAttribute('aria-selected', String(on)); $('t-' + t).tabIndex = on ? 0 : -1; $('p-' + t).hidden = !on; });
     if (!inited[name]) { inited[name] = true; INIT[name](); }
@@ -459,7 +612,7 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
     /* el Mermaid enriquecido, con su código al lado (los datos de GraphX resaltados) */
     var src = DATA.arquitectura;
     $('arq-src').innerHTML = src.split('\n').map(function (l) { return /%% @gx|@\{[^}]*(heat|spark|owner|rate|progress)/.test(l) ? '<span class="g">' + esc(l) + '</span>' : esc(l); }).join('\n');
-    try { GX.mountMermaid($('g-arq'), src, { lang: 'es', minimap: false }); } catch (e) { $('g-arq').textContent = e.message; }
+    try { GX.mountMermaid($('g-arq'), src, { lang: LANG, minimap: false }); } catch (e) { $('g-arq').textContent = e.message; }
   }
 
   /* ---------- GALERÍA ---------- */
@@ -483,7 +636,7 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
     }, 2000);
     /* los bloques, cada uno en su tarjeta */
     var B = DATA.blocks;
-    $('bk-grid').innerHTML = B.map(function (c) { return '<article class="bkcard"><header><code>' + esc(c.type) + '</code><span>' + esc(c.what) + '</span></header><div class="gx gx-scope">' + GX.fx.renderBlocks(c.blocks, { lang: 'es' }) + '</div></article>'; }).join('');
+    $('bk-grid').innerHTML = B.map(function (c) { return '<article class="bkcard"><header><code>' + esc(c.type) + '</code><span>' + esc(c.what) + '</span></header><div class="gx gx-scope">' + GX.fx.renderBlocks(c.blocks, { lang: LANG }) + '</div></article>'; }).join('');
     /* los iconos */
     var IC = GX.icons || {};
     $('icons').innerHTML = Object.keys(IC).filter(function (k) { return k !== 'claude'; }).map(function (k) { return '<div class="icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path pathLength="1" d="' + IC[k] + '"/></svg><span>' + esc(k) + '</span></div>'; }).join('');
@@ -592,7 +745,7 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
       }, edges: { a5: { rate: Math.round(22 + Math.sin(shift / 2) * 6) }, a9: { rate: Math.round(21 + Math.cos(shift / 2) * 5) } } });
     }, 2200);
     var big = clone(DATA.grande); big.initialDepth = 2; big.minimap = false;
-    GX.mount($('g-grande'), big, { fx: 'vivid', lang: 'es' });
+    GX.mount($('g-grande'), big, { fx: 'vivid', lang: LANG });
   }
 
   /* ---------- EJEMPLOS ---------- */
@@ -606,36 +759,309 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
       [].forEach.call($('ex-list').children, function (b) { b.setAttribute('aria-pressed', String(+b.dataset.i === i)); });
       if (inst) inst.destroy(); $('g-ex').innerHTML = '';
       var x = EX[i];
-      try { inst = x.mermaid ? GX.mountMermaid($('g-ex'), x.mermaid, { lang: 'es' }) : GX.mount($('g-ex'), clone(x.spec), {}); } catch (e) { $('g-ex').textContent = e.message; }
+      try { var o = x.fx ? { lang: LANG, fx: x.fx } : { lang: LANG };
+      inst = x.mermaid ? GX.mountMermaid($('g-ex'), x.mermaid, o) : GX.mount($('g-ex'), clone(x.spec), o); } catch (e) { $('g-ex').textContent = e.message; }
     }
     $('ex-list').addEventListener('click', function (ev) { var b = ev.target.closest('.ex'); if (b) open(+b.dataset.i); });
     open(0);
   }
 
-  /* ---------- MERMAID ---------- */
-  function initMermaid() {
-    var MM = DATA.mermaid, mOff = null, mOn = null, mT = null, mPreset = 'neon';
-    function mmdPresets() {
-      $('mmd-presets').innerHTML = ['vivid', 'neon', 'blueprint', 'glass'].map(function (p) { return '<button type="button" data-p="' + p + '" aria-pressed="' + (p === mPreset) + '">' + p + '</button>'; }).join('');
-      $('mmd-fx').textContent = 'fx: "' + mPreset + '"';
+  /* ---------- DIAGRAMAS: cada tipo de Mermaid, por GraphX y por Mermaid ---------- */
+  function initDiagramas() {
+    var DG = DATA.diagramas, CODE = {};
+    DG.types.forEach(function (t) { CODE[t.id] = t.code; });
+    DG.rich.forEach(function (t) { CODE[t.id] = t.code; });
+    var PRESETS = [['off', 'Apagados'], ['calm', 'Por defecto'], ['vivid', 'Vivid'], ['neon', 'Neon'], ['blueprint', 'Blueprint'], ['glass', 'Glass']];
+    var st = { cur: null, view: store.get('dg-view', 'both'), preset: store.get('dg-preset', 'calm') };
+    var spec = null, type = '', convErr = null, gMain = null, gOff = null;
+    var themeOver = store.get('dg-theme', {}), kindOver = store.get('dg-kinds', {});
+    var TOKENS = [['accent', 'Acento y selección'], ['canvas', 'Fondo del lienzo'], ['card', 'Relleno de tarjeta'], ['card-line', 'Borde de tarjeta'], ['glyph-bg', 'Fondo del icono'],
+      ['neu', 'Conexiones'], ['group', 'Relleno de contenedor'], ['group-line', 'Borde de contenedor'], ['band-a', 'Franja de carril'], ['ink', 'Texto']];
+    var chip = function (t, rich) { return '<button type="button" class="tchip' + (rich ? ' rich' : '') + '" data-id="' + esc(t.id) + '" aria-pressed="false" title="' + esc(t.file) + '">' + esc(t.name) + '</button>'; };
+    $('dg-types').innerHTML = DG.types.map(function (t) { return chip(t); }).join('');
+    $('dg-rich').innerHTML = DG.rich.map(function (t) { return chip(t, true); }).join('');
+    $('dg-presets').innerHTML = PRESETS.map(function (p) { return '<button type="button" data-v="' + p[0] + '">' + p[1] + '</button>'; }).join('');
+
+    /* colores: tokens del tema y color por tipo de pieza */
+    var cx = document.createElement('canvas').getContext('2d');
+    function toHex(v) {
+      if (!v || !cx) return '#8c959f';
+      cx.fillStyle = '#000'; cx.fillStyle = String(v).trim(); var c = cx.fillStyle;
+      if (c[0] === '#') return c;
+      var m = /rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(c);
+      return m ? '#' + [m[1], m[2], m[3]].map(function (x) { return (+x).toString(16).padStart(2, '0'); }).join('') : '#8c959f';
     }
-    $('mmd-presets').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; mPreset = b.dataset.p; mmdPresets(); draw(); });
-    mmdPresets();
-    $('mmd-pick').innerHTML = MM.map(function (m, i) { return '<option value="' + i + '">' + esc(m.name) + '</option>'; }).join('');
-    function draw() {
-      var txt = $('mmd-src').value;
+    function applyTheme() {
+      ['g-dg', 'g-dg-off'].forEach(function (id) { var h = $(id); TOKENS.forEach(function (t) { if (themeOver[t[0]]) h.style.setProperty('--gx-' + t[0], themeOver[t[0]]); else h.style.removeProperty('--gx-' + t[0]); }); });
+    }
+    function swatch(id, label, value, set, onInput) {
+      var row = document.createElement('label'); row.className = 'sw' + (set ? ' set' : ''); row.htmlFor = id;
+      var inp = document.createElement('input'); inp.type = 'color'; inp.id = id; inp.value = value;
+      var t = document.createElement('span'); t.textContent = label;
+      var hx = document.createElement('span'); hx.className = 'hex'; hx.textContent = value;
+      inp.addEventListener('input', function () { hx.textContent = inp.value; row.classList.add('set'); onInput(inp.value); });
+      row.append(inp, t, hx); return row;
+    }
+    function themeSwatches() {
+      var box = $('dg-theme-sw'), h = $('g-dg'), cs = h.classList.contains('gx') ? getComputedStyle(h) : null; box.innerHTML = '';
+      TOKENS.forEach(function (t) {
+        var now = themeOver[t[0]] || (cs ? toHex(cs.getPropertyValue('--gx-' + t[0])) : '#8c959f');
+        box.appendChild(swatch('tok-' + t[0], t[1], now, !!themeOver[t[0]], function (v) { themeOver[t[0]] = v; store.set('dg-theme', themeOver); applyTheme(); }));
+      });
+    }
+    var kindT = 0;
+    function kindSwatches() {
+      var box = $('dg-kind-sw'); box.innerHTML = '';
+      if (!spec) { $('dg-kinds-help').textContent = 'Este diagrama no se puede dibujar con GraphX.'; return; }
+      $('dg-kinds-help').textContent = 'Tiñen la barra, el icono y el borde de cada pieza de ese tipo. Solo en este diagrama.';
+      var over = kindOver[st.cur] || {}, names = (spec.legend && spec.legend.kinds) || {}, seen = {};
+      spec.nodes.forEach(function (n) {
+        var k = n.kind || 'other'; if (seen[k]) return; seen[k] = 1;
+        var own = spec.nodes.filter(function (x) { return (x.kind || 'other') === k && x.color; })[0];
+        var base = own ? (typeof own.color === 'string' ? own.color : own.color.light) : '#8c959f';
+        box.appendChild(swatch('kind-' + k.replace(/[^\w-]/g, ''), names[k] || k, over[k] || toHex(base), !!over[k], function (v) {
+          (kindOver[st.cur] = kindOver[st.cur] || {})[k] = v; store.set('dg-kinds', kindOver);
+          clearTimeout(kindT); kindT = setTimeout(mountGX, 220);
+        }));
+      });
+    }
+
+    /* GraphX: uno o dos lienzos (con y sin efectos) */
+    function msg(text) { var d = document.createElement('div'); d.className = 'msg'; d.textContent = text; $('dg-msgs').appendChild(d); }
+    function convert() {
+      $('dg-msgs').innerHTML = ''; spec = null; convErr = null; type = '';
       try {
-        var a = GX.fromMermaid(txt, { fx: false }), b = GX.fromMermaid(txt, { fx: mPreset });
-        if (mOff) mOff.destroy(); if (mOn) mOn.destroy();
-        $('g-mmd-off').innerHTML = ''; $('g-mmd-on').innerHTML = '';
-        mOff = GX.mount($('g-mmd-off'), a.spec, { minimap: false });
-        mOn = GX.mount($('g-mmd-on'), b.spec, { minimap: false });
-        $('mmd-err').textContent = a.warnings.length ? a.warnings.length + ' líneas sin equivalente (se ignoran)' : '';
-      } catch (e) { $('mmd-err').textContent = e.message; }
+        var r = GX.fromMermaid($('dg-code').value, { lang: LANG });
+        r.warnings.forEach(msg); spec = r.spec; type = r.type;
+        $('dg-stat').textContent = 'GraphX.fromMermaid(code) → ' + r.type + ' · ' + spec.nodes.length + ' piezas · ' + spec.edges.length + ' conexiones' + ((spec.flows || []).length ? ' · ' + spec.flows.length + ' flujo' : '');
+      } catch (e) { convErr = e.message; msg(e.message); $('dg-stat').textContent = 'GraphX.fromMermaid(code) → error'; }
     }
-    $('mmd-pick').onchange = function () { $('mmd-src').value = MM[+this.value].code; draw(); };
-    $('mmd-src').addEventListener('input', function () { clearTimeout(mT); mT = setTimeout(draw, 650); });
-    $('mmd-src').value = MM[0].code; draw();
+    function fresh(id, old) {
+      if (old) { try { old.destroy(); } catch (_) { } }
+      var h = $(id), n = document.createElement('div'); n.id = id; n.className = 'gx-host'; h.replaceWith(n); return n;
+    }
+    function fxOf(p) { return p === 'off' ? false : p === 'calm' ? undefined : p; }
+    function mountGX() {
+      var both = st.view === 'fx', host = fresh('g-dg', gMain); gMain = null;
+      fresh('g-dg-off', gOff); gOff = null;
+      $('dg-fxlab').textContent = st.preset === 'calm' ? 'fx por defecto' : st.preset === 'off' ? 'fx: false' : 'fx: "' + st.preset + '"';
+      if (!spec) { host.className = 'gx-empty'; host.textContent = convErr ? 'GraphX no dibuja este diagrama: ' + convErr : ''; return; }
+      var over = kindOver[st.cur] || {}, s = clone(spec);
+      s.nodes.forEach(function (n) { var c = over[n.kind || 'other']; if (c) n.color = c; });
+      var o = { lang: LANG, minimap: false }, f = fxOf(st.preset); if (f !== undefined) o.fx = f;
+      gMain = GX.mount(host, s, o);
+      if (both) gOff = GX.mount($('g-dg-off'), clone(s), { lang: LANG, minimap: false, fx: false });
+      applyTheme();
+      if (!$('dg-colors').hidden) gMain.ready.then(themeSwatches);
+    }
+
+    /* Mermaid: se carga de jsDelivr la primera vez que hace falta; un dibujo que llega tarde se descarta */
+    var MERMAID_URL = 'https://cdn.jsdelivr.net/npm/mermaid@11.17.0/dist/mermaid.min.js', mermaidP = null, seq = 0, cache = {};
+    function loadMermaid() {
+      if (mermaidP) return mermaidP;
+      if (window.mermaid && typeof window.mermaid.render === 'function') return (mermaidP = Promise.resolve(window.mermaid));
+      mermaidP = new Promise(function (res, rej) {
+        var sc = document.createElement('script'); sc.src = MERMAID_URL; sc.async = true;
+        sc.onload = function () { window.mermaid ? res(window.mermaid) : rej(new Error('Mermaid no se registró')); };
+        sc.onerror = function () { mermaidP = null; rej(new Error('No se pudo cargar Mermaid desde jsDelivr')); };
+        document.head.appendChild(sc);
+      });
+      return mermaidP;
+    }
+    var isDark = function () { var t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+    function note(text, err) { var b = $('dg-mmd'); b.innerHTML = ''; var p = document.createElement('p'); p.className = 'mmd-note' + (err ? ' err' : ''); p.textContent = text; b.appendChild(p); }
+    function showMermaid() {
+      var code = $('dg-code').value, theme = isDark() ? 'dark' : 'default', key = theme + '|' + code, my = ++seq;
+      if (cache[key]) { $('dg-mmd').innerHTML = cache[key]; return; }
+      note('Dibujando con Mermaid…');
+      loadMermaid().then(function (m) {
+        m.initialize({ startOnLoad: false, securityLevel: 'strict', theme: theme });
+        return m.render('mmd-r' + my, code);
+      }).then(function (r) { cache[key] = r.svg; if (my === seq) $('dg-mmd').innerHTML = r.svg; })
+        .catch(function (e) {
+          var junk = document.getElementById('dmmd-r' + my); if (junk) junk.remove();
+          if (my === seq) note('Mermaid no puede dibujar este código: ' + String((e && e.message) || e).split(/\n/).slice(0, 4).join(' · '), true);
+        });
+    }
+    var redraw = function () { if (st.cur && (st.view === 'both' || st.view === 'mermaid') && inited.diagramas) showMermaid(); };
+    try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw); } catch (_) { }
+    new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    function sync() {
+      $('dg-stage').dataset.view = st.view;
+      [].forEach.call($('dg-view').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === st.view)); });
+      [].forEach.call($('dg-presets').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === st.preset)); b.disabled = st.view === 'mermaid'; });
+      [].forEach.call(document.querySelectorAll('#dg-types .tchip, #dg-rich .tchip'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.id === st.cur)); });
+    }
+    function render() {
+      sync();
+      if (st.view !== 'mermaid') mountGX();
+      if (st.view === 'both' || st.view === 'mermaid') showMermaid();
+      if (!$('dg-colors').hidden) kindSwatches();
+    }
+    function refresh() { convert(); render(); }
+    function pick(id) {
+      st.cur = id; $('dg-code').value = CODE[id]; store.set('dg-cur', id);
+      var t = DG.types.concat(DG.rich).filter(function (x) { return x.id === id; })[0];
+      $('dg-kind').textContent = t ? t.file : '';
+      refresh();
+    }
+    $('p-diagramas').addEventListener('click', function (ev) { var b = ev.target.closest('.tchip'); if (b && b.dataset.id) pick(b.dataset.id); });
+    $('dg-view').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b) return;
+      st.view = b.dataset.v; store.set('dg-view', st.view);
+      /* con y sin efectos no se ve nada si los efectos están apagados o son los de siempre */
+      if (st.view === 'fx' && (st.preset === 'off' || st.preset === 'calm')) { st.preset = 'vivid'; store.set('dg-preset', st.preset); }
+      render();
+    });
+    $('dg-presets').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b || b.disabled) return; st.preset = b.dataset.v; store.set('dg-preset', st.preset); sync(); mountGX(); });
+    $('dg-run').onclick = refresh;
+    $('dg-code').addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); refresh(); } });
+    function codeOpen(open) { $('dg-tcode').setAttribute('aria-expanded', String(open)); $('dg-src').hidden = !open; $('dg-work').classList.toggle('nocode', !open); }
+    $('dg-tcode').onclick = function () { var open = this.getAttribute('aria-expanded') !== 'true'; store.set('dg-code-open', open); codeOpen(open); if (open) $('dg-code').focus(); };
+    codeOpen(store.get('dg-code-open', false));
+    $('dg-tcolors').onclick = function () { var open = $('dg-colors').hidden; $('dg-colors').hidden = !open; this.setAttribute('aria-expanded', String(open)); if (open) { themeSwatches(); kindSwatches(); } };
+    $('dg-reset-theme').onclick = function () { Object.keys(themeOver).forEach(function (k) { delete themeOver[k]; }); store.set('dg-theme', themeOver); applyTheme(); themeSwatches(); };
+    $('dg-reset-kinds').onclick = function () { delete kindOver[st.cur]; store.set('dg-kinds', kindOver); mountGX(); kindSwatches(); };
+    var saved = store.get('dg-cur', 'flowchart');
+    pick(CODE[saved] ? saved : 'flowchart');
+  }
+
+  /* ---------- FORMAS: el catálogo de React ---------- */
+  function initFormas() {
+    var REACT_URLS = ['https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js'];
+    var loadScript = function (src) { return new Promise(function (res, rej) { var sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = function () { rej(new Error('No se pudo cargar ' + src)); }; document.head.appendChild(sc); }); };
+    var GROUPS = [
+      ['flow', 'Flujo', 'Flowchart, mindmap y bloques', 'El texto va dentro de la forma. Con color, el contorno y un relleno suave toman el de la pieza; las aristas acaban en su contorno, no en su caja.'],
+      ['chart', 'Gráficos', 'Gráficos como piezas', 'Una cifra con su tendencia, un valor contra sus umbrales y un reparto (un pie de Mermaid se convierte en donut). Con datos en vivo cuentan de un valor al siguiente.'],
+      ['card', 'Con datos', 'Tarjetas con datos: gantt, journey, kanban, sankey y treemap', 'La tarjeta de GraphX con algo más: la barra de fechas, la puntuación, el ticket, el nivel o un área que crece con el valor.'],
+      ['table', 'Tablas', 'Tablas: ER, clases y requisitos', 'Filas con claves (PK, FK, UK), visibilidad UML y compartimentos.'],
+      ['c4', 'C4', 'C4', 'Cajas rellenas del color de la notación, con tipo y descripción.'],
+      ['tile', 'Iconos', 'Iconos: arquitectura y actores', 'Una baldosa con el icono grande y la etiqueta debajo.'],
+      ['dot', 'Marcas', 'Marcas: estados, uniones y commits', 'Piezas pequeñas: inicio y fin de un estado, elección, bifurcación, uniones de arquitectura y commits de git (el HEAD late).'],
+      ['note', 'Notas', 'Notas', 'Las notas de clases, estados y flowcharts son piezas propias, unidas por una línea sin flecha.'],
+      ['bar', 'Barras', 'Barras de los layouts propios', 'En un gantt, la barra mide lo que dura la tarea; en un sankey, lo alto que es su valor. Aquí, a su tamaño por defecto.'],
+      ['tree', 'Ficheros', 'Árbol de ficheros', 'El fichero con su extensión, sus líneas cambiadas y la letra de git; la carpeta plegada, que agrupa; y la abierta, una cabecera de la que cuelgan sus hijos.']
+    ];
+    var HINTS = {
+      rect: 'A[texto]', rounded: 'A(texto)', terminal: 'A([texto])', subroutine: 'A[[texto]]', datastore: 'A[(texto)]', 'cylinder-h': '@{ shape: h-cyl }', circle: 'A((texto))', dcircle: 'A(((texto)))',
+      hexagon: 'A{{texto}}', decision: 'A{texto}', io: 'A[/texto/]', 'io-l': 'A[\\texto\\]', trapezoid: 'A[/texto\\]', 'trapezoid-t': 'A[\\texto/]', flag: 'A>texto]', document: '@{ shape: doc }',
+      cloud: 'mindmap: A)texto(', bang: 'mindmap: A))texto((', triangle: '@{ shape: tri }', 'triangle-down': '@{ shape: flip-tri }', hourglass: '@{ shape: hourglass }', delay: '@{ shape: delay }',
+      card: '@{ shape: notch-rect }', text: '@{ shape: text }', 'arrow-right': 'block: A<["texto"]>(right)', 'arrow-left': 'block: A<["texto"]>(left)', 'arrow-up': 'block: A<["texto"]>(up)', 'arrow-down': 'block: A<["texto"]>(down)',
+      note: 'note for A "texto" · @{ shape: comment }', start: 'state: [*] --> A', end: 'state: A --> [*]', junction: 'architecture: junction j', choice: 'state c <<choice>>', fork: 'state f <<fork>>',
+      commit: 'gitGraph: commit', 'commit-merge': 'gitGraph: merge rama', 'commit-highlight': 'commit type: HIGHLIGHT', 'commit-reverse': 'commit type: REVERSE',
+      table: 'erDiagram: CLIENTE { … }', class: 'classDiagram: class A { … }', requirement: 'requirementDiagram', tile: 'architecture: service a(server)[…]', actor: 'sequence: actor U',
+      person: 'C4: Person(…)', c4: 'C4: System(…) · Container(…)', 'c4-db': 'C4: SystemDb(…)', 'c4-queue': 'C4: SystemQueue(…)',
+      file: 'GraphX.tree.fromPaths([…])', folder: 'carpeta plegada', 'folder-open': 'carpeta abierta',
+      bar: 'gantt: tarea :a1, 2026-09-08, 6d', gbar: 'gantt (layout): la sección', sbar: 'sankey-beta: A,B,10', score: 'journey: Tarea: 4: Yo', ticket: 'kanban: t1[…]@{ ticket, assigned }', flowbar: 'sankey-beta', block: 'treemap-beta: "Hoja": 7',
+      kpi: '"shape": "kpi", value, change, spark', gauge: '"shape": "gauge", value, thresholds', donut: 'pie · "shape": "donut", parts'
+    };
+    var LABELS = { flow: 'Revisar pedido', dot: 'v1.0', note: 'Se guarda 30 días y luego se borra', table: 'CLIENTE', tile: 'Base de datos', c4: 'Banca online', card: 'Preparar envío' };
+    function sampleNode(name, fam) {
+      var n = { id: name, shape: name, label: name === 'decision' ? '¿Stock?' : name.indexOf('commit') === 0 ? 'feat-login' : LABELS[fam] || name, kind: 'other' };
+      if (fam === 'table') {
+        if (name === 'class') { n.label = 'Pedido'; n.subtitle = '«entity»'; n.rows = [{ name: 'String id', vis: '+', section: 'attr' }, { name: 'List<Linea> lineas', vis: '-', section: 'attr' }, { name: 'total()', type: 'Money', vis: '+', section: 'method' }, { name: 'validar()', type: 'bool', vis: '#', section: 'method', abstract: true }]; }
+        else if (name === 'requirement') { n.label = 'tiempo_respuesta'; n.subtitle = '«performanceRequirement»'; n.rows = [{ name: 'Id', type: '1.2' }, { name: 'Responde en menos de 200 ms' }, { name: 'Riesgo', type: 'high' }]; }
+        else { n.kind = 'table'; n.rows = [{ name: 'id', type: 'uuid', keys: 'PK' }, { name: 'empresa_id', type: 'uuid', keys: 'FK' }, { name: 'email', type: 'string', keys: 'UK' }, { name: 'alta', type: 'date' }]; }
+      }
+      if (name.indexOf('commit') === 0) n.badge = name === 'commit' ? 'v1.0' : '';
+      if (name === 'commit') n.head = true;
+      if (fam === 'tile') { n.kind = name === 'actor' ? 'actor' : 'datastore'; if (name === 'actor') n.label = 'Usuaria'; }
+      if (fam === 'c4') { n.label = name === 'person' ? 'Cliente' : name === 'c4-db' ? 'Mainframe' : name === 'c4-queue' ? 'Eventos' : 'Banca online'; n.subtitle = name === 'person' ? '[Persona]' : '[Sistema]'; n.summary = 'Consulta cuentas y hace pagos desde la web.'; }
+      if (name === 'bar') { n.kind = 'job'; n.subtitle = '2026-09-08 → 2026-09-14'; n.span = { start: '2026-09-08', end: '2026-09-14', live: true }; }
+      if (name === 'score') { n.kind = 'job'; n.subtitle = 'Yo, Equipo'; n.score = 4; }
+      if (name === 'ticket') { n.kind = 'card'; n.subtitle = 'ana'; n.badge = 'PRJ-7'; n.avatar = 'A'; }
+      if (name === 'flowbar') { n.kind = 'flowpoint'; n.label = 'Red'; n.subtitle = '105'; n.value = 7; }
+      if (name === 'block') { n.label = 'Salarios'; n.subtitle = '700'; n.value = 7; }
+      if (name === 'gbar') { n.label = 'Backend'; n.kind = 'job'; n.span = { start: '2026-09-08', end: '2026-09-14', live: true }; }
+      if (name === 'sbar') { n.label = 'Red'; n.subtitle = '105'; }
+      if (name === 'kpi') { n.label = 'Pedidos por minuto'; n.kind = 'cart'; n.value = 1846; n.change = 6.4; n.spark = [1210, 1340, 1295, 1480, 1550, 1610, 1720, 1846]; }
+      if (name === 'gauge') { n.label = 'CPU del clúster'; n.kind = 'cpu'; n.value = 72; n.unit = '%'; n.thresholds = [70, 90]; }
+      if (name === 'donut') { n.label = 'Tráfico por canal'; n.unit = 'k req'; n.parts = [{ label: 'Web', value: 52 }, { label: 'App', value: 31 }, { label: 'Socios', value: 12 }, { label: 'API pública', value: 5 }]; }
+      if (fam === 'tree') {
+        var exts = [{ ext: 'ts', n: 9, color: '#3178c6' }, { ext: 'css', n: 3, color: '#7c4dff' }, { ext: 'json', n: 2, color: '#0f9d8a' }];
+        if (name === 'file') Object.assign(n, { label: 'Carrito.tsx', ext: 'tsx', badge: 'TSX', extColor: '#3178c6', subtitle: '4,2 KB · 128 líneas', additions: 42, deletions: 7, delta: 'modified', path: 'src/components/Carrito.tsx' });
+        else Object.assign(n, { label: 'components', path: 'src/components', tree: { files: 14, dirs: 2, exts: exts }, additions: 120, deletions: 31, _hits: name === 'folder' ? 3 : 0 });
+      }
+      if (/^(start|end|junction|choice|fork)$/.test(name)) n.label = name;
+      return n;
+    }
+    var cat = { state: '', delta: 'unchanged', color: '', dir: 'right' }, RX = null, root = null;
+    var COLORS = [['', 'Sin color'], ['#0969da', 'Azul'], ['#1a7f37', 'Verde'], ['#9a6700', 'Ámbar'], ['#cf222e', 'Rojo'], ['#8250df', 'Violeta']];
+    $('fm-color').innerHTML = COLORS.map(function (c) { return '<button type="button" class="cdot' + (c[0] ? '' : ' none') + '" data-v="' + c[0] + '"' + (c[0] ? ' style="background:' + c[0] + '"' : '') + ' title="' + c[1] + '" aria-label="' + c[1] + '"></button>'; }).join('');
+    var S = GX.shapes, fams = {};
+    S.names.forEach(function (nm) { fams[S.families[nm]] = (fams[S.families[nm]] || 0) + 1; });
+    $('fm-nav').innerHTML = GROUPS.filter(function (g) { return fams[g[0]]; }).map(function (g) { return '<button type="button" class="tchip" data-fam="' + g[0] + '">' + g[1] + ' · ' + fams[g[0]] + '</button>'; }).join('') + '<button type="button" class="tchip" data-fam="markers">Puntas · ' + Object.keys(S.markers).length + '</button>';
+    $('fm-nav').addEventListener('click', function (ev) { var b = ev.target.closest('[data-fam]'); var el = b && $('fam-' + b.dataset.fam); if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); });
+    var KEYS = { 'fm-state': 'state', 'fm-delta': 'delta', 'fm-color': 'color', 'fm-dir': 'dir' };
+    Object.keys(KEYS).forEach(function (id) { $(id).addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; cat[KEYS[id]] = b.dataset.v; draw(); }); });
+    function markerDemo(h) {
+      var M = S.markers;
+      return h('div', { className: 'cat-grid' }, Object.keys(M).map(function (k) {
+        return h('figure', { className: 'cat-item', key: k },
+          h('div', { className: 'cat-fig', style: { minHeight: 48 } }, h('svg', { width: 200, height: 34, viewBox: '0 0 200 34', className: 'gx-svg' },
+            h('defs', null, h('marker', { id: 'cm-' + k, viewBox: '0 0 20 20', refX: 19.5, refY: 10, markerWidth: 15, markerHeight: 15, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' },
+              h('path', { d: M[k].d, className: 'gx-mkx', style: { stroke: M[k].fill === 'solid' ? 'none' : 'var(--gx-neu)', fill: M[k].fill === 'solid' ? 'var(--gx-neu)' : M[k].fill === 'line' ? 'none' : 'var(--gx-canvas)', strokeWidth: 1.8 } }))),
+            h('path', { d: 'M12,17 H186', className: 'gx-eline', markerEnd: 'url(#cm-' + k + ')', style: { opacity: 1 } }))),
+          h('figcaption', null, h('div', { className: 'cat-name' }, k), h('div', { className: 'cat-hint' }, 'head: "' + k + '"')));
+      }));
+    }
+    function draw() {
+      Object.keys(KEYS).forEach(function (id) { [].forEach.call($(id).children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === cat[KEYS[id]])); }); });
+      if (!RX) return;
+      var h = window.React.createElement, span = { min: Date.UTC(2026, 8, 1), max: Date.UTC(2026, 8, 30) }, now = Date.UTC(2026, 8, 11);
+      var groups = GROUPS.filter(function (g) { return fams[g[0]]; }).map(function (g) {
+        return h('section', { className: 'cat-group', key: g[0], id: 'fam-' + g[0] },
+          h('h3', null, g[2], h('small', null, fams[g[0]] + ' formas')), h('p', null, g[3]),
+          h('div', { className: 'cat-grid' }, S.names.filter(function (nm) { return S.families[nm] === g[0]; }).map(function (nm) {
+            return h('figure', { className: 'cat-item', key: nm },
+              h('div', { className: 'cat-fig' }, h(RX.GraphXShape, { node: sampleNode(nm, g[0]), state: cat.state || undefined, delta: cat.delta, color: cat.color || undefined, dir: cat.dir, span: span, now: now, maxValue: 10 })),
+              h('figcaption', null, h('div', { className: 'cat-name' }, nm), h('div', { className: 'cat-hint' }, HINTS[nm] || '')));
+          })));
+      });
+      groups.push(h('section', { className: 'cat-group', key: 'markers', id: 'fam-markers' }, h('h3', null, 'Puntas de arista', h('small', null, Object.keys(S.markers).length + ' puntas')),
+        h('p', null, 'head y tail de una arista: flechas, UML (herencia, composición, agregación), patas de gallo de ER y puntas de mensaje.'), markerDemo(h)));
+      root.render(h(RX.GraphXScope, null, groups));
+    }
+    draw();
+    (window.React && window.ReactDOM ? Promise.resolve() : REACT_URLS.reduce(function (p, u) { return p.then(function () { return loadScript(u); }); }, Promise.resolve()))
+      .then(function () { RX = window.GraphXReactFactory(window.React, function () { return window.GraphX; }); $('catalog').innerHTML = ''; root = window.ReactDOM.createRoot($('catalog')); draw(); })
+      .catch(function (e) { $('catalog').innerHTML = '<p class="msg">' + esc(e.message) + '. El catálogo necesita React desde cdnjs.</p>'; });
+  }
+
+  /* ---------- ÁRBOL: este repositorio o uno pegado ---------- */
+  function initArbol() {
+    var SAMPLE = DATA.treeSample, src = store.get('tr-src', 'repo'), skin = 'calm', inst = null;
+    function tmsg(text) { var d = document.createElement('div'); d.className = 'msg'; d.textContent = text; $('tr-msgs').appendChild(d); }
+    function specFrom(text) {
+      var T = GX.tree, lines = text.split(/\r?\n/).map(function (l) { return l.replace(/\s+$/, ''); }).filter(function (l) { return l.trim(); });
+      if (/[├└]──|\|--|`--/.test(text)) return T.fromTreeText(text, { title: 'Árbol pegado', lang: LANG });
+      if (lines.length && lines.every(function (l) { return /^[AMDRCTU]\d*\t/.test(l); })) return T.fromGit({ nameStatus: text }, { title: 'Cambios pegados', root: 'repo', lang: LANG });
+      if (lines.length && lines.every(function (l) { return /^(\d+|-)\t(\d+|-)\t/.test(l); })) return T.fromGit({ numstat: text }, { title: 'Cambios pegados', root: 'repo', lang: LANG });
+      return T.fromPaths(lines.map(function (l) { return l.trim(); }), { title: 'Rutas pegadas', root: 'repo', lang: LANG });
+    }
+    function mount() {
+      if (inst) { try { inst.destroy(); } catch (_) { } inst = null; }
+      var old = $('g-tree'), host = document.createElement('div'); host.id = 'g-tree'; host.className = 'gx-host'; old.replaceWith(host);
+      $('tr-msgs').innerHTML = '';
+      var spec = null;
+      try { spec = src === 'repo' ? clone(DATA.treeRepo) : specFrom($('tr-code').value); } catch (e) { tmsg(e.message); }
+      if (!spec || !spec.nodes.length) { host.className = 'gx-empty'; host.textContent = 'No hay rutas que dibujar.'; $('tr-stat').textContent = ''; return; }
+      inst = GX.mount(host, spec, skin === 'calm' ? { lang: LANG } : { lang: LANG, fx: { skin: skin } });
+      var files = spec.nodes.filter(function (n) { return n.kind === 'file'; }), changed = files.filter(function (n) { return n.delta && n.delta !== 'unchanged'; });
+      $('tr-stat').textContent = (src === 'repo' ? 'tools/tree-spec.mjs --base ' + DATA.treeBase + ' → ' : 'GraphX.tree.from…(texto) → ') + files.length + ' ficheros · ' + (spec.nodes.length - files.length) + ' carpetas' + (changed.length ? ' · ' + changed.length + ' cambiados' : '');
+    }
+    function sync() {
+      [].forEach.call($('tr-src').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === src)); });
+      [].forEach.call($('tr-skin').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === skin)); });
+      $('tr-box').hidden = src === 'repo'; $('tr-work').classList.toggle('nocode', src === 'repo');
+    }
+    $('tr-src').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; src = b.dataset.v; store.set('tr-src', src); sync(); mount(); });
+    $('tr-skin').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (!b) return; skin = b.dataset.v; sync(); mount(); });
+    $('tr-code').value = store.get('tr-code', SAMPLE);
+    $('tr-run').onclick = function () { store.set('tr-code', $('tr-code').value); mount(); };
+    $('tr-code').addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); $('tr-run').onclick(); } });
+    sync(); mount();
   }
 
   /* ---------- REFERENCIA ---------- */
@@ -661,16 +1087,17 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
     var go = function (t) { return t ? '<button type="button" class="goto" data-goto="' + t + '">Ver →</button>' : ''; };
     var ASSETS = [
       ['Tarjetas', 'La pieza por defecto: icono según <code>kind</code>, título, subtítulo, chip de cambio, enlaces, ficheros, notas y <code>+N</code> si tiene hijos.', 'Servicios, módulos, tareas: casi todo.', 'galeria#h-gal'],
-      ['Formas de flujo', '28 formas: rectángulo, rombo, cilindro, círculo, hexágono, documento, nube, flechas… (las de Mermaid).', 'Procesos y diagramas de flujo.', 'mermaid#h-mmd'],
-      ['Marcas y commits', 'Inicio, fin, uniones, elección, bifurcación y cuatro clases de commit.', 'Máquinas de estados, ramas de git.', 'galeria#h-gal'],
-      ['Tablas, notas y C4', 'Entidad de ER, clase UML, requisito; notas; persona, sistema, base de datos y cola de C4; baldosas de arquitectura y actores.', 'Modelos de datos y arquitectura.', 'galeria#h-gal'],
-      ['Tarjetas con datos', 'Barra de gantt, tarea de journey, ticket de kanban, barra de sankey, hoja de treemap, ficheros y carpetas.', 'Planes, tableros y repositorios.', 'galeria#h-gal'],
-      ['Gráficos como piezas', '<code>kpi</code> (cifra, variación y serie), <code>gauge</code> (rango y umbrales) y <code>donut</code> (reparto).', 'Indicadores dentro del diagrama.', 'galeria#h-gal'],
+      ['Formas de flujo', '28 formas: rectángulo, rombo, cilindro, círculo, hexágono, documento, nube, flechas… (las de Mermaid).', 'Procesos y diagramas de flujo.', 'formas#h-fm'],
+      ['Marcas y commits', 'Inicio, fin, uniones, elección, bifurcación y cuatro clases de commit.', 'Máquinas de estados, ramas de git.', 'formas#h-fm'],
+      ['Tablas, notas y C4', 'Entidad de ER, clase UML, requisito; notas; persona, sistema, base de datos y cola de C4; baldosas de arquitectura y actores.', 'Modelos de datos y arquitectura.', 'formas#h-fm'],
+      ['Tarjetas con datos', 'Barra de gantt, tarea de journey, ticket de kanban, barra de sankey, hoja de treemap, ficheros y carpetas.', 'Planes, tableros y repositorios.', 'arbol#h-tr'],
+      ['Gráficos como piezas', '<code>kpi</code> (cifra, variación y serie), <code>gauge</code> (rango y umbrales) y <code>donut</code> (reparto; también desde un <code>pie</code> de Mermaid).', 'Indicadores dentro del diagrama.', 'galeria#h-gal'],
       ['Contenedores', 'Carriles con marco y cabecera fija, grupos plegables (marco continuo, discontinuo o punteado) y niveles con nombre.', 'Fronteras: equipos, sistemas, capas.', 'software#h-soft'],
-      ['Aristas', 'Llamada o evento, principal o discreta, animada, grosor por valor, curva, 13 puntas, cardinalidades, etiquetas y caudal (<code>rate</code>).', 'Quién depende de quién y cuánto viaja.', 'software#h-soft'],
+      ['Aristas', 'Llamada o evento, principal o discreta, animada, grosor por valor, curva, 13 puntas, cardinalidades, etiquetas y caudal (<code>rate</code>).', 'Quién depende de quién y cuánto viaja.', 'formas#h-fm'],
       ['Iconos de tipo', '35 tipos (<code>service</code>, <code>datastore</code>, <code>queue</code>, <code>user</code>, <code>lock</code>, <code>cart</code>…) y los tuyos con <code>icons</code>.', 'Reconocer cada pieza de un vistazo.', 'galeria#h-ic'],
       ['Bloques del panel', '24 tipos: texto, avisos, citas, código, tablas, cifras, gráficos, barras, gauge, donut, checklist, pasos, eventos, actividad, insignias, imágenes.', 'Explicar una pieza con detalle.', 'galeria#h-blk'],
-      ['Vistas y layouts', 'Grafo jerárquico (ELK), secuencia por flujo, y layouts propios: gantt, git, sankey, treemap, timeline, journey, rejilla y árbol de ficheros.', 'Cada tipo de diagrama con su forma natural.', 'ejemplos#h-ex'],
+      ['Vistas y layouts', 'Grafo jerárquico (ELK), secuencia por flujo, y layouts propios: gantt, git, sankey, treemap, timeline, journey, rejilla y árbol de ficheros.', 'Cada tipo de diagrama con su forma natural.', 'diagramas#h-dg'],
+      ['Árbol de ficheros', '<code>file</code>, <code>folder</code> y <code>folder-open</code> con el layout <code>tree</code>: desde un directorio, la salida de <code>tree</code> o un <code>git diff</code>, con sus líneas cambiadas.', 'Repositorios, PRs y diffs.', 'arbol#h-tr'],
       ['Color y temas', 'Tokens de claro y oscuro, colores por pieza, estados con leyenda, paleta categórica, 5 escalas de calor y 3 pieles (neon, blueprint, glass).', 'Que el diagrama hable el idioma visual del equipo.', 'vivo#h-vivo']
     ];
     $('cls-assets').innerHTML = ASSETS.map(function (r) { return '<tr><td><b>' + r[0] + '</b></td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + go(r[3]) + '</td></tr>'; }).join('');
@@ -687,7 +1114,7 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
       ['Responde al lector', [
         ['Ondas', 'waves', '—', 'Recorren el grafo salto a salto al seleccionar, trazar o avanzar el recorrido.', 'software#h-soft'],
         ['Impacto', 'blast', '—', 'Qué deja de funcionar si una pieza falla: anillos por salto y resumen.', 'software#h-soft'],
-        ['▶ Flujo', 'play', '—', 'Una onda que sale de los orígenes y enciende lo que alcanza.', 'mermaid#h-mmd'],
+        ['▶ Flujo', 'play', '—', 'Una onda que sale de los orígenes y enciende lo que alcanza.', 'diagramas#h-dg'],
         ['Marcha al pasar', 'hoverFlow', '—', 'Las conexiones de la pieza bajo el puntero avanzan en su sentido.', 'vivo#h-big'],
         ['Foco', 'spotlight', '—', 'Atenúa lo que rodea a la selección o al paso del recorrido.', 'software#h-soft']
       ]],
@@ -699,15 +1126,16 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
       ['Estilo y presentación', [
         ['Cascada', 'entrance', '—', 'Las piezas entran en orden de lectura al abrir.', 'galeria#h-gal'],
         ['Brillo y degradado', 'glow · gradient', '—', 'Halo en lo principal; aristas del color de su origen al de su destino.', 'vivo#h-vivo'],
-        ['Colores automáticos', 'autoColor', '—', 'Paleta por carril, grupo o tipo donde no hay color.', 'mermaid#h-mmd'],
+        ['Colores automáticos', 'autoColor', '—', 'Paleta por carril, grupo o tipo donde no hay color.', 'diagramas#h-dg'],
         ['Pieles', 'skin', '—', 'neon, blueprint o glass: el diagrama entero con otra identidad.', 'vivo#h-vivo'],
-        ['Trazo a mano', 'sketch', '<code>look: handDrawn</code>', 'El contorno tiembla, como dibujado a mano.', 'mermaid#h-mmd']
+        ['Trazo a mano', 'sketch', '<code>look: handDrawn</code>', 'El contorno tiembla, como dibujado a mano.', 'diagramas#h-dg']
       ]]
     ];
     $('cls-fx').innerHTML = FXC.map(function (g) { return '<tr><td colspan="5" class="grpn">' + g[0] + '</td></tr>' + g[1].map(function (r) { return '<tr><td><b>' + r[0] + '</b></td><td><code>' + r[1] + '</code></td><td>' + r[2] + '</td><td>' + r[3] + '</td><td>' + go(r[4]) + '</td></tr>'; }).join(''); }).join('');
   }
 
   var start = (location.hash || '').replace('#', '');
-  show(TABS.indexOf(start) >= 0 ? start : 'software');
+  show(ALIAS[start] || start);
+  window.addEventListener('hashchange', function () { var h = (location.hash || '').replace('#', ''); h = ALIAS[h] || h; if (TABS.indexOf(h) >= 0 && $('p-' + h).hidden) show(h); });
 })();
 </script>

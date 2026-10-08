@@ -195,7 +195,7 @@ let inst = null, current = null, spec = null, convError = null, dirty = true;
 const views = store.get('gx-mmd-views', {});
 const themeOver = store.get('gx-mmd-theme', {});
 const kindOver = store.get('gx-mmd-kinds', {});
-const viewFor = name => views[name] || (name === 'pie' ? 'mermaid' : 'both');
+const viewFor = name => views[name] || 'both';
 
 /* colores: tokens del tema de GraphX que se pueden cambiar en vivo */
 const TOKENS = [
@@ -329,8 +329,8 @@ function pick(name) {
 }
 
 Object.keys(SAMPLES).forEach(name => {
-  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (name === 'pie' ? ' off' : ''); b.dataset.name = name;
-  b.textContent = name === 'pie' ? 'pie (solo Mermaid)' : name; b.setAttribute('aria-pressed', 'false');
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.dataset.name = name;
+  b.textContent = name; b.setAttribute('aria-pressed', 'false');
   b.onclick = () => pick(name); $('types').appendChild(b);
 });
 document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { views[current] = b.dataset.view; store.set('gx-mmd-views', views); applyView(); });

@@ -12,7 +12,11 @@
     "verify:tree": "node tools/verify-tree.mjs",
     "verify:fx": "node tools/verify-fx.mjs",
     "tree": "node tools/tree-spec.mjs",
-    "gallery": "node examples/gallery/build.mjs"
+    "gallery": "node examples/gallery/build.mjs",
+    "mod": "node mod/build.mjs",
+    "mod:test": "claude plugin validate mod/graphx && claude plugin test mod/graphx",
+    "mod:preview": "node mod/tools/term-preview.mjs",
+    "mod:fixtures": "node mod/tools/gen-fixtures.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.0.0",

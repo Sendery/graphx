@@ -1,17 +1,39 @@
 # La página de demostración
 
-Una página autocontenida (motor, ELK, datos y estilos dentro: funciona sin red) que enseña GraphX 1.9 en
-seis pestañas. Se genera con:
+El showcase de GraphX 1.9: una página autocontenida (motor, ELK, datos y estilos dentro) que enseña todo lo
+que dibuja el motor en ocho pestañas, en castellano y en inglés. Solo dos pestañas tiran de la red: Diagramas
+carga Mermaid de jsDelivr para compararlo y Formas carga React de cdnjs. Se genera con:
 
 ```bash
-node tools/build-dist.mjs                                   # dist/ al día
-node examples/fx/build.mjs /tmp/graphx-demo.html --standalone   # con <!doctype>, para abrirla en local
-node examples/fx/build.mjs /tmp/graphx-demo.html                # sin esqueleto, para publicarla como artifact
+node tools/build-dist.mjs                                              # dist/ al día
+node examples/fx/build.mjs docs/demo/es/index.html --standalone --lang es   # la demo en castellano
+node examples/fx/build.mjs docs/demo/index.html --standalone --lang en      # la demo en inglés
+node examples/fx/build.mjs /tmp/graphx-demo.html                       # sin esqueleto, para publicarla como artifact
 ```
 
-Pesa unos 2 MB. Cada pestaña se monta la primera vez que se abre; la dirección recuerda la pestaña
-(`#software`, `#galeria`, `#vivo`, `#ejemplos`, `#mermaid`, `#referencia`). Las capturas de este documento
-se regeneran con `node tools/capture-docs.mjs` (ver [README](README.md)).
+Las dos versiones construidas están en el repositorio como demo en vivo: [`docs/demo/es/`](demo/es/index.html)
+y [`docs/demo/`](demo/index.html) (con GitHub Pages sobre `/docs`, quedan en `/demo/es/` y `/demo/`).
+
+Pesa unos 2,2 MB. Cada pestaña se monta la primera vez que se abre; la dirección recuerda la pestaña
+(`#software`, `#ejemplos`, `#diagramas`, `#galeria`, `#formas`, `#arbol`, `#vivo`, `#referencia`; `#mermaid`
+lleva a Diagramas). Las capturas de este documento se regeneran con `node tools/capture-docs.mjs` y los GIF de
+los README con `node tools/capture-gifs.mjs` (ver [README](README.md)).
+
+**La versión inglesa.** `--lang en` traduce la plantilla con `examples/fx/showcase.en.txt` (pares de frases
+exactas; el build falla si una frase ya no está en la plantilla o si queda castellano visible) y toma los
+datos de `examples/en/`, que replica `examples/` con cada ejemplo traducido (mismos ids, `"lang": "en"`). Al
+cambiar un texto de la página, añade su traducción al diccionario; al cambiar un ejemplo, su copia en inglés.
+
+| Pestaña | Qué enseña |
+|---|---|
+| Software | el checkout de una tienda con su día de tráfico, impacto, equipos, paneles ricos y Mermaid con datos |
+| Casos de uso | diez ejemplos del repositorio, de un postmortem a un plan de lanzamiento |
+| Diagramas | los 19 tipos de Mermaid dibujados por GraphX y por Mermaid, con y sin efectos, colores y editor |
+| Piezas | cada clase de pieza con datos en vivo, los 24 bloques del panel y los iconos |
+| Formas | el catálogo de formas en React (`GraphXShape`) con estados, cambios, colores y puntas de arista |
+| Árbol | este repositorio como árbol de ficheros con los cambios de la rama, o un árbol pegado |
+| En vivo | datos que cambian cada segundo y medio, presets y efectos uno a uno |
+| Guía | la clasificación de assets y efectos y la referencia de configuración |
 
 ![La portada](img/demo-portada.webp)
 
@@ -64,20 +86,39 @@ una PR de 73 piezas con el preset `vivid` (zoom semántico, marcha al pasar, min
 
 ![La sala de control](img/demo-vivo.webp)
 
-## Ejemplos
+## Casos de uso
 
-Ocho ejemplos del repositorio, cada uno con lo que demuestra y su fichero; al elegirlo se monta al lado.
-Ver [ejemplos.md](ejemplos.md).
+Diez ejemplos del repositorio, cada uno con lo que demuestra y su fichero; al elegirlo se monta al lado (el
+visor se queda fijo al bajar por la lista). Ver [ejemplos.md](ejemplos.md).
 
-![La pestaña de ejemplos](img/demo-ejemplos.webp)
+![La pestaña de casos de uso](img/demo-ejemplos.webp)
 
-## Mermaid
+## Diagramas
 
-El mismo código de Mermaid convertido sin efectos y con un preset (vivid, neon, blueprint o glass). El código
-se edita y los dos lados se rehacen. Ejemplos: un flowchart con subgrafos, un despliegue con tema `forest` y
-trazo a mano, la búsqueda con datos `@gx` y una máquina de estados.
+Los 19 tipos de Mermaid (`examples/mermaid/*.mmd`) y tres más con datos de GraphX (`@{…}` y `%% @gx`). Cuatro
+vistas: solo GraphX, GraphX y Mermaid lado a lado (Mermaid 11.17 desde jsDelivr), con y sin efectos (`fx: false`
+frente al preset elegido) y solo Mermaid. Los efectos se eligen arriba (apagados, por defecto, vivid, neon,
+blueprint, glass); «Colores» cambia los tokens del tema y el color de cada tipo de pieza en vivo; «Editar el
+código» abre el editor (Ctrl + Enter convierte). Un `pie` se dibuja como una pieza `donut`.
 
-![Mermaid con y sin efectos](img/demo-mermaid.webp)
+![Diagramas: GraphX y Mermaid](img/demo-mermaid.webp)
+
+## Formas
+
+Cada forma de `graphx-shapes.js` dibujada suelta con el componente `GraphXShape` de React, agrupada por familia
+(flujo, gráficos, tarjetas con datos, tablas, C4, iconos, marcas, notas, barras y ficheros) y con cómo se pide
+desde Mermaid o el JSON. Arriba se cambia el estado (normal, iluminada, seleccionada), el cambio (nueva,
+eliminada), el color y el sentido; al final, las puntas de arista.
+
+![El catálogo de formas](img/demo-formas.webp)
+
+## Árbol
+
+Este repositorio como árbol de ficheros (`tools/tree-spec.mjs`, con los cambios confirmados de la rama
+respecto a `main`) o un árbol pegado: la salida de `tree`, una ruta por línea o un `git diff --numstat`. Se
+navega con el teclado y se puede ver con otra piel.
+
+![El árbol del repositorio](img/demo-arbol.webp)
 
 ## Guía
 

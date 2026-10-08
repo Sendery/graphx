@@ -1,0 +1,5 @@
+# Páginas y binarios generados: fuera de las estadísticas de lenguaje y de los diffs
+docs/demo/** linguist-generated=true
+dist/** linguist-generated=true
+*.gif binary
+*.webp binary

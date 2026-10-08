@@ -1,0 +1,32 @@
+sequenceDiagram
+    title Inicio de sesión con SSO
+    autonumber
+    box Aqua Navegador
+    actor U as Usuaria
+    participant W as Web
+    end
+    box rgb(240,240,255) Servidor
+    participant A as API
+    participant IdP as Proveedor de identidad
+    participant DB@{ "type" : "database" }
+    end
+    U->>W: Pulsa «Entrar»
+    W->>+A: GET /login
+    A-->>-W: 302 al IdP
+    Note right of W: El navegador sigue la redirección
+    W->>IdP: /authorize
+    alt credenciales correctas
+        IdP-->>W: code
+        W->>A: /callback?code
+        A->>IdP: canjea el code
+        IdP-->>A: id_token
+        loop cada campo del perfil
+            A->>A: valida claim
+        end
+        A->>DB: upsert usuaria
+        A-->>W: cookie de sesión
+    else credenciales incorrectas
+        IdP--xW: error
+    end
+    W-)U: muestra el panel
+    link A: Dashboard @ https://example.com/api

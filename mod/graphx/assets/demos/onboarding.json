@@ -1,0 +1,406 @@
+{
+  "schema": "graphx/1",
+  "title": "Incorporación de una persona nueva",
+  "summary": "Ejemplo ficticio de uso fuera de las PRs: un proceso entre departamentos, de la firma del contrato al final del primer mes.",
+  "lang": "es",
+  "direction": "down",
+  "initialDepth": 1,
+  "levels": [
+    {
+      "depth": 0,
+      "label": "Área"
+    },
+    {
+      "depth": 1,
+      "label": "Etapa"
+    },
+    {
+      "depth": 2,
+      "label": "Tarea"
+    }
+  ],
+  "theme": {
+    "light": {
+      "accent": "#0b6e8c"
+    },
+    "dark": {
+      "accent": "#4fb3d1"
+    }
+  },
+  "lanes": [
+    {
+      "id": "rrhh",
+      "label": "Personas y cultura",
+      "subtitle": "RR. HH.",
+      "color": "#8250df"
+    },
+    {
+      "id": "it",
+      "label": "IT",
+      "subtitle": "equipos y accesos",
+      "color": {
+        "light": "#bc4c00",
+        "dark": "#f0883e"
+      }
+    },
+    {
+      "id": "equipo",
+      "label": "Equipo y manager",
+      "subtitle": "donde se aterriza",
+      "color": "#1a7f37"
+    },
+    {
+      "id": "persona",
+      "label": "Persona que se incorpora",
+      "subtitle": "lo que vive quien llega",
+      "color": "#0b6e8c"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "p-firma",
+      "lane": "persona",
+      "label": "Firma del contrato",
+      "kind": "ui",
+      "summary": "El punto de partida: con la firma, el resto de áreas reciben el aviso y empiezan a preparar la llegada."
+    },
+    {
+      "id": "p-dia1",
+      "lane": "persona",
+      "label": "Primer día",
+      "kind": "ui",
+      "summary": "Lo que la persona ve el primer día. Todo lo demás del diagrama existe para que este día salga bien."
+    },
+    {
+      "id": "p-dia1-acceso",
+      "parent": "p-dia1",
+      "label": "Entra con sus credenciales",
+      "kind": "function",
+      "summary": "Si IT llegó a tiempo, el portátil arranca y el correo funciona. Es el fallo más visible cuando algo se retrasa."
+    },
+    {
+      "id": "p-dia1-bienvenida",
+      "parent": "p-dia1",
+      "label": "Sesión de bienvenida",
+      "kind": "function",
+      "summary": "Una hora con Personas y cultura: cómo funciona la empresa, a quién preguntar qué."
+    },
+    {
+      "id": "p-mes1",
+      "lane": "persona",
+      "label": "Primer mes",
+      "kind": "ui",
+      "summary": "Las semanas en las que la persona pasa de observar a contribuir."
+    },
+    {
+      "id": "r-alta",
+      "lane": "rrhh",
+      "label": "Alta administrativa",
+      "kind": "service",
+      "summary": "Todo lo que tiene que existir antes del primer día: el registro de la persona, su contrato y su nómina."
+    },
+    {
+      "id": "r-alta-ficha",
+      "parent": "r-alta",
+      "label": "Crear la ficha",
+      "kind": "function",
+      "summary": "La ficha es la fuente de verdad del resto de sistemas: sin ella, IT no puede crear las cuentas."
+    },
+    {
+      "id": "r-alta-nomina",
+      "parent": "r-alta",
+      "label": "Alta en nómina",
+      "kind": "function",
+      "summary": "Necesita los datos bancarios y fiscales; si faltan, la primera nómina se retrasa."
+    },
+    {
+      "id": "r-plan",
+      "lane": "rrhh",
+      "label": "Plan de acogida",
+      "kind": "config",
+      "summary": "El guion del primer mes: sesiones, lecturas y quién acompaña cada semana."
+    },
+    {
+      "id": "r-plan-agenda",
+      "parent": "r-plan",
+      "label": "Agenda del primer día",
+      "kind": "function",
+      "summary": "Se envía a la persona y a su manager la semana anterior."
+    },
+    {
+      "id": "r-plan-encuesta",
+      "parent": "r-plan",
+      "label": "Encuesta a los 30 días",
+      "kind": "function",
+      "summary": "Cierra el proceso: qué funcionó y qué no, para mejorar la siguiente incorporación."
+    },
+    {
+      "id": "i-equipo",
+      "lane": "it",
+      "label": "Equipo físico",
+      "kind": "external",
+      "summary": "Portátil y periféricos. El plazo de compra es lo que más a menudo marca el calendario."
+    },
+    {
+      "id": "i-cuentas",
+      "lane": "it",
+      "label": "Cuentas y accesos",
+      "kind": "service",
+      "summary": "Correo, SSO y las herramientas del equipo, con los permisos que pida el manager."
+    },
+    {
+      "id": "i-cuentas-sso",
+      "parent": "i-cuentas",
+      "label": "Alta en el SSO",
+      "kind": "function",
+      "summary": "Se crea a partir de la ficha de RR. HH.: si la ficha cambia, la cuenta se actualiza sola."
+    },
+    {
+      "id": "i-cuentas-permisos",
+      "parent": "i-cuentas",
+      "label": "Permisos del equipo",
+      "kind": "function",
+      "summary": "Los grupos y accesos concretos del puesto. Los define el manager, no IT."
+    },
+    {
+      "id": "e-preparar",
+      "lane": "equipo",
+      "label": "Preparar la llegada",
+      "kind": "module",
+      "summary": "Lo que el equipo decide antes: primera tarea, compañero de acogida y permisos."
+    },
+    {
+      "id": "e-preparar-buddy",
+      "parent": "e-preparar",
+      "label": "Elegir compañero de acogida",
+      "kind": "function",
+      "summary": "Alguien del equipo que no es el manager y responde las dudas pequeñas."
+    },
+    {
+      "id": "e-preparar-tarea",
+      "parent": "e-preparar",
+      "label": "Primera tarea real",
+      "kind": "function",
+      "summary": "Pequeña y terminable en la primera semana: da la sensación temprana de aportar."
+    },
+    {
+      "id": "e-seguimiento",
+      "lane": "equipo",
+      "label": "Seguimiento",
+      "kind": "job",
+      "summary": "Reuniones semanales uno a uno durante el primer mes."
+    }
+  ],
+  "edges": [
+    {
+      "id": "x-aviso",
+      "from": "p-firma",
+      "to": "r-alta-ficha",
+      "kind": "event",
+      "label": "aviso de alta",
+      "animated": true,
+      "summary": "La firma dispara el proceso.",
+      "data": "datos personales y fecha de incorporación"
+    },
+    {
+      "id": "x-ficha-sso",
+      "from": "r-alta-ficha",
+      "to": "i-cuentas-sso",
+      "kind": "data",
+      "label": "la ficha crea la cuenta",
+      "emphasis": "hero",
+      "animated": true,
+      "summary": "La conexión que más importa: si la ficha llega tarde, todo lo de IT llega tarde."
+    },
+    {
+      "id": "x-ficha-nom",
+      "from": "r-alta-ficha",
+      "to": "r-alta-nomina",
+      "kind": "call"
+    },
+    {
+      "id": "x-pedido",
+      "from": "r-alta-ficha",
+      "to": "i-equipo",
+      "kind": "queue",
+      "label": "pedido de equipo"
+    },
+    {
+      "id": "x-permisos",
+      "from": "e-preparar-tarea",
+      "to": "i-cuentas-permisos",
+      "kind": "call",
+      "label": "qué accesos necesita"
+    },
+    {
+      "id": "x-acceso",
+      "from": "i-cuentas-sso",
+      "to": "p-dia1-acceso",
+      "kind": "data",
+      "label": "credenciales"
+    },
+    {
+      "id": "x-portatil",
+      "from": "i-equipo",
+      "to": "p-dia1-acceso",
+      "kind": "data",
+      "label": "portátil listo"
+    },
+    {
+      "id": "x-agenda",
+      "from": "r-plan-agenda",
+      "to": "p-dia1-bienvenida",
+      "kind": "event",
+      "label": "agenda"
+    },
+    {
+      "id": "x-buddy",
+      "from": "e-preparar-buddy",
+      "to": "p-dia1",
+      "kind": "call",
+      "label": "le recibe"
+    },
+    {
+      "id": "x-mes",
+      "from": "p-dia1",
+      "to": "p-mes1",
+      "kind": "call"
+    },
+    {
+      "id": "x-seguir",
+      "from": "e-seguimiento",
+      "to": "p-mes1",
+      "kind": "call",
+      "label": "1:1 semanal"
+    },
+    {
+      "id": "x-encuesta",
+      "from": "p-mes1",
+      "to": "r-plan-encuesta",
+      "kind": "event",
+      "label": "a los 30 días"
+    }
+  ],
+  "flows": [
+    {
+      "id": "dia1",
+      "title": "El primer día",
+      "summary": "Qué tiene que haber pasado antes de las 9:00.",
+      "participants": [
+        {
+          "node": "r-alta"
+        },
+        {
+          "node": "i-cuentas"
+        },
+        {
+          "node": "i-equipo"
+        },
+        {
+          "node": "p-dia1"
+        },
+        {
+          "node": "e-preparar"
+        }
+      ],
+      "messages": [
+        {
+          "id": "d1",
+          "from": "r-alta",
+          "to": "i-cuentas",
+          "label": "ficha completa",
+          "kind": "async",
+          "note": "Una semana antes, como mínimo."
+        },
+        {
+          "id": "d2",
+          "from": "i-cuentas",
+          "to": "p-dia1",
+          "label": "credenciales",
+          "kind": "sync"
+        },
+        {
+          "id": "d3",
+          "from": "i-equipo",
+          "to": "p-dia1",
+          "label": "portátil en la mesa",
+          "kind": "sync"
+        },
+        {
+          "id": "d4",
+          "from": "e-preparar",
+          "to": "p-dia1",
+          "label": "le recibe el compañero",
+          "kind": "sync",
+          "animated": true
+        },
+        {
+          "id": "d5",
+          "from": "p-dia1",
+          "to": "p-dia1",
+          "label": "primera tarea",
+          "kind": "self",
+          "note": "Terminable esa misma semana."
+        }
+      ]
+    }
+  ],
+  "tour": {
+    "title": "Cómo se prepara una incorporación",
+    "steps": [
+      {
+        "title": "Todo empieza con la firma",
+        "depth": 1,
+        "focus": {
+          "nodes": [
+            "p-firma",
+            "r-alta"
+          ]
+        },
+        "body_html": "<p>La firma del contrato avisa a Personas y cultura, que abre la <b>ficha</b> de la persona. Todo lo demás cuelga de esa ficha.</p>"
+      },
+      {
+        "title": "La ficha crea las cuentas",
+        "focus": {
+          "edges": [
+            "x-ficha-sso"
+          ]
+        },
+        "body_html": "<p><b>Qué viaja:</b> los datos de la ficha. <b>Qué lo dispara:</b> el alta en RR. HH. Si la ficha llega tarde, las credenciales del primer día también.</p>"
+      },
+      {
+        "title": "El equipo decide qué accesos hacen falta",
+        "focus": {
+          "nodes": [
+            "e-preparar-tarea",
+            "i-cuentas-permisos"
+          ]
+        },
+        "body_html": "<p>IT no adivina permisos: los pide el manager a partir de la primera tarea que va a hacer la persona.</p>"
+      },
+      {
+        "title": "Las 9:00 del primer día",
+        "view": "flow:dia1",
+        "focus": {
+          "messages": [
+            "d2",
+            "d3",
+            "d4"
+          ]
+        },
+        "body_html": "<p>Tres cosas tienen que estar listas a la vez: credenciales, portátil y un compañero que reciba. Falta una y el día empieza mal.</p>"
+      },
+      {
+        "title": "Se cierra a los 30 días",
+        "focus": {
+          "nodes": [
+            "p-mes1",
+            "r-plan-encuesta",
+            "e-seguimiento"
+          ]
+        },
+        "body_html": "<p>El proceso termina con una encuesta a la persona. Sus respuestas mejoran el <b>plan de acogida</b> de la siguiente incorporación.</p>"
+      }
+    ]
+  }
+}

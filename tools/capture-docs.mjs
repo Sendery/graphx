@@ -55,7 +55,9 @@ const S = [
   { name: 'demo-iconos', url: P.demo + '#galeria', sel: '#icons' },
   { name: 'demo-vivo', url: P.demo + '#vivo', sel: '#p-vivo .console', wait: 5000 },
   { name: 'demo-ejemplos', url: P.demo + '#ejemplos', sel: '#p-ejemplos .exs', wait: 3500 },
-  { name: 'demo-mermaid', url: P.demo + '#mermaid', sel: '#p-mermaid .mmd', wait: 3500 },
+  { name: 'demo-mermaid', url: P.demo + '#diagramas', act: async p => { await p.waitForFunction(() => document.querySelector('#dg-mmd svg'), null, { timeout: 60000 }); }, wait: 1500, sel: '#p-diagramas .console' },
+  { name: 'demo-formas', url: P.demo + '#formas', act: async p => { await p.waitForSelector('.cat-item svg', { timeout: 60000 }); }, wait: 800, clip: '#p-formas', h: 1500 },
+  { name: 'demo-arbol', url: P.demo + '#arbol', sel: '#p-arbol .console', wait: 3000 },
   { name: 'demo-guia', url: P.demo + '#referencia', sel: 'section[aria-labelledby="h-efectos"]' },
   /* los efectos, de cerca */
   { name: 'fx-particulas', url: P.viva, dark: true, act: async p => { await p.evaluate(`${gx}.focusNode('gateway')`); await p.mouse.click(4, 4); await p.evaluate(`${gx}.state.selected = null; document.querySelector('.gx-panel').classList.remove('on')`); }, wait: 1500, sel: '.gx-stage' },
@@ -111,7 +113,7 @@ for (const sc of S) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: sc.dark ? 'dark' : 'light', reducedMotion: 'no-preference' });
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(pathToFileURL(sc.url.split('#')[0]).href + (sc.url.includes('#') ? '#' + sc.url.split('#')[1] : ''));
+  await p.goto(pathToFileURL(sc.url.split('#')[0]).href + (sc.url.includes('#') ? '#' + sc.url.split('#')[1] : ''), { waitUntil: 'domcontentloaded', timeout: 90000 });
   await p.waitForTimeout(sc.wait && !sc.act ? sc.wait : 3000);
   if (sc.act) { await sc.act(p); await p.waitForTimeout(sc.wait || 800); }
   if (sc.closePanel) await p.evaluate(`(() => { const g = ${gx}; g.state.selected = null; document.querySelector('.gx-panel').classList.remove('on'); g.state.trace = null; })()`);

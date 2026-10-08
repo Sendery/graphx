@@ -1,0 +1,32 @@
+sequenceDiagram
+    title Single sign-on login
+    autonumber
+    box Aqua Browser
+    actor U as User
+    participant W as Web
+    end
+    box rgb(240,240,255) Server
+    participant A as API
+    participant IdP as Identity provider
+    participant DB@{ "type" : "database" }
+    end
+    U->>W: Clicks «Sign in»
+    W->>+A: GET /login
+    A-->>-W: 302 to the IdP
+    Note right of W: The browser follows the redirect
+    W->>IdP: /authorize
+    alt valid credentials
+        IdP-->>W: code
+        W->>A: /callback?code
+        A->>IdP: exchanges the code
+        IdP-->>A: id_token
+        loop each profile field
+            A->>A: validates claim
+        end
+        A->>DB: upsert user
+        A-->>W: session cookie
+    else invalid credentials
+        IdP--xW: error
+    end
+    W-)U: shows the dashboard
+    link A: Dashboard @ https://example.com/api

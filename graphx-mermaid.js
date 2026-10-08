@@ -11,7 +11,7 @@
  * Tipos: flowchart/graph · sequenceDiagram · classDiagram · stateDiagram(-v2) · erDiagram ·
  * mindmap · gantt · journey · timeline · gitGraph · C4 (Context, Container, Component,
  * Dynamic, Deployment) · architecture-beta · block-beta · requirementDiagram · sankey-beta ·
- * kanban · treemap-beta. Los gráficos de datos (pie, xychart, quadrantChart, radar, packet)
+ * kanban · treemap-beta · pie (como un donut). Los gráficos de datos (xychart, quadrantChart, radar, packet)
  * no son grafos de piezas y conexiones: se rechazan con un error que lo explica.
  *
  * Qué se conserva: piezas, formas (como icono), textos, subgrafos y anidamientos (niveles
@@ -143,7 +143,7 @@
   };
   const PALETTE = [['#0969da', '#4493f8'], ['#1a7f37', '#4ac26b'], ['#bc4c00', '#f0883e'], ['#8250df', '#b083f0'], ['#bf3989', '#f778ba'], ['#1b7c83', '#39c5cf'], ['#9a6700', '#d29922'], ['#cf222e', '#ff7b72']]
     .map(([light, dark]) => ({ light, dark }));
-  const REJECT = /^(pie|quadrantChart|xychart(-beta)?|radar(-beta)?|packet(-beta)?|venn(-beta)?)$/;
+  const REJECT = /^(quadrantChart|xychart(-beta)?|radar(-beta)?|packet(-beta)?|venn(-beta)?)$/;
 
   class MermaidError extends Error { constructor(msg, line) { super(line ? `línea ${line}: ${msg}` : msg); this.line = line || null; this.name = 'MermaidError'; } }
 
@@ -323,7 +323,7 @@
   /* ---------- constructor del JSON ---------- */
   function Builder(lang) {
     this.lang = lang; this.T = STR[lang] || STR.es;
-    this.map = new Map(); this.used = new Set(); this.nodes = new Map(); this.lanes = new Map(); this.edges = [];
+    this.map = new Map(); this.used = new Set(); this.alias = new Map(); this.nodes = new Map(); this.lanes = new Map(); this.edges = [];
     this.warnings = []; this.kinds = new Set(); this.kindNames = {}; this.statuses = {}; this.flows = []; this.levelNames = null;
   }
   Builder.prototype = {
@@ -618,7 +618,12 @@
       const e = b.edge(a.id, c.id, { kind: l.style === 'dotted' ? 'async' : 'call', label: l.label || null, summary: notes.join(' ') || null, _thick: l.style === 'thick' || null,
         head: l.head ? END[l.head] : 'none', tail: l.tail ? END[l.tail] : null });
       linkIdx.push(e);
-      if (l.eid) edgeById.set(l.eid, e);
+      if (l.eid) {
+        edgeById.set(l.eid, e);
+        /* la arista se llama como en Mermaid (`e1@-->`), así `%% @gx e1 {…}` la encuentra; si el nombre ya es de
+           otra cosa, se queda con el suyo y el de Mermaid sirve de alias */
+        if (!b.used.has(l.eid)) { b.used.delete(e.id); b.used.add(l.eid); e.id = l.eid; } else b.alias.set(l.eid, e);
+      }
     };
     for (const { t, n } of statements(P.lines.slice(1), true)) {
       let m;
@@ -1553,6 +1558,31 @@
     nodes.filter(x => x.kind === 'group').forEach(g => { const s = sum(g.id); g.metrics = [{ label: T.total, value: String(Math.round(s * 100) / 100) }]; g.subtitle = String(Math.round(s * 100) / 100); });
   }
 
+  /* ================= pie ================= */
+  /* Un reparto es un dato, no un grafo: una sola pieza `donut` con todas sus partes (el donut agrupa a
+     partir de la quinta en «Otros») y, en el panel, la lista completa como ranking. */
+  function parsePie(P, b) {
+    const T = b.T, en = b.lang === 'en', parts = [];
+    let title = (/^pie\b(?:\s+showData)?(?:\s+title\s+(.+))?$/.exec(P.lines[0].t) || [])[1] || null;
+    for (const L of P.lines.slice(1)) {
+      let m;
+      if ((m = /^title\s+(.+)$/.exec(L.t))) { title = clean(m[1]); continue; }
+      if (/^(showData|accDescr\b)/.test(L.t)) continue;
+      if ((m = /^("[^"]*"|'[^']*')\s*:\s*(-?[\d.]+)\s*$/.exec(L.t))) { const v = parseFloat(m[2]); if (v > 0) parts.push({ label: clean(m[1]), value: v }); continue; }
+      b.warn(T.ignored(L.t), L.n);
+    }
+    if (!parts.length) return { title };
+    if (title) title = clean(title);
+    const total = parts.reduce((a, p) => a + p.value, 0), fmt = v => String(Math.round(v * 100) / 100);
+    const nd = b.node('pie', { label: title || (en ? 'Breakdown' : 'Reparto'), kind: 'chart', shape: 'donut' });
+    nd.parts = parts;
+    nd.metrics = [{ label: T.total, value: fmt(total) }];
+    const top = parts.slice().sort((x, y) => y.value - x.value);
+    nd.summary = top.map(p => `${p.label}: ${fmt(p.value)} (${Math.round(p.value / total * 100)} %)`).join(' · ');
+    nd.blocks = [{ type: 'bars', items: top.map(p => ({ label: p.label, value: p.value })) }];
+    return { title };
+  }
+
   /* ---------- entrada ---------- */
   const TYPES = [
     [/^(flowchart|flowchart-elk|graph)\b/, 'flowchart', parseFlowchart],
@@ -1571,7 +1601,8 @@
     [/^requirementDiagram\b/, 'requirementDiagram', parseRequirement],
     [/^sankey(-beta)?\b/, 'sankey', parseSankey],
     [/^kanban\b/, 'kanban', parseKanban],
-    [/^treemap(-beta)?\b/, 'treemap', parseTreemap]
+    [/^treemap(-beta)?\b/, 'treemap', parseTreemap],
+    [/^pie\b/, 'pie', parsePie]
   ];
   function detect(text) {
     const P = prep(text);
@@ -1581,8 +1612,10 @@
   /* ---------- datos ricos: los mismos que una pieza de GraphX, desde Mermaid ---------- */
   /* En `A@{ shape: rect, heat: 310, spark: "1 2 3", owner: pagos }` (las claves que Mermaid no conoce) o en un
      comentario `%% @gx A { "blocks": [ … ] }` (JSON). `%% @gx { … }` sin id va a la raíz: fx, owners, timeline… */
-  const NODE_RICH = ['heat', 'spark', 'unit', 'progress', 'alert', 'owner', 'value', 'change', 'good', 'min', 'max', 'thresholds', 'decimals', 'parts', 'summary', 'subtitle', 'metrics', 'blocks', 'links', 'notes', 'status', 'color', 'tags', 'kind', 'files', 'delta'];
-  const EDGE_RICH = ['rate', 'speed', 'weight', 'emphasis', 'summary', 'data', 'trigger', 'animated', 'label', 'delta', 'color'];
+  const NODE_RICH = ['heat', 'spark', 'unit', 'progress', 'alert', 'owner', 'value', 'change', 'good', 'min', 'max', 'thresholds', 'decimals', 'parts', 'summary', 'subtitle', 'metrics', 'blocks', 'links', 'notes', 'status', 'color', 'tags', 'kind', 'files', 'delta',
+    /* la forma y sus datos, para lo que Mermaid no sabe dibujar (kpi, gauge, tablas…): solo desde `%% @gx id {…}` */
+    'shape', 'rows', 'span', 'score', 'badge', 'avatar', 'fill', 'textColor', 'frame', 'details_html'];
+  const EDGE_RICH = ['rate', 'speed', 'weight', 'emphasis', 'summary', 'data', 'trigger', 'animated', 'label', 'delta', 'color', 'head', 'tail', 'headLabel', 'tailLabel', 'links', 'curve'];
   const ROOT_RICH = ['fx', 'owners', 'timeline', 'statuses', 'tour', 'filters', 'legend', 'title', 'summary', 'initialDepth', 'focus', 'flows'];
   const NUMERIC = { heat: 1, progress: 1, value: 1, change: 1, min: 1, max: 1, decimals: 1, rate: 1, weight: 1 };
   const toNums = v => (Array.isArray(v) ? v : String(v).replace(/[[\]]/g, '').split(/[\s,;]+/)).map(Number).filter(x => isFinite(x));
@@ -1594,11 +1627,13 @@
     if (k === 'animated') return /^(true|1|yes|sí|si)$/i.test(v);
     return v;
   }
-  function richNode(n, meta) { NODE_RICH.forEach(k => { if (meta[k] != null && k !== 'label') { const v = richVal(k, meta[k]); if (v !== undefined) n[k] = v; } }); }
+  const GX_ONLY = new Set(['shape', 'rows', 'span', 'score', 'badge', 'avatar', 'fill', 'textColor', 'frame', 'details_html']);
+  function richNode(n, meta) { NODE_RICH.forEach(k => { if (meta[k] != null && k !== 'label' && !GX_ONLY.has(k)) { const v = richVal(k, meta[k]); if (v !== undefined) n[k] = v; } }); }
   function richEdge(e, meta) { EDGE_RICH.forEach(k => { if (meta[k] != null && !(k === 'animated' && e.animated)) { const v = richVal(k, meta[k]); if (v !== undefined) e[k] = v; } }); }
-  function applyGx(spec, list, warn) {
+  function applyGx(spec, list, warn, alias) {
     const fxs = [];
     const byId = new Map(spec.nodes.map(n => [n.id, n])), lanes = new Map((spec.lanes || []).map(l => [l.id, l])), edges = new Map(spec.edges.map(e => [e.id, e]));
+    if (alias) for (const [k, e] of alias) if (!edges.has(k)) edges.set(k, e);
     const safe = raw => String(raw).replace(/[^A-Za-z0-9._:/-]/g, '_');
     for (const it of list) {
       const o = parseLoose(it.json);
@@ -1626,7 +1661,9 @@
   };
   const VAR_TOKENS = { primaryColor: 'card', mainBkg: 'card', primaryBorderColor: 'card-line', nodeBorder: 'card-line', primaryTextColor: 'ink', textColor: 'ink', lineColor: 'neu', secondaryColor: 'glyph-bg', tertiaryColor: 'group', clusterBkg: 'group', clusterBorder: 'group-line', background: 'canvas' };
   function parseLoose(txt) {
-    /* JSON a la manera de Mermaid: comillas simples, claves sin comillas, comas al final */
+    /* JSON de verdad primero (sus cadenas pueden llevar comillas simples, comas y dos puntos); si no, JSON a la
+       manera de Mermaid: comillas simples, claves sin comillas, comas al final */
+    try { return JSON.parse(String(txt).trim()); } catch (_) { }
     try {
       return JSON.parse(String(txt).trim().replace(/'/g, '"').replace(/([{,]\s*)([A-Za-z_$][\w$-]*)\s*:/g, '$1"$2":').replace(/,\s*([}\]])/g, '$1'));
     } catch (_) { return null; }
@@ -1696,7 +1733,7 @@
     const look = lookOf(P.meta);
     if (look.theme) spec.theme = look.theme;
     /* efectos: los del tipo, los del look, los del propio código (`%% @gx { "fx": … }`) y, encima, los de quien convierte */
-    const fxs = P.meta.gx.length ? applyGx(spec, P.meta.gx, w => b.warnings.push(w)) : [];
+    const fxs = P.meta.gx.length ? applyGx(spec, P.meta.gx, w => b.warnings.push(w), b.alias) : [];
     if (opts.fx === false || opts.fx === 'off' || fxs.some(f => f === false || f === 'off')) spec.fx = false;
     else {
       const fx = Object.assign({}, FX_BY_TYPE[type] || {}, look.fx || {});
