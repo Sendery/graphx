@@ -12,6 +12,7 @@ Sin servidor, sin paso de compilación, sin framework. Funciona como fichero loc
 ![formas](https://img.shields.io/badge/formas-61-3cc4cf)
 ![efectos](https://img.shields.io/badge/efectos-29%20KB%20gzip-b45309)
 ![dependencias](https://img.shields.io/badge/dependencias-solo%20ELK-142120)
+![claude code](https://img.shields.io/badge/Claude%20Code-mod-d97757)
 
 [English](README.md) · **Español**
 
@@ -23,13 +24,55 @@ Sin servidor, sin paso de compilación, sin framework. Funciona como fichero loc
 
 </div>
 
----
-
-## Por qué GraphX
-
 Los diagramas de arquitectura envejecen porque son dibujos. Los de GraphX son **datos**: servicios, equipos,
 latencias, caudales, incidentes y despliegues van en el JSON, y el diagrama los dibuja, los anima y deja que quien
 lo lee los explore.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+<img src="docs/gif/es/diagramas.gif" alt="Diagramas de Mermaid dibujados por GraphX junto a Mermaid"><br>
+<b>🧜 Los 19 tipos de Mermaid</b><br>
+<sub>convertidos sin Mermaid, con sus formas, notas y fronteras</sub>
+</td>
+<td width="33%" valign="top">
+<img src="docs/gif/es/efectos.gif" alt="El mismo diagrama con y sin efectos, en cuatro presets"><br>
+<b>✨ Efectos y pieles</b><br>
+<sub><code>vivid</code>, <code>neon</code>, <code>blueprint</code>, <code>glass</code>… o <code>fx: false</code></sub>
+</td>
+<td width="33%" valign="top">
+<img src="docs/gif/es/vivo.gif" alt="Una plataforma de pagos recibiendo datos en vivo y un incidente"><br>
+<b>🌊 Datos en vivo</b><br>
+<sub><code>setData()</code>: caudal, calor, KPI e incidentes</sub>
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top">
+<img src="docs/gif/es/impacto.gif" alt="Radio de impacto de un servicio que falla"><br>
+<b>💥 Radio de impacto</b><br>
+<sub>qué se rompe, salto a salto, y a qué equipos llamar</sub>
+</td>
+<td width="33%" valign="top">
+<img src="docs/gif/es/arbol.gif" alt="Un repositorio como árbol de ficheros navegable"><br>
+<b>🗂 Árboles de ficheros</b><br>
+<sub>un repositorio con el diff de la rama</sub>
+</td>
+<td width="33%" valign="top">
+<img src="mod/docs/gif/presentacion.gif" alt="Una presentación guiada en el terminal de Claude Code"><br>
+<b>🤖 En Claude Code</b><br>
+<sub>el mismo diagrama en el terminal, paso a paso</sub>
+</td>
+</tr>
+</table>
+
+```bash
+node graphx-build.mjs examples/onboarding-proceso.json --out /tmp/onboarding.html && open /tmp/onboarding.html
+```
+
+---
+
+<details>
+<summary><h3>🧭 Por qué GraphX</h3></summary>
 
 | | |
 |---|---|
@@ -42,60 +85,181 @@ lo lee los explore.
 | 🎛 **Configurable** | cada efecto se enciende o se apaga con `fx`; `fx: false` es el diagrama de siempre, tal cual |
 | 📦 **Portable** | un solo `<script>`; no pide al navegador más que SVG; funciona sin red con el bundle completo |
 
-## El showcase
+La [demo en vivo](docs/demo/es/index.html) lo reúne todo en una página con ocho pestañas: **Software**, **Casos de
+uso**, **Diagramas**, **Piezas**, **Formas**, **Árbol**, **En vivo** y una **Guía** de cada asset y cada efecto.
 
-La [demo en vivo](docs/demo/es/index.html) lo reúne todo en una página con ocho pestañas: **Software** (un mapa de
-servicios con su día de tráfico), **Casos de uso** (diez ejemplos reales), **Diagramas** (Mermaid frente a GraphX),
-**Piezas**, **Formas**, **Árbol**, **En vivo** y una **Guía** de cada asset y cada efecto.
+<img src="docs/img/demo-portada.webp" alt="La portada de la demo">
 
-### Los 19 tipos de Mermaid, al lado de Mermaid
+</details>
+
+<details>
+<summary><h3>🧜 Los 19 tipos de Mermaid, al lado de Mermaid</h3></summary>
 
 Pega cualquier diagrama de Mermaid y GraphX lo convierte, con sus formas, notas, fronteras y puntas de flecha; un
 `pie` se convierte en un donut vivo. Cambia los colores del tema o de cada tipo de pieza mientras miras.
 
 ![Diagramas de Mermaid dibujados por GraphX junto a Mermaid](docs/gif/es/diagramas.gif)
 
-### Efectos y pieles, a un clic
+<table>
+<tr>
+<td width="50%"><img src="docs/img/cat-secuencia.webp" alt="Secuencia"><br><sub><b>sequenceDiagram</b> con cajas, notas y bloques</sub></td>
+<td width="50%"><img src="docs/img/cat-clases.webp" alt="Diagrama de clases"><br><sub><b>classDiagram</b> con miembros y relaciones UML</sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/cat-er.webp" alt="Diagrama de entidad-relación"><br><sub><b>erDiagram</b> con cardinalidades</sub></td>
+<td><img src="docs/img/cat-gantt.webp" alt="Gantt"><br><sub><b>gantt</b> con hitos y el día de hoy</sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/cat-git.webp" alt="gitGraph"><br><sub><b>gitGraph</b> con ramas, merges y tags</sub></td>
+<td><img src="docs/img/cat-sankey.webp" alt="Sankey"><br><sub><b>sankey</b> con caudales proporcionales</sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/cat-treemap.webp" alt="Treemap"><br><sub><b>treemap</b> anidado</sub></td>
+<td><img src="docs/img/cat-formas-flujo.webp" alt="Las formas de un flowchart de Mermaid"><br><sub>las formas de <b>flowchart</b></sub></td>
+</tr>
+</table>
 
-El mismo diagrama con `fx: false` y con los presets `vivid`, `neon`, `blueprint` y `glass`.
+Sigue siendo Mermaid válido: Mermaid ignora las claves de más y los comentarios `%% @gx`.
+
+```mermaid
+flowchart LR
+  usuario([Usuario]) e1@--> buscador{{API de búsqueda}}
+  buscador@{ heat: 85, spark: "40 52 61 58 70", owner: busqueda }
+  buscador --> cache((Redis))
+  e1@{ rate: 900, speed: fast }
+  %% @gx buscador { "blocks": [ { "type": "callout", "tone": "warn", "text": "p95 por encima de **80 ms**" } ] }
+```
+
+</details>
+
+<details>
+<summary><h3>✨ Efectos y pieles, a un clic</h3></summary>
+
+El mismo diagrama con `fx: false` y con los presets `vivid`, `neon`, `blueprint` y `glass`. Cada efecto se enciende
+o se apaga por separado; [docs/efectos.md](docs/efectos.md) los clasifica con recetas.
 
 ![El mismo diagrama de Mermaid con y sin efectos, en cuatro presets](docs/gif/es/efectos.gif)
 
-### Datos en vivo e incidentes
+<table>
+<tr>
+<td width="33%"><img src="docs/img/fx-piel-neon.webp" alt="neon"><br><sub><b>neon</b></sub></td>
+<td width="33%"><img src="docs/img/fx-piel-blueprint.webp" alt="blueprint"><br><sub><b>blueprint</b></sub></td>
+<td width="33%"><img src="docs/img/fx-piel-glass.webp" alt="glass"><br><sub><b>glass</b></sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/fx-particulas.webp" alt="Partículas por caudal, en oscuro"><br><sub>partículas por caudal</sub></td>
+<td><img src="docs/img/fx-calor-tarjetas.webp" alt="Calor, serie, progreso, alerta y equipo en las tarjetas"><br><sub>calor, serie, progreso y alertas</sub></td>
+<td><img src="docs/img/fx-trazo-mano.webp" alt="Trazo a mano con el tema forest de Mermaid"><br><sub>trazo a mano</sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/fx-ondas.webp" alt="Trazar las dependencias de la pasarela"><br><sub>ondas al trazar dependencias</sub></td>
+<td><img src="docs/img/fx-flujo.webp" alt="Flujo a mitad de recorrido"><br><sub>▶ flujo paso a paso</sub></td>
+<td><img src="docs/img/fx-foco.webp" alt="El foco sobre Checkout"><br><sub>foco sobre una pieza</sub></td>
+</tr>
+</table>
+
+<img src="docs/img/fx-zoom-semantico.webp" alt="Zoom semántico en una PR de 73 piezas"><br>
+<sub>zoom semántico en una PR de 73 piezas</sub>
+
+</details>
+
+<details>
+<summary><h3>🌊 Datos en vivo, tiempo e incidentes</h3></summary>
 
 `setData()` cada segundo y medio: las partículas aceleran con el caudal, los colores siguen la latencia p95 y los
 KPI cuentan hasta su valor. Provoca un incidente y el mapa traza lo que depende del servicio que falla.
 
 ![Una plataforma de pagos recibiendo datos en vivo y un incidente](docs/gif/es/vivo.gif)
 
-<table>
-<tr>
-<td width="50%">
+La línea de tiempo sale de cualquier tabla TSV o CSV: recorre un día de tráfico y mira cómo llega el incidente.
 
-**Radio de impacto.** Un clic en el panel: anillos por salto, qué se rompe y a qué equipos llamar.
+<img src="docs/img/demo-tiempo.webp" alt="La línea de tiempo en el incidente de las 13:00">
+
+```js
+const g = GraphX.mount(el, spec, { fx: 'neon', lang: 'es' });
+g.setData({ nodes: { api: { heat: 480, alert: 'crit' } }, edges: { e1: { rate: 240 } } });
+g.timeline.seek('13:00'); g.blast('api'); g.filterOwners(['datos']);
+```
+
+</details>
+
+<details>
+<summary><h3>💥 Impacto, equipos y paneles</h3></summary>
+
+Un clic en el panel: anillos por salto, qué se rompe y a qué equipos llamar. Los equipos filtran el mapa y el panel
+de cada pieza lleva bloques ricos: métricas, avisos, tablas, enlaces y su vecindad.
 
 ![Radio de impacto de un servicio que falla](docs/gif/es/impacto.gif)
 
-</td>
-<td width="50%">
-
-**Árboles de ficheros.** Un repositorio con el diff de la rama, filtrado mientras escribes.
-
-![Un repositorio como árbol de ficheros navegable](docs/gif/es/arbol.gif)
-
-</td>
+<table>
+<tr>
+<td width="50%"><img src="docs/img/demo-impacto.webp" alt="El impacto de Antifraude"><br><sub>el impacto de Antifraude</sub></td>
+<td width="50%"><img src="docs/img/demo-equipos.webp" alt="Filtrar por un equipo"><br><sub>filtrar por un equipo</sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/demo-bloques.webp" alt="Los bloques del panel"><br><sub>los bloques del panel</sub></td>
+<td><img src="docs/img/demo-arbol.webp" alt="El árbol del repositorio"><br><sub>un repositorio como árbol, con su diff</sub></td>
 </tr>
 </table>
 
-### Cada forma, en el motor y en React
+</details>
 
-61 formas (flowchart, C4, tablas de ER y UML, commits de git, barras de gantt, tickets de kanban, KPI, gauge,
-donut, ficheros y carpetas…) y 12 puntas de arista, dibujadas por `GraphXShape` desde el mismo árbol SVG que usa
-el motor.
+<details>
+<summary><h3>🧩 61 formas, en el motor y en React</h3></summary>
+
+Flowchart, C4, tablas de ER y UML, commits de git, barras de gantt, tickets de kanban, KPI, gauge, donut, ficheros
+y carpetas… y 12 puntas de arista, dibujadas por `GraphXShape` desde el mismo árbol SVG que usa el motor.
 
 ![El catálogo de formas en React](docs/gif/es/formas.gif)
 
-### También en Claude Code
+<table>
+<tr>
+<td width="50%"><img src="docs/img/cat-formas-datos.webp" alt="Formas con serie, progreso, calor y equipo"><br><sub>formas con datos</sub></td>
+<td width="50%"><img src="docs/img/cat-graficos.webp" alt="KPI, gauge y donut"><br><sub>KPI, gauge y donut</sub></td>
+</tr>
+</table>
+
+```jsx
+const { GraphX, GraphXShape } = GraphXReactFactory(React, () => window.GraphX);
+<GraphX mermaid={texto} fx="glass" lang="es" />
+<GraphXShape node={{ shape: 'gauge', label: 'CPU', value: 72, unit: '%', thresholds: [70, 90] }} />
+```
+
+</details>
+
+<details>
+<summary><h3>🗂 Diez casos de uso reales</h3></summary>
+
+Todos están en [`examples/`](examples) (y en inglés en `examples/en/`); [docs/ejemplos.md](docs/ejemplos.md) los
+cuenta uno a uno.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/img/ej-software.webp" alt="Checkout de la tienda"><br><sub><b>Checkout de una tienda</b> con su día de tráfico</sub></td>
+<td width="50%"><img src="docs/img/ej-plataforma-viva.webp" alt="Plataforma de pagos"><br><sub><b>Plataforma de pagos</b> en vivo</sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/ej-postmortem.webp" alt="Postmortem a las 10:50"><br><sub><b>Postmortem</b> a las 10:50</sub></td>
+<td><img src="docs/img/ej-pipeline.webp" alt="La carga nocturna a las 03:40"><br><sub><b>Pipeline de datos</b>: la carga nocturna</sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/ej-kubernetes.webp" alt="El clúster a nivel de pod"><br><sub><b>Kubernetes</b> a nivel de pod</sub></td>
+<td><img src="docs/img/ej-ci-cd.webp" alt="CI/CD"><br><sub><b>CI/CD</b></sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/ej-pr-review.webp" alt="Revisión de una PR"><br><sub><b>Revisión de una PR</b></sub></td>
+<td><img src="docs/img/ej-radar.webp" alt="Radar de PRs"><br><sub><b>Radar de PRs</b></sub></td>
+</tr>
+<tr>
+<td><img src="docs/img/ej-almacen.webp" alt="Almacén"><br><sub><b>Almacén</b></sub></td>
+<td><img src="docs/img/ej-onboarding.webp" alt="Incorporación"><br><sub><b>Incorporación</b> de una persona</sub></td>
+</tr>
+</table>
+
+</details>
+
+<details>
+<summary><h3>🤖 También en Claude Code</h3></summary>
 
 La carpeta [`mod/`](mod/README.md) es un plugin de Claude Code que dibuja cualquier diagrama de GraphX dentro de
 la sesión: Claude dibuja con herramientas y tú lo navegas con el teclado y el ratón. En el terminal vuelve a
@@ -105,7 +269,20 @@ explicaciones.
 
 ![Una presentación guiada de un mapa de servicios en el terminal de Claude Code](mod/docs/gif/presentacion.gif)
 
-## Empezar en un minuto
+<table>
+<tr>
+<td width="50%"><img src="mod/docs/gif/zoom.gif" alt="Zoom semántico en el terminal"><br><sub>zoom semántico: tarjetas, fichas y vista general</sub></td>
+<td width="50%"><img src="mod/docs/gif/impacto.gif" alt="Radio de impacto en el terminal"><br><sub>✺ impacto y trazado</sub></td>
+</tr>
+</table>
+
+<img src="mod/docs/img/mermaid.png" alt="Doce tipos de Mermaid en el terminal"><br>
+<sub>doce tipos de Mermaid en el terminal · <a href="mod/README.md">todo el mod →</a></sub>
+
+</details>
+
+<details>
+<summary><h3>🚀 Empezar en un minuto</h3></summary>
 
 ```bash
 node graphx-build.mjs examples/onboarding-proceso.json --out /tmp/onboarding.html
@@ -116,7 +293,7 @@ El ensamblador valida antes de escribir (ids duplicados, extremos que no existen
 inseguros…) y acepta `.json`, `.mmd` y Markdown con un bloque ` ```mermaid `. Con `--strict` los avisos también
 fallan, `--mode lite` carga ELK de un CDN (≈135 KB con gzip) y `--lang en` genera los textos en inglés.
 
-### El diagrama más pequeño
+**El diagrama más pequeño**
 
 ```json
 {
@@ -135,20 +312,7 @@ fallan, `--mode lite` carga ELK de un CDN (≈135 KB con gzip) y `--lang en` gen
 }
 ```
 
-### Desde Mermaid, con datos
-
-Sigue siendo Mermaid válido: Mermaid ignora las claves de más y los comentarios `%% @gx`.
-
-```mermaid
-flowchart LR
-  usuario([Usuario]) e1@--> buscador{{API de búsqueda}}
-  buscador@{ heat: 85, spark: "40 52 61 58 70", owner: busqueda }
-  buscador --> cache((Redis))
-  e1@{ rate: 900, speed: fast }
-  %% @gx buscador { "blocks": [ { "type": "callout", "tone": "warn", "text": "p95 por encima de **80 ms**" } ] }
-```
-
-### En una página
+**En una página**
 
 ```html
 <script src="dist/graphx.bundle.min.js"></script>
@@ -159,19 +323,12 @@ flowchart LR
 
 ```js
 const g = GraphX.mount(el, spec, { fx: 'neon', lang: 'es' });   // o GraphX.mountMermaid(el, texto)
-g.setData({ nodes: { api: { heat: 480, alert: 'crit' } }, edges: { e1: { rate: 240 } } });
-g.timeline.seek('13:00'); g.blast('api'); g.filterOwners(['datos']);
 ```
 
-### En React
+</details>
 
-```jsx
-const { GraphX, GraphXShape } = GraphXReactFactory(React, () => window.GraphX);
-<GraphX mermaid={texto} fx="glass" lang="es" />
-<GraphXShape node={{ shape: 'gauge', label: 'CPU', value: 72, unit: '%', thresholds: [70, 90] }} />
-```
-
-## Qué trae
+<details>
+<summary><h3>📦 Qué trae</h3></summary>
 
 | Fichero | Qué es | Peso (gzip) |
 |---|---|---|
@@ -187,7 +344,10 @@ const { GraphX, GraphXShape } = GraphXReactFactory(React, () => window.GraphX);
 | `examples/` · `examples/en/` | todos los ejemplos, en castellano y en inglés | |
 | `mod/` | el plugin de Claude Code: terminal, escritorio y navegador ([mod/README.md](mod/README.md)) | |
 
-## Documentación
+</details>
+
+<details>
+<summary><h3>📚 Documentación</h3></summary>
 
 | | |
 |---|---|
@@ -195,8 +355,12 @@ const { GraphX, GraphXShape } = GraphXReactFactory(React, () => window.GraphX);
 | [docs/catalogo.md](docs/catalogo.md) | cada asset por familia: tarjetas, formas, gráficos, contenedores, aristas, iconos, bloques, layouts y color |
 | [docs/efectos.md](docs/efectos.md) | los efectos, clasificados por lo que hacen, con recetas |
 | [docs/demo.md](docs/demo.md) · [docs/ejemplos.md](docs/ejemplos.md) | el showcase pestaña a pestaña y cada ejemplo |
+| [mod/README.md](mod/README.md) | el mod de Claude Code |
 
-## Desarrollo
+</details>
+
+<details>
+<summary><h3>🛠 Desarrollo</h3></summary>
 
 ```bash
 node tools/build-dist.mjs                                   # regenera dist/
@@ -209,5 +373,7 @@ node mod/tools/capture-media.mjs                            # vuelve a grabar la
 
 La página en inglés sale de la misma plantilla: `examples/fx/showcase.en.txt` guarda las traducciones y el build
 falla si queda castellano en la página.
+
+</details>
 
 <sub>Construido en septiembre de 2026 junto a la skill `pr-review-artifact-v5`. ELK es EPL-2.0 (https://eclipse.dev/elk).</sub>

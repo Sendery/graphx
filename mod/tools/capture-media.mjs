@@ -56,7 +56,6 @@ const S = [
   { name: 'secuencia', gif: demo('sequence.mmd'), o: { cols: 120, rows: 36, fps: 6, chrome: `${W} · f reproducir la secuencia`, script: 'hold:800;f;hold:9000' } },
   { name: 'arbol', gif: treeTxt, o: { cols: 110, rows: 30, fps: 6, chrome: `${W} paths · árbol de ficheros`, script: 'hold:800;j;hold:400;j;hold:400;j;hold:700;o;hold:900;j;hold:400;j;hold:400;j;hold:400;j;hold:700;o;hold:1800' } },
   /* fotos */
-  { name: 'portada', png: demo('software.json'), o: { cols: 150, rows: 40, chrome: `${W} demo software`, wait: 2500 } },
   { name: 'claro', png: demo('onboarding.json'), o: { cols: 132, rows: 34, theme: 'light', chrome: `${W} demo onboarding · tema claro`, wait: 2500 } },
   { name: 'ancho', png: demo('flowchart.mmd'), o: { cols: 150, rows: 36, keys: 'tab,tab,tab', detail: true, chrome: 'ancho · 150 × 36 · el grafo y el panel lateral' } },
   { name: 'tamanos', mosaic: 3, shots: [
