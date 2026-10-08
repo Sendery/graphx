@@ -1,0 +1,12 @@
+block-beta
+    columns 3
+    a["Entrada"] b c
+    block:grupo:2
+        d["Proceso"] e(("Núcleo"))
+    end
+    f[("Datos")]
+    space
+    envio<["Envío"]>(right)
+    a --> d
+    d -- "resultado" --> f
+    e --> c

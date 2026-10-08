@@ -1,0 +1,51 @@
+{
+  "name": "graphx",
+  "version": "0.1.0",
+  "description": "GraphX en Claude Code: cualquier diagrama (19 tipos de Mermaid, grafos, árboles) con sus efectos, en el terminal a cualquier tamaño y en el escritorio",
+  "author": { "name": "Sendery" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "view": {
+      "type": "string",
+      "title": "Dónde se abre el diagrama",
+      "description": "auto: el panel de Claude Code (caracteres en el terminal, SVG en el escritorio) · panel · browser: el navegador · both: los dos",
+      "options": ["auto", "panel", "browser", "both"],
+      "default": "auto"
+    },
+    "inline": {
+      "type": "string",
+      "title": "Dibujar los bloques Mermaid de las respuestas",
+      "description": "on: los ```mermaid de Claude se ven como diagramas de GraphX en el transcript · off: como código",
+      "options": ["on", "off"],
+      "default": "on"
+    },
+    "color": {
+      "type": "string",
+      "title": "Color del terminal",
+      "description": "auto: lo detecta (COLORTERM, TERM, el tema) · truecolor · 256 · 16 · mono",
+      "options": ["auto", "truecolor", "256", "16", "mono"],
+      "default": "auto"
+    },
+    "glyphs": {
+      "type": "string",
+      "title": "Caracteres",
+      "description": "auto · unicode (cajas, bloques y braille) · basic (cajas simples) · ascii",
+      "options": ["auto", "unicode", "basic", "ascii"],
+      "default": "auto"
+    },
+    "motion": {
+      "type": "string",
+      "title": "Movimiento",
+      "description": "auto · full (partículas, latidos, ondas) · reduced (sin partículas) · off (quieto)",
+      "options": ["auto", "full", "reduced", "off"],
+      "default": "auto"
+    },
+    "theme": {
+      "type": "string",
+      "title": "Tema del diagrama",
+      "description": "auto: el de Claude Code · dark · light",
+      "options": ["auto", "dark", "light"],
+      "default": "auto"
+    }
+  }
+}

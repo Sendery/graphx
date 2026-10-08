@@ -1,0 +1,14 @@
+gitGraph
+    commit id: "init"
+    commit
+    branch develop
+    checkout develop
+    commit id: "feat-a" tag: "v0.1"
+    branch feature/login
+    commit msg: "login básico"
+    checkout develop
+    merge feature/login
+    checkout main
+    merge develop tag: "v1.0"
+    commit type: HIGHLIGHT
+    cherry-pick id: "feat-a"
