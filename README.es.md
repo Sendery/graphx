@@ -369,6 +369,7 @@ node tools/verify-shapes.mjs && node tools/verify-tree.mjs && node tools/verify-
 node examples/fx/build.mjs docs/demo/es/index.html --standalone --lang es   # regenera la demo
 node tools/capture-gifs.mjs                                 # vuelve a grabar los GIF (Playwright + ffmpeg)
 node mod/tools/capture-media.mjs                            # vuelve a grabar las capturas del mod de Claude Code (ffmpeg)
+node tools/release.mjs --tag v1.9.0-rc.1                    # los distribuibles clasificados de una versión, en release/<tag>/
 ```
 
 La página en inglés sale de la misma plantilla: `examples/fx/showcase.en.txt` guarda las traducciones y el build
