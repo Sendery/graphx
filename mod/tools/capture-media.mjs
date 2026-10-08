@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, '..', '..');
-const MOD = path.join(HERE, '..', 'graphx');
+const MOD = path.join(HERE, '..', 'graphx-mod');
 const DEMOS = path.join(MOD, 'assets', 'demos');
 const OUT = path.join(HERE, '..', 'docs');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'graphx-mod-media-'));
@@ -45,7 +45,7 @@ function mosaic(out, cols, shots) {
 const treeTxt = path.join(TMP, 'repo.txt');
 fs.writeFileSync(treeTxt, execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(f => f && !/^(docs\/(gif|img|demo)|examples\/|vendor\/|dist\/)/.test(f)).join('\n'));
 
-const W = 'claude · /graphx';
+const W = 'claude · /graphx-mod';
 const S = [
   /* películas */
   { name: 'presentacion', gif: demo('software.json'), o: { cols: 150, rows: 40, fps: 6, chrome: `${W} demo software · r presentar`, script: 'hold:1500;r;hold:3500;n;hold:3500;n;hold:3500;b;hold:1500' } },

@@ -1,3 +1,4 @@
 viewer/vendor/
 server/vendor/
 .claude-plugin/types/
+node-path

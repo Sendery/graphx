@@ -2,16 +2,22 @@
  * de las cifras, que comparten las piezas, el panel de detalle y la línea de tiempo. */
 import type { Grid } from './grid'
 import type { Glyphs } from './glyphs'
+import { tr } from '../i18n'
 
 export function fmtNum(v: number, decimals?: number): string {
   if (!Number.isFinite(v)) return '—'
   const a = Math.abs(v)
-  if (decimals != null) return v.toFixed(decimals).replace('.', ',')
-  if (a >= 1e9) return (v / 1e9).toFixed(a >= 1e10 ? 0 : 1).replace(/\.0$/, '').replace('.', ',') + ' G'
-  if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '').replace('.', ',') + ' M'
-  if (a >= 1e4) return (v / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/, '').replace('.', ',') + ' k'
+  if (decimals != null) return decimalMark(v.toFixed(decimals))
+  if (a >= 1e9) return decimalMark((v / 1e9).toFixed(a >= 1e10 ? 0 : 1).replace(/\.0$/, '')) + ' G'
+  if (a >= 1e6) return decimalMark((v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '')) + ' M'
+  if (a >= 1e4) return decimalMark((v / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/, '')) + ' k'
   if (a >= 100 || Number.isInteger(v)) return String(Math.round(v))
-  return v.toFixed(1).replace('.', ',')
+  return decimalMark(v.toFixed(1))
+}
+
+/* la coma decimal en español, el punto en inglés */
+export function decimalMark(s: string): string {
+  return tr(s.replace('.', ','), s)
 }
 
 /* una serie en `w` celdas con bloques de ocho alturas (o lo que tenga el juego de glifos) */

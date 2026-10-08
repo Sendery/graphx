@@ -45,14 +45,21 @@ const CODE_VERSION = CODE_FILES.map(f => { try { return Math.round(fs.statSync(p
 const VIEWER_VERSION = ['index.html', 'viewer.js', 'viewer.css', 'board.js'].map(f => { try { return fs.statSync(path.join(ROOT, 'viewer', f)).mtimeMs.toFixed(0); } catch (_) { return '0'; } }).join('-');
 
 let state = { rev: 0, board: null };
+/* el idioma de la interfaz: el del último tablero que lo dijo (los hooks siempre lo ponen); sin él, inglés */
+let lastLang = null;
+const LANGS = new Set(['es', 'en']);
+const langOf = (u, req, body) => [u && u.searchParams.get('lang'), req && req.headers['x-graphx-lang'], body && body.lang, state.board && state.board.lang, lastLang].find(l => LANGS.has(l)) || 'en';
+const tr = (l, es, en) => (l === 'es' ? es : en);
 let snap = null;                 /* la última captura del navegador */
 let tmpDir = null;
 const inbox = [];
 
 /* ---------- el motor ---------- */
-let engine = null, engineError = null;
-try { engine = createEngine(ROOT); if (!engine) engineError = 'falta server/vendor/jsdom.cjs o el bundle: ejecuta `node mod/build.mjs`'; }
-catch (err) { engineError = String(err && err.message || err); }
+let engine = null, engineFail = null;
+const NO_ENGINE = Symbol('no-engine');
+try { engine = createEngine(ROOT); if (!engine) engineFail = NO_ENGINE; }
+catch (err) { engineFail = String(err && err.message || err); }
+const engineErr = l => (engineFail === NO_ENGINE ? tr(l, 'falta server/vendor/jsdom.cjs o el bundle: ejecuta `node mod/build.mjs`', 'server/vendor/jsdom.cjs or the bundle is missing: run `node mod/build.mjs`') : engineFail);
 const ui = { open: new Set(), close: new Set(), depth: undefined, dir: undefined, search: '', view: undefined, owners: undefined };
 let scene = null, sceneSeq = 0, rendering = Promise.resolve(), pending = false;
 const cache = new Map();         /* svg y png por (seq, tema, ancho) */
@@ -71,7 +78,7 @@ function render() {
   });
   return rendering;
 }
-const sceneOut = () => scene || { v: 1, seq: sceneSeq, kind: 'empty', error: engineError || undefined };
+const sceneOut = l => scene || { v: 1, seq: sceneSeq, kind: 'empty', error: engineErr(l) || undefined };
 
 const clients = new Set();
 const send = (res, code, body, type = 'application/json; charset=utf-8', extra = {}) => {
@@ -80,16 +87,17 @@ const send = (res, code, body, type = 'application/json; charset=utf-8', extra =
 };
 const readBody = req => new Promise((ok, ko) => {
   const parts = []; let n = 0;
-  req.on('data', c => { n += c.length; if (n > MAX_BODY) { ko(new Error('demasiado grande')); req.destroy(); } else parts.push(c); });
+  req.on('data', c => { n += c.length; if (n > MAX_BODY) { ko(new Error(tr(langOf(null, req), 'demasiado grande', 'too large'))); req.destroy(); } else parts.push(c); });
   req.on('end', () => ok(Buffer.concat(parts).toString('utf8')));
   req.on('error', ko);
 });
 const authed = (u, req) => u.searchParams.get('t') === TOKEN || req.headers['x-graphx-token'] === TOKEN;
-const broadcast = () => { const msg = `event: state\ndata: ${JSON.stringify(state)}\n\n`; for (const c of clients) c.write(msg); };
-function serveStatic(res, file, base) {
+const stateMsg = () => JSON.stringify(Object.assign({}, state, { lang: lastLang || undefined }));
+const broadcast = () => { const msg = `event: state\ndata: ${stateMsg()}\n\n`; for (const c of clients) c.write(msg); };
+function serveStatic(res, file, base, l) {
   const real = path.resolve(file);
-  if (!real.startsWith(base + path.sep)) return send(res, 403, { error: 'fuera del visor' });
-  fs.readFile(real, (err, buf) => { if (err) return send(res, 404, { error: 'no existe' }); send(res, 200, buf, TYPES[path.extname(real)] || 'application/octet-stream'); });
+  if (!real.startsWith(base + path.sep)) return send(res, 403, { error: tr(l, 'fuera del visor', 'outside the viewer') });
+  fs.readFile(real, (err, buf) => { if (err) return send(res, 404, { error: tr(l, 'no existe', 'not found') }); send(res, 200, buf, TYPES[path.extname(real)] || 'application/octet-stream'); });
 }
 
 async function svgOf(theme, opts = {}) {
@@ -127,17 +135,18 @@ function specNow() {
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://127.0.0.1');
   const p = u.pathname;
+  const L = langOf(u, req);
   try {
     if (req.method === 'GET' && p === '/health') return send(res, 200, { ok: true, code: CODE_VERSION, rev: state.rev, viewers: clients.size, engine: !!engine, rsvg: !!(engine && engine.rsvg) });
-    if (req.method === 'GET' && (p === '/' || p === '/index.html')) return serveStatic(res, path.join(ROOT, 'viewer', 'index.html'), path.join(ROOT, 'viewer'));
-    for (const [pre, dir] of Object.entries(STATIC)) if (req.method === 'GET' && p.startsWith(pre)) return serveStatic(res, path.join(dir, decodeURIComponent(p.slice(pre.length))), dir);
+    if (req.method === 'GET' && (p === '/' || p === '/index.html')) return serveStatic(res, path.join(ROOT, 'viewer', 'index.html'), path.join(ROOT, 'viewer'), L);
+    for (const [pre, dir] of Object.entries(STATIC)) if (req.method === 'GET' && p.startsWith(pre)) return serveStatic(res, path.join(dir, decodeURIComponent(p.slice(pre.length))), dir, L);
     if (req.method === 'GET' && p === '/favicon.ico') return send(res, 204, '');
     if (!authed(u, req)) return send(res, 401, { error: 'token' });
 
     if (req.method === 'GET' && p === '/events') {
       res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' });
       res.write(`retry: 1500\nevent: hello\ndata: ${JSON.stringify({ version: VIEWER_VERSION })}\n\n`);
-      res.write(`event: state\ndata: ${JSON.stringify(state)}\n\n`);
+      res.write(`event: state\ndata: ${stateMsg()}\n\n`);
       clients.add(res);
       const ping = setInterval(() => res.write(': ping\n\n'), 20000);
       req.on('close', () => { clearInterval(ping); clients.delete(res); });
@@ -148,11 +157,13 @@ const server = http.createServer(async (req, res) => {
       /* dos herramientas a la vez pueden llegar en otro orden: una revisión vieja no pisa a una nueva */
       if (+body.rev && +body.rev < state.rev) return send(res, 200, { ok: true, stale: true, rev: state.rev, viewers: clients.size, seq: sceneSeq });
       state = { rev: +body.rev || state.rev + 1, board: body.board ?? null };
+      if (state.board && LANGS.has(state.board.lang)) lastLang = state.board.lang;
+      else if (LANGS.has(body.lang)) lastLang = body.lang;
       broadcast();
       await render();
       return send(res, 200, { ok: true, rev: state.rev, viewers: clients.size, seq: sceneSeq });
     }
-    if (req.method === 'GET' && p === '/scene') { await rendering; return send(res, 200, sceneOut()); }
+    if (req.method === 'GET' && p === '/scene') { await rendering; return send(res, 200, sceneOut(L)); }
     if (req.method === 'POST' && p === '/ui') {
       const b = JSON.parse(await readBody(req) || '{}');
       if (typeof b.open === 'string') { ui.open.add(b.open); ui.close.delete(b.open); }
@@ -164,16 +175,16 @@ const server = http.createServer(async (req, res) => {
       if (Array.isArray(b.owners) || b.owners === null) ui.owners = b.owners || [];
       if (b.reset) { ui.open.clear(); ui.close.clear(); ui.depth = undefined; ui.search = ''; ui.owners = []; }
       await render();
-      return send(res, 200, sceneOut());
+      return send(res, 200, sceneOut(L));
     }
-    if (req.method === 'GET' && p === '/detail') { await rendering; return send(res, 200, (engine && engine.detail(u.searchParams.get('id') || '')) || { error: 'no existe' }); }
+    if (req.method === 'GET' && p === '/detail') { await rendering; return send(res, 200, (engine && engine.detail(u.searchParams.get('id') || '')) || { error: tr(L, 'no existe', 'not found') }); }
     if (req.method === 'GET' && p === '/svg') {
       const s = await svgOf(u.searchParams.get('theme') === 'dark' ? 'dark' : 'light', { maxChars: +u.searchParams.get('max') || 131072 });
-      return s ? send(res, 200, s) : send(res, 404, { error: engineError || 'nada pintado' });
+      return s ? send(res, 200, s) : send(res, 404, { error: engineErr(L) || tr(L, 'nada pintado', 'nothing drawn') });
     }
     if (req.method === 'GET' && (p === '/png' || p === '/png.b64')) {
       const r = await pngOf(u.searchParams.get('theme') === 'dark' ? 'dark' : 'light', +u.searchParams.get('width') || 0);
-      if (!r) return send(res, 404, { error: engine && !engine.rsvg ? 'sin rsvg-convert' : engineError || 'nada pintado' });
+      if (!r) return send(res, 404, { error: engine && !engine.rsvg ? tr(L, 'sin rsvg-convert', 'no rsvg-convert') : engineErr(L) || tr(L, 'nada pintado', 'nothing drawn') });
       if (p === '/png.b64') return send(res, 200, { b64: r.buf.toString('base64'), w: r.w, h: r.h, file: r.file });
       return send(res, 200, { file: r.file, w: r.w, h: r.h, bytes: r.buf.length });
     }
@@ -195,25 +206,27 @@ const server = http.createServer(async (req, res) => {
         return { cells: halfBlocks(img, c, r2, bg), cols: c, rows: r2 };
       })().catch(err => { process.stderr.write('raster: ' + err.message + '\n'); return null; }));
       const v = await cache.get(k);
-      return v ? send(res, 200, v) : send(res, 404, { error: 'sin imagen' });
+      return v ? send(res, 200, v) : send(res, 404, { error: tr(L, 'sin imagen', 'no image') });
     }
     if (req.method === 'POST' && p === '/convert') {
       const b = JSON.parse(await readBody(req) || '{}');
+      const bl = langOf(u, req, b);
       if (typeof b.mermaid === 'string') {
-        const ann = annotations(b.mermaid);
-        if (!engine) return send(res, 200, { error: engineError, annotations: ann });
-        const r = engine.convert(b.mermaid, b.lang);
+        const ann = annotations(b.mermaid, bl);
+        if (!engine) return send(res, 200, { error: engineErr(bl), annotations: ann });
+        const r = engine.convert(b.mermaid, LANGS.has(b.lang) ? b.lang : bl);
         return send(res, 200, Object.assign({ annotations: ann }, r));
       }
-      if (b.spec && typeof b.spec === 'object') return send(res, 200, toMermaid(b.spec, { flow: b.flow }));
-      return send(res, 400, { error: 'pasa mermaid o spec' });
+      if (b.spec && typeof b.spec === 'object') return send(res, 200, toMermaid(b.spec, { flow: b.flow, lang: bl }));
+      return send(res, 400, { error: tr(bl, 'pasa mermaid o spec', 'pass mermaid or spec') });
     }
     if (req.method === 'POST' && p === '/inline') {
       const b = JSON.parse(await readBody(req) || '{}');
-      if (!engine) return send(res, 200, { error: engineError });
+      const bl = langOf(u, req, b);
+      if (!engine) return send(res, 200, { error: engineErr(bl) });
       /* en la cola del motor: no se cruza con el pintado del lienzo */
       let out;
-      rendering = rendering.then(async () => { try { out = await engine.inline(b.mermaid, b.theme === 'dark' ? 'dark' : 'light'); } catch (err) { out = { error: String(err && err.message || err) }; } });
+      rendering = rendering.then(async () => { try { out = await engine.inline(b.mermaid, b.theme === 'dark' ? 'dark' : 'light', bl); } catch (err) { out = { error: String(err && err.message || err) }; } });
       await rendering;
       return send(res, 200, out);
     }
@@ -221,7 +234,7 @@ const server = http.createServer(async (req, res) => {
       await rendering;
       const board = state.board;
       const spec = (engine && board && engine.specOf(board)) || specNow();
-      if (!spec || !board) return send(res, 404, { error: 'el lienzo está vacío' });
+      if (!spec || !board) return send(res, 404, { error: tr(L, 'el lienzo está vacío', 'the canvas is empty') });
       const flow = u.searchParams.get('flow') || undefined;
       /* un Mermaid de partida se conserva tal cual (su tipo, su layout) con lo añadido después como `%% @gx` */
       if (board.source && board.source.kind === 'mermaid' && !flow && u.searchParams.get('regen') !== '1') {
@@ -231,7 +244,7 @@ const server = http.createServer(async (req, res) => {
         const structural = (board.patches || []).some(pt => pt.add || pt.remove || pt.set);
         if (!structural) return send(res, 200, { text: overlay(board.source.text, extra), type: 'mermaid (original + %% @gx)', lossy: [] });
       }
-      return send(res, 200, toMermaid(spec, { flow }));
+      return send(res, 200, toMermaid(spec, { flow, lang: L }));
     }
     if (req.method === 'POST' && p === '/snapshot') {
       const body = JSON.parse(await readBody(req));
@@ -239,7 +252,7 @@ const server = http.createServer(async (req, res) => {
       snap = { rev: +body.rev || 0, svg: String(body.svg || ''), png: m ? Buffer.from(m[1], 'base64') : null, w: +body.w || 0, h: +body.h || 0, at: Date.now() };
       return send(res, 200, { ok: true });
     }
-    if (req.method === 'GET' && p === '/snapshot.b64') return snap && snap.png ? send(res, 200, snap.png.toString('base64'), 'text/plain; charset=utf-8') : send(res, 404, { error: 'sin captura' });
+    if (req.method === 'GET' && p === '/snapshot.b64') return snap && snap.png ? send(res, 200, snap.png.toString('base64'), 'text/plain; charset=utf-8') : send(res, 404, { error: tr(L, 'sin captura', 'no snapshot') });
     if (req.method === 'POST' && (p === '/ui-event' || p === '/ui-viewer')) {
       const body = JSON.parse(await readBody(req));
       if (body && typeof body.type === 'string') inbox.push(Object.assign({ at: Date.now() }, body));
@@ -247,8 +260,8 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true });
     }
     if (req.method === 'POST' && p === '/quit') { send(res, 200, { ok: true }); setTimeout(() => process.exit(0), 50); return; }
-    if (req.method === 'GET' && p === '/inbox') return send(res, 200, { events: inbox.splice(0), viewers: clients.size, seq: sceneSeq, engineError, snapshot: snap ? { rev: snap.rev, at: snap.at, w: snap.w, h: snap.h } : null });
-    send(res, 404, { error: 'ruta' });
+    if (req.method === 'GET' && p === '/inbox') return send(res, 200, { events: inbox.splice(0), viewers: clients.size, seq: sceneSeq, engineError: engineErr(L), snapshot: snap ? { rev: snap.rev, at: snap.at, w: snap.w, h: snap.h } : null });
+    send(res, 404, { error: tr(L, 'ruta', 'no such route') });
   } catch (err) {
     send(res, 400, { error: String(err && err.message || err) });
   }
@@ -257,7 +270,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
   const port = server.address().port;
   try { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `graphx-${port}-`)); } catch (_) { tmpDir = null; }
-  process.stdout.write(JSON.stringify({ ready: true, port, url: `http://localhost:${port}/?t=${TOKEN}`, engine: !!engine, rsvg: !!(engine && engine.rsvg), engineError }) + '\n');
+  process.stdout.write(JSON.stringify({ ready: true, port, url: `http://localhost:${port}/?t=${TOKEN}`, engine: !!engine, rsvg: !!(engine && engine.rsvg), engineError: engineErr(lastLang) }) + '\n');
 });
 server.on('error', err => { console.error('graphx:', err.message); process.exit(1); });
 

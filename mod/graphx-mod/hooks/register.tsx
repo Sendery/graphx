@@ -1,6 +1,6 @@
-/* graphx: GraphX entero dentro de Claude Code, en cada superficie y a cada tamaño.
+/* graphx-mod: GraphX entero dentro de Claude Code, en cada superficie y a cada tamaño.
  *
- * Claude dibuja con herramientas (mcp__graphx__show, patch, data, signs, guide, view, convert, export,
+ * Claude dibuja con herramientas (mcp__graphx-mod__show, patch, data, signs, guide, view, convert, export,
  * capabilities, reference); el tablero vive en $.state y un servidor local (server/live.mjs, Node) monta el
  * motor de verdad sin navegador y saca de él lo que cada superficie sabe pintar:
  *
@@ -8,7 +8,7 @@
  *                tamaño, color y juego de caracteres que tenga el terminal (detectado al arrancar, hooks/term/caps.ts);
  *                en kitty, Ghostty y WezTerm, también como imagen del motor
  *   escritorio   el SVG del motor con sus animaciones, controles y el detalle en Markdown; o el mismo lienzo
- *   navegador    el visor con el motor interactivo (/graphx open)
+ *   navegador    el visor con el motor interactivo (/graphx-mod open)
  *
  * Los bloques ```mermaid de las respuestas de Claude se dibujan con GraphX en el propio transcript. */
 import { atom, read, update } from 'claude-code'
@@ -20,32 +20,33 @@ import type {
 import { detectCaps, withOverrides, type Env } from './term/caps'
 import { REFERENCE, capabilitiesText } from './catalog'
 import { textFrame } from './term/snapshot'
+import { getLang, pickLang, setLang, tr } from './i18n'
 
 type D = EngineInterface
 type Json = Record<string, unknown>
 
-const PLUGIN = 'graphx'
+const PLUGIN = 'graphx-mod'
 const PANE = 'graphx'
-const boardA = atom({ plugin: 'graphx', key: 'board' } as const, null)
-const revA = atom({ plugin: 'graphx', key: 'rev' } as const, 0)
-const serverA = atom({ plugin: 'graphx', key: 'server' } as const, null)
-const renderA = atom({ plugin: 'graphx', key: 'render' } as const, null)
-const liveA = atom({ plugin: 'graphx', key: 'live' } as const, { viewers: 0, step: -1, asks: 0, lastSeen: 0 })
-const seqA = atom({ plugin: 'graphx', key: 'seq' } as const, 0)
-const detailA = atom({ plugin: 'graphx', key: 'detail' } as const, null)
-const capsA = atom({ plugin: 'graphx', key: 'caps' } as const, null)
-const overA = atom({ plugin: 'graphx', key: 'over' } as const, null)
-const viewA = atom({ plugin: 'graphx', key: 'view' } as const, 'auto')
-const cmdA = atom({ plugin: 'graphx', key: 'cmd' } as const, null)
-const presentA = atom({ plugin: 'graphx', key: 'present' } as const, null as { n: number; at: number } | null)
+const boardA = atom({ plugin: 'graphx-mod', key: 'board' } as const, null)
+const revA = atom({ plugin: 'graphx-mod', key: 'rev' } as const, 0)
+const serverA = atom({ plugin: 'graphx-mod', key: 'server' } as const, null)
+const renderA = atom({ plugin: 'graphx-mod', key: 'render' } as const, null)
+const liveA = atom({ plugin: 'graphx-mod', key: 'live' } as const, { viewers: 0, step: -1, asks: 0, lastSeen: 0 })
+const seqA = atom({ plugin: 'graphx-mod', key: 'seq' } as const, 0)
+const detailA = atom({ plugin: 'graphx-mod', key: 'detail' } as const, null)
+const capsA = atom({ plugin: 'graphx-mod', key: 'caps' } as const, null)
+const overA = atom({ plugin: 'graphx-mod', key: 'over' } as const, null)
+const viewA = atom({ plugin: 'graphx-mod', key: 'view' } as const, 'auto')
+const cmdA = atom({ plugin: 'graphx-mod', key: 'cmd' } as const, null)
+const presentA = atom({ plugin: 'graphx-mod', key: 'present' } as const, null as { n: number; at: number } | null)
 
 /* la barra de atajos del panel: cada botón es una tecla del lienzo (la misma, tenga el foco el lienzo o el panel) */
-const KEYS: { k: string; l: string; when?: 'tour' | 'sel' }[] = [
-  { k: 'r', l: 'presentar' }, { k: 'b', l: '◀' }, { k: 'n', l: '▶' },
-  { k: 'a', l: '◂pieza' }, { k: 's', l: 'pieza▸' }, { k: 'o', l: 'abrir' }, { k: 'd', l: 'detalle' },
-  { k: 'z', l: '+' }, { k: 'x', l: '−' }, { k: '0', l: 'todo' }, { k: 'h', l: '←' }, { k: 'j', l: '↓' }, { k: 'k', l: '↑' }, { k: 'l', l: '→' },
-  { k: 'v', l: 'vista' }, { k: 'g', l: '↦↧' }, { k: 't', l: 'trazar' }, { k: 'c', l: 'impacto' }, { k: 'f', l: 'flujo' }, { k: 'y', l: 'tiempo' },
-  { k: 'e', l: 'equipos' }, { k: 'm', l: 'mapa' }, { k: 'u', l: 'efectos' }, { k: 'q', l: 'preguntar' }, { k: 'i', l: 'imagen' }, { k: 'w', l: 'web' },
+const KEYS = (): { k: string; l: string; when?: 'tour' | 'sel' }[] => [
+  { k: 'r', l: tr('presentar', 'present') }, { k: 'b', l: '◀' }, { k: 'n', l: '▶' },
+  { k: 'a', l: tr('◂pieza', '◂node') }, { k: 's', l: tr('pieza▸', 'node▸') }, { k: 'o', l: tr('abrir', 'open') }, { k: 'd', l: tr('detalle', 'detail') },
+  { k: 'z', l: '+' }, { k: 'x', l: '−' }, { k: '0', l: tr('todo', 'fit') }, { k: 'h', l: '←' }, { k: 'j', l: '↓' }, { k: 'k', l: '↑' }, { k: 'l', l: '→' },
+  { k: 'v', l: tr('vista', 'view') }, { k: 'g', l: '↦↧' }, { k: 't', l: tr('trazar', 'trace') }, { k: 'c', l: tr('impacto', 'blast') }, { k: 'f', l: tr('flujo', 'flow') }, { k: 'y', l: tr('tiempo', 'time') },
+  { k: 'e', l: tr('equipos', 'teams') }, { k: 'm', l: tr('mapa', 'map') }, { k: 'u', l: tr('efectos', 'effects') }, { k: 'q', l: tr('preguntar', 'ask') }, { k: 'i', l: tr('imagen', 'image') }, { k: 'w', l: 'web' },
 ]
 
 const TONES: readonly GraphxTone[] = ['info', 'tip', 'ok', 'warn', 'danger', 'note']
@@ -58,7 +59,8 @@ const strs = (v: unknown): string[] | undefined => (Array.isArray(v) ? v.filter(
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
 const toneOf = (v: unknown): GraphxTone => (TONES.includes(v as GraphxTone) ? (v as GraphxTone) : 'info')
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
-const emptyBoard = (source: GraphxSource): GraphxBoard => ({ source, patches: [], signs: [], banner: null, guide: { steps: [], at: -1, seq: 0 }, view: { seq: 0 } })
+/* en el idioma de la interfaz salvo que Claude pida otro: el motor y el visor lo siguen */
+const emptyBoard = (source: GraphxSource): GraphxBoard => ({ source, patches: [], lang: getLang(), signs: [], banner: null, guide: { steps: [], at: -1, seq: 0 }, view: { seq: 0 } })
 
 /* lo que vive en el módulo (se pierde con cada recarga y se recupera del servidor) */
 let child: { return?: (value?: unknown) => unknown } | null = null
@@ -75,13 +77,14 @@ type ViewMode = 'auto' | 'browser' | 'panel' | 'both'
 let where: ViewMode = 'auto'
 let inlineOn = true
 let optCaps: Partial<Caps> = {}
+let optLang: string | undefined
 
 /* ---------- servidor ---------- */
 const base = (s: GraphxServer) => `http://127.0.0.1:${s.port}`
 async function call($: D, s: GraphxServer, path: string, body?: unknown) {
   return $.http.fetch(base(s) + path, {
     method: body === undefined ? 'GET' : 'POST',
-    headers: { 'x-graphx-token': s.token, 'content-type': 'application/json' },
+    headers: { 'x-graphx-token': s.token, 'x-graphx-lang': getLang(), 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 }
@@ -103,8 +106,13 @@ async function current($: D, s: GraphxServer) {
   } catch { return false }
 }
 
-function spawnServer($: D, token: string, port: number): Promise<GraphxServer> {
-  const stream = $.process.spawn({ argv: ['node', `${$.plugin.root}/server/live.mjs`, '--token', token, '--port', String(port)] })
+/* la app de escritorio, abierta desde el Dock, no hereda el PATH de la shell: el instalador deja aquí la ruta de node */
+async function nodeBin($: D): Promise<string> {
+  try { const p = (await $.fs.read(`${$.plugin.root}/node-path`)).trim(); if (p) return p } catch { /* sin fijar: el del PATH */ }
+  return 'node'
+}
+async function spawnServer($: D, token: string, port: number): Promise<GraphxServer> {
+  const stream = $.process.spawn({ argv: [await nodeBin($), `${$.plugin.root}/server/live.mjs`, '--token', token, '--port', String(port)] })
   child = stream as unknown as { return?: (value?: unknown) => unknown }
   return new Promise((resolve, reject) => {
     let buf = '', done = false, err = '', realPort = port
@@ -125,7 +133,7 @@ function spawnServer($: D, token: string, port: number): Promise<GraphxServer> {
           } else if (chunk.stream === 'stderr') { err += chunk.text; $.ui.log(`graphx: ${chunk.text.trim()}`, { to: 'debug' }) }
         }
       } catch (e) { if (!done) reject(e instanceof Error ? e : new Error(String(e))) }
-      if (!done) reject(new Error(err.trim() || 'el servidor terminó sin arrancar (¿está node en el PATH?)'))
+      if (!done) reject(new Error(err.trim() || tr('el servidor terminó sin arrancar (¿está node en el PATH?)', 'the server exited before starting (is node on the PATH?)')))
       if (child === (stream as unknown)) child = null
       await update($, serverA, s => (s && s.port === realPort ? null : s))
     })()
@@ -207,14 +215,14 @@ async function pump($: D) {
           lanes: strs(ev.lanes) ?? [], nodeCount: num(ev.nodeCount) ?? 0, edgeCount: num(ev.edgeCount) ?? 0, steps: num(ev.steps) ?? 0, flows: strs(ev.flows), fx: strs(ev.fx),
         }
         await update($, renderA, () => render)
-        if (!render.ok) $.ui.toast(`GraphX: ${clip(render.error ?? 'no se ha podido pintar', 90)}`)
+        if (!render.ok) $.ui.toast(`GraphX: ${clip(render.error ?? tr('no se ha podido pintar', 'could not draw it'), 90)}`)
       } else if (ev.type === 'step') {
         const at = num(ev.step) ?? -1
         await update($, boardA, b => (b ? { ...b, guide: { ...b.guide, at } } : b))
         await update($, liveA, l => ({ ...l, step: at }))
         await syncStatus($)
       } else if (ev.type === 'ask') {
-        await ask($, str(ev.node) ?? '', str(ev.label) ?? str(ev.node) ?? 'el diagrama', str(ev.text))
+        await ask($, str(ev.node) ?? '', str(ev.label) ?? str(ev.node) ?? tr('el diagrama', 'the diagram'), str(ev.text))
       }
     }
     if (inbox.seq !== undefined && inbox.seq !== sceneSeq) await fetchScene($, s)
@@ -223,10 +231,11 @@ async function pump($: D) {
   } catch { /* el servidor se ha ido: la próxima herramienta lo arranca otra vez */ } finally { pumping = false }
 }
 async function ask($: D, id: string, label: string, quote?: string) {
-  const text = `Sobre «${label}»${id && id !== label ? ` (\`${id}\`)` : ''} en el diagrama de GraphX${quote ? ` — cartel: “${clip(quote, 200)}”` : ''}: `
+  const idPart = id && id !== label ? ` (\`${id}\`)` : ''
+  const text = tr(`Sobre «${label}»${idPart} en el diagrama de GraphX${quote ? ` — cartel: “${clip(quote, 200)}”` : ''}: `, `About “${label}”${idPart} in the GraphX diagram${quote ? ` — sign: “${clip(quote, 200)}”` : ''}: `)
   await $.prompt.fill({ text, mode: 'append' })
   await update($, liveA, l => ({ ...l, asks: l.asks + 1 }))
-  $.ui.toast(`GraphX: pregunta sobre «${clip(label, 40)}» en el prompt`)
+  $.ui.toast(tr(`GraphX: pregunta sobre «${clip(label, 40)}» en el prompt`, `GraphX: question about “${clip(label, 40)}” in the prompt`))
 }
 
 /* ---------- publicar ---------- */
@@ -234,20 +243,20 @@ async function syncStatus($: D) {
   const b = await read($, boardA)
   if (!b) { $.ui.status(undefined); return }
   const n = b.guide.steps.length
-  const bits = [`◆ GraphX · ${clip(b.title ?? scene?.title ?? 'lienzo', 32)}`]
-  if (n) bits.push(b.guide.at >= 0 ? `paso ${b.guide.at + 1}/${n}` : `${n} pasos`)
-  if (b.signs.length) bits.push(`${b.signs.length} cartel${b.signs.length === 1 ? '' : 'es'}`)
+  const bits = [`◆ GraphX · ${clip(b.title ?? scene?.title ?? tr('lienzo', 'canvas'), 32)}`]
+  if (n) bits.push(b.guide.at >= 0 ? tr(`paso ${b.guide.at + 1}/${n}`, `step ${b.guide.at + 1}/${n}`) : tr(`${n} pasos`, `${n} steps`))
+  if (b.signs.length) bits.push(tr(`${b.signs.length} cartel${b.signs.length === 1 ? '' : 'es'}`, `${b.signs.length} sign${b.signs.length === 1 ? '' : 's'}`))
   $.ui.status(bits.join(' · '))
 }
 async function publish($: D, change: (b: GraphxBoard | null) => GraphxBoard | null) {
   const board = await update($, boardA, change)
-  /* el último diagrama, también fuera de la sesión: /graphx last lo recupera en otra */
+  /* el último diagrama, también fuera de la sesión: /graphx-mod last lo recupera en otra */
   if (board) { try { await $.store.set('last-board', { board, at: Date.now() }) } catch { /* sin almacén */ } }
   const rev = await update($, revA, r => r + 1)
   const s = await ensureServer($)
   let viewers = 0
   try {
-    const r = await call($, s, '/state', { rev, board })
+    const r = await call($, s, '/state', { rev, board, lang: getLang() })
     viewers = (JSON.parse(r.text) as { viewers?: number }).viewers ?? 0
   } catch { /* lo reintenta la siguiente publicación */ }
   await fetchScene($, s)
@@ -365,7 +374,7 @@ const TOOLS = [
   {
     name: 'show',
     description: 'Dibuja un diagrama con GraphX y lo enseña donde esté la persona: en el panel del terminal (con caracteres, a cualquier tamaño y con los efectos animados), en la app de escritorio (SVG del motor) o en el navegador. '
-      + 'Pasa UNA fuente: `spec` (JSON de GraphX), `mermaid` (cualquiera de los 19 tipos, con datos de GraphX en @{…} y %% @gx), `paths` (rutas → árbol de ficheros con su diff), `tree_text` (salida de `tree`) o `file` (.json, .mmd o .md). '
+      + 'Pasa UNA fuente: `spec` (JSON de GraphX), `mermaid` (cualquiera de los 18 tipos, con datos de GraphX en @{…} y %% @gx), `paths` (rutas → árbol de ficheros con su diff), `tree_text` (salida de `tree`) o `file` (.json, .mmd o .md). '
       + 'Sustituye el diagrama anterior (carteles y recorrido se borran salvo keep_signs/keep_guide). Devuelve lo pintado, los avisos y los ids. '
       + 'Llama a `capabilities` para elegir el tipo de diagrama y a `reference` para el formato. Úsalo cuando un dibujo explique mejor que el texto: arquitectura, flujos, dependencias, secuencias, planes, estados de un sistema, el árbol de un repo.',
     inputSchema: {
@@ -438,7 +447,7 @@ const TOOLS = [
   },
   {
     name: 'capabilities',
-    description: 'El mapa de lo que GraphX sabe dibujar (19 tipos de Mermaid, grafo, árbol, 61 formas, efectos y datos) y cómo se verá en cada superficie: navegador, escritorio, terminal en caracteres y terminal con imágenes; con lo detectado de este terminal. Para elegir el diagrama adecuado.',
+    description: 'El mapa de lo que GraphX sabe dibujar (18 tipos de Mermaid, grafo, árbol, 61 formas, efectos y datos) y cómo se verá en cada superficie: navegador, escritorio, terminal en caracteres y terminal con imágenes; con lo detectado de este terminal. Para elegir el diagrama adecuado.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -449,36 +458,43 @@ const TOOLS = [
 ] as const
 
 /* ---------- capacidades ---------- */
-const ENV_NAMES = ['TERM', 'COLORTERM', 'TERM_PROGRAM', 'TERM_PROGRAM_VERSION', 'KITTY_WINDOW_ID', 'GHOSTTY_RESOURCES_DIR', 'WEZTERM_EXECUTABLE', 'ITERM_SESSION_ID', 'VTE_VERSION', 'WT_SESSION', 'TMUX', 'STY', 'ZELLIJ', 'SSH_CONNECTION', 'SSH_TTY', 'NO_COLOR', 'FORCE_COLOR', 'LANG', 'LC_ALL', 'LC_CTYPE', 'COLORFGBG', 'KONSOLE_VERSION', 'ALACRITTY_SOCKET', 'TERMINAL_EMULATOR', 'WARP_IS_LOCAL_SHELL_SESSION', 'CLAUDE_CODE_REDUCED_MOTION'] as const
+const ENV_NAMES = ['TERM', 'COLORTERM', 'TERM_PROGRAM', 'TERM_PROGRAM_VERSION', 'KITTY_WINDOW_ID', 'GHOSTTY_RESOURCES_DIR', 'WEZTERM_EXECUTABLE', 'ITERM_SESSION_ID', 'VTE_VERSION', 'WT_SESSION', 'TMUX', 'STY', 'ZELLIJ', 'SSH_CONNECTION', 'SSH_TTY', 'NO_COLOR', 'FORCE_COLOR', 'LANG', 'LC_ALL', 'LC_CTYPE', 'LC_MESSAGES', 'COLORFGBG', 'KONSOLE_VERSION', 'ALACRITTY_SOCKET', 'TERMINAL_EMULATOR', 'WARP_IS_LOCAL_SHELL_SESSION', 'CLAUDE_CODE_REDUCED_MOTION'] as const
 async function readEnv($: D): Promise<Env> {
   /* los nombres van uno a uno y escritos: el motor solo deja leer los que el módulo nombra */
   const v = await Promise.all([
     $.env.get('TERM'), $.env.get('COLORTERM'), $.env.get('TERM_PROGRAM'), $.env.get('TERM_PROGRAM_VERSION'), $.env.get('KITTY_WINDOW_ID'), $.env.get('GHOSTTY_RESOURCES_DIR'),
     $.env.get('WEZTERM_EXECUTABLE'), $.env.get('ITERM_SESSION_ID'), $.env.get('VTE_VERSION'), $.env.get('WT_SESSION'), $.env.get('TMUX'), $.env.get('STY'), $.env.get('ZELLIJ'),
-    $.env.get('SSH_CONNECTION'), $.env.get('SSH_TTY'), $.env.get('NO_COLOR'), $.env.get('FORCE_COLOR'), $.env.get('LANG'), $.env.get('LC_ALL'), $.env.get('LC_CTYPE'),
+    $.env.get('SSH_CONNECTION'), $.env.get('SSH_TTY'), $.env.get('NO_COLOR'), $.env.get('FORCE_COLOR'), $.env.get('LANG'), $.env.get('LC_ALL'), $.env.get('LC_CTYPE'), $.env.get('LC_MESSAGES'),
     $.env.get('COLORFGBG'), $.env.get('KONSOLE_VERSION'), $.env.get('ALACRITTY_SOCKET'), $.env.get('TERMINAL_EMULATOR'), $.env.get('WARP_IS_LOCAL_SHELL_SESSION'), $.env.get('CLAUDE_CODE_REDUCED_MOTION'),
   ])
   const env: Env = {}
   ENV_NAMES.forEach((k, i) => { if (v[i] != null) env[k] = v[i] })
   return env
 }
-async function claudeTheme($: D) {
-  try { const row = (await $.config.list()).find(r => r.key === 'theme'); return typeof row?.value === 'string' ? row.value : undefined } catch { return undefined }
+async function claudeConfig($: D, key: string) {
+  try { const row = (await $.config.list()).find(r => r.key === key); return typeof row?.value === 'string' ? row.value : undefined } catch { return undefined }
 }
+const claudeTheme = ($: D) => claudeConfig($, 'theme')
+/* el idioma: la opción del mod, el de Claude Code, la configuración regional; inglés si nada lo dice */
+async function langFor($: D, env: Env) { return pickLang({ option: optLang, claude: await claudeConfig($, 'language'), env }) }
 let detected: Caps | null = null
 async function detect($: D, fullscreen?: boolean) {
-  detected = detectCaps(await readEnv($), { fullscreen, claudeTheme: await claudeTheme($), surface: 'terminal' })
+  const env = await readEnv($)
+  detected = detectCaps(env, { fullscreen, claudeTheme: await claudeTheme($), surface: 'terminal', lang: await langFor($, env) })
+  setLang(detected.lang)
   await update($, capsA, () => detected)
   return detected
 }
 /* sin escribir estado (se llama desde los render): lo detectado al arrancar o, si aún no, se deduce aquí */
 async function capsFor($: D, surface: string, fullscreen?: boolean): Promise<Caps> {
   let c = (await read($, capsA)) ?? detected
-  if (!c) { c = detectCaps(await readEnv($), { fullscreen, claudeTheme: await claudeTheme($), surface }); detected = c }
+  if (!c) { const env = await readEnv($); c = detectCaps(env, { fullscreen, claudeTheme: await claudeTheme($), surface, lang: await langFor($, env) }); detected = c }
   let out = c
   if (fullscreen !== undefined && out.pointer !== (fullscreen || surface === 'desktop')) out = { ...out, pointer: fullscreen || surface === 'desktop' }
   if (surface !== 'terminal') out = { ...out, color: 'truecolor', glyphs: 'unicode', braille: true, images: 'none', fps: 15 }
-  return withOverrides(out, { ...optCaps, ...((await read($, overA)) ?? {}) })
+  const caps = withOverrides(out, { ...optCaps, ...((await read($, overA)) ?? {}) })
+  setLang(caps.lang)
+  return caps
 }
 
 /* las props del lienzo, dentro del tamaño que admite un Client */
@@ -517,12 +533,13 @@ export const register: Register = (on, options) => {
   if (options.glyphs === 'unicode' || options.glyphs === 'basic' || options.glyphs === 'ascii') optCaps.glyphs = options.glyphs
   if (options.motion === 'full' || options.motion === 'reduced' || options.motion === 'off') optCaps.motion = options.motion
   if (options.theme === 'dark' || options.theme === 'light') optCaps.theme = options.theme
+  optLang = typeof options.language === 'string' ? options.language : undefined
 
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     for (const t of TOOLS) await $.tool.register({ name: t.name, description: t.description, inputSchema: t.inputSchema as unknown as Record<string, unknown> })
     await detect($)
-    await $.command.register({ name: 'graphx', description: 'GraphX: panel del diagrama, navegador, imagen, capacidades del terminal, efectos, demos, exportar a Mermaid', argumentHint: '[panel|present|open|image|cells|caps|fx|demo|last|export|clear|stop|help]' })
+    await $.command.register({ name: 'graphx-mod', description: tr('GraphX (mod): panel del diagrama, navegador, imagen, capacidades del terminal, efectos, demos, exportar a Mermaid · help', 'GraphX (mod): diagram panel, browser, image, terminal capabilities, effects, demos, Mermaid export · help'), argumentHint: '[panel|present|open|image|cells|caps|fx|demo|last|export|clear|stop|help]' })
     /* una recarga del mod: el tablero sigue en $.state, así que el servidor vuelve en el mismo puerto */
     if (await read($, boardA)) {
       try {
@@ -530,7 +547,7 @@ export const register: Register = (on, options) => {
         await call($, s, '/state', { rev: await read($, revA), board: await read($, boardA) })
         await fetchScene($, s)
         await syncStatus($)
-      } catch (err) { $.ui.log(`graphx: no se ha podido recuperar el lienzo: ${String(err)}`, { to: 'debug' }) }
+      } catch (err) { $.ui.log(`graphx-mod: no se ha podido recuperar el lienzo: ${String(err)}`, { to: 'debug' }) }
     }
     return started
   })
@@ -542,15 +559,15 @@ export const register: Register = (on, options) => {
     const r = await next(e)
     const text = [
       '# Diagramas con GraphX',
-      'En esta sesión hay un lienzo de GraphX (herramientas mcp__graphx__*). Cuando un dibujo explique mejor que el texto (arquitectura, flujos, dependencias, secuencias, estados, planes, el árbol de un repo, datos que cambian), dibújalo con mcp__graphx__show y guíalo con guide, signs y data: se ve en el panel del terminal (con caracteres y efectos, a cualquier tamaño), en la app de escritorio y en el navegador.',
-      inlineOn ? 'Los bloques ```mermaid de tus respuestas también se dibujan con GraphX (los 19 tipos de Mermaid; datos extra con claves en id@{…} y comentarios %% @gx). Para algo que vas a cambiar o recorrer, mejor el lienzo.' : '',
-      'Primera vez: mcp__graphx__capabilities para elegir el tipo y mcp__graphx__reference para el formato. Comprueba lo dibujado con mcp__graphx__view.',
+      'En esta sesión hay un lienzo de GraphX (herramientas mcp__graphx-mod__*). Cuando un dibujo explique mejor que el texto (arquitectura, flujos, dependencias, secuencias, estados, planes, el árbol de un repo, datos que cambian), dibújalo con mcp__graphx-mod__show y guíalo con guide, signs y data: se ve en el panel del terminal (con caracteres y efectos, a cualquier tamaño), en la app de escritorio y en el navegador.',
+      inlineOn ? 'Los bloques ```mermaid de tus respuestas también se dibujan con GraphX (los 18 tipos de Mermaid; datos extra con claves en id@{…} y comentarios %% @gx). Para algo que vas a cambiar o recorrer, mejor el lienzo.' : '',
+      'Primera vez: mcp__graphx-mod__capabilities para elegir el tipo y mcp__graphx-mod__reference para el formato. Comprueba lo dibujado con mcp__graphx-mod__view.',
     ].filter(Boolean).join('\n')
     return { ...r, sections: [...r.sections, { id: 'graphx', text, scope: 'session' as const }] }
   })
 
   /* ---- show ---- */
-  on('tool.call', { tool: 'mcp__graphx__show' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__show' }, async ($, e) => {
     let source: GraphxSource | null = null
     const n = [e.spec, e.mermaid, e.paths, e.tree_text, e.file].filter(x => x !== undefined).length
     if (n !== 1) return { result: 'Pasa exactamente una fuente: spec, mermaid, paths, tree_text o file.' }
@@ -588,7 +605,7 @@ export const register: Register = (on, options) => {
   })
 
   /* ---- patch ---- */
-  on('tool.call', { tool: 'mcp__graphx__patch' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__patch' }, async ($, e) => {
     if (!(await read($, boardA))) return { result: 'No hay ningún diagrama: empieza con show.' }
     const p: Json = {}
     if (isObj(e.add)) p.add = e.add
@@ -602,7 +619,7 @@ export const register: Register = (on, options) => {
   })
 
   /* ---- data ---- */
-  on('tool.call', { tool: 'mcp__graphx__data' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__data' }, async ($, e) => {
     if (!(await read($, boardA))) return { result: 'No hay ningún diagrama: empieza con show.' }
     const { rev } = await publish($, b => {
       if (!b) return b
@@ -622,7 +639,7 @@ export const register: Register = (on, options) => {
   })
 
   /* ---- signs ---- */
-  on('tool.call', { tool: 'mcp__graphx__signs' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__signs' }, async ($, e) => {
     if (!(await read($, boardA))) return { result: 'No hay ningún diagrama: empieza con show.' }
     const skipped: string[] = []
     const { rev } = await publish($, b => {
@@ -646,7 +663,7 @@ export const register: Register = (on, options) => {
   })
 
   /* ---- guide ---- */
-  on('tool.call', { tool: 'mcp__graphx__guide' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__guide' }, async ($, e) => {
     if (!(await read($, boardA))) return { result: 'No hay ningún diagrama: empieza con show.' }
     const { rev } = await publish($, b => {
       if (!b) return b
@@ -697,7 +714,7 @@ export const register: Register = (on, options) => {
   })
 
   /* ---- view ---- */
-  on('tool.call', { tool: 'mcp__graphx__view' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__view' }, async ($, e) => {
     const s = await read($, serverA)
     if (s) await pump($)
     const b = await read($, boardA)
@@ -735,7 +752,7 @@ export const register: Register = (on, options) => {
   })
 
   /* ---- convert / export ---- */
-  on('tool.call', { tool: 'mcp__graphx__convert' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__convert' }, async ($, e) => {
     const s = await ensureServer($)
     if (typeof e.mermaid === 'string') {
       const r = await call($, s, '/convert', { mermaid: e.mermaid, lang: e.lang })
@@ -759,7 +776,7 @@ export const register: Register = (on, options) => {
     }
     return { result: 'Pasa mermaid (para convertirlo a GraphX y ver sus anotaciones) o spec (para expresarlo como Mermaid).' }
   })
-  on('tool.call', { tool: 'mcp__graphx__export' }, async ($, e) => {
+  on('tool.call', { tool: 'mcp__graphx-mod__export' }, async ($, e) => {
     if (!(await read($, boardA))) return { result: 'No hay ningún diagrama: empieza con show.' }
     const s = await ensureServer($)
     const r = await call($, s, `/export?${new URLSearchParams({ ...(typeof e.flow === 'string' ? { flow: e.flow } : {}), ...(e.regen === true ? { regen: '1' } : {}) }).toString()}`)
@@ -767,33 +784,33 @@ export const register: Register = (on, options) => {
     if (j.error) return { result: j.error }
     return { result: `Mermaid (${j.type}):\n\`\`\`mermaid\n${j.text}\`\`\`${j.lossy?.length ? `\nNota: ${j.lossy.join('; ')}` : ''}` }
   })
-  on('tool.call', { tool: 'mcp__graphx__capabilities' }, async $ => {
+  on('tool.call', { tool: 'mcp__graphx-mod__capabilities' }, async $ => {
     const caps = await capsFor($, 'terminal')
     const s = await read($, serverA)
     return { result: capabilitiesText(caps, { rsvg: s?.rsvg, engine: s?.engine }) }
   })
-  on('tool.call', { tool: 'mcp__graphx__reference' }, () => ({ result: REFERENCE }))
+  on('tool.call', { tool: 'mcp__graphx-mod__reference' }, () => ({ result: REFERENCE }))
 
-  /* ---- /graphx ---- */
-  on('command.run', { command: 'graphx' }, async ($, e) => {
+  /* ---- /graphx-mod ---- */
+  on('command.run', { command: 'graphx-mod' }, async ($, e) => {
     const [sub = '', ...rest] = e.args.trim().split(/\s+/)
     const arg = sub.toLowerCase()
-    if (arg === 'help' || arg === '?') return { text: HELP }
-    if (arg === 'stop') { await stopServer($); return { text: 'GraphX: servidor parado. El tablero sigue guardado; la próxima herramienta lo vuelve a abrir.' } }
+    if (arg === 'help' || arg === '?' || arg === 'ayuda') return { text: help() }
+    if (arg === 'stop') { await stopServer($); return { text: tr('GraphX: servidor parado. El tablero sigue guardado; la próxima herramienta lo vuelve a abrir.', 'GraphX: server stopped. The board is still saved; the next tool call opens it again.') } }
     if (arg === 'last' || arg === 'restore') {
       const last = (await $.store.get('last-board').catch(() => null)) as { board?: GraphxBoard; at?: number } | null
-      if (!last?.board) return { text: 'GraphX: no hay ningún diagrama guardado de otra sesión.' }
+      if (!last?.board) return { text: tr('GraphX: no hay ningún diagrama guardado de otra sesión.', 'GraphX: no diagram saved from another session.') }
       await update($, detailA, () => null)
       await publish($, prev => ({ ...last.board!, view: { seq: (prev?.view.seq ?? 0) + 1 }, guide: { ...last.board!.guide, seq: (prev?.guide.seq ?? 0) + 1 } }))
       await $.ui.open({ id: PANE, title: 'GraphX', focus: true })
-      const when = last.at ? new Date(last.at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : ''
-      return { text: `GraphX: recuperado «${last.board.title ?? 'el último diagrama'}»${when ? ` (${when})` : ''}.` }
+      const when = last.at ? new Date(last.at).toLocaleString(tr('es-ES', 'en-GB'), { dateStyle: 'short', timeStyle: 'short' }) : ''
+      return { text: tr(`GraphX: recuperado «${last.board.title ?? 'el último diagrama'}»${when ? ` (${when})` : ''}.`, `GraphX: restored “${last.board.title ?? 'the last diagram'}”${when ? ` (${when})` : ''}.`) }
     }
     if (arg === 'clear') {
       await update($, boardA, () => null); await update($, renderA, () => null); await update($, detailA, () => null); scene = null
       if (await read($, serverA)) await publish($, () => null)
       $.ui.status(undefined)
-      return { text: 'GraphX: lienzo vacío.' }
+      return { text: tr('GraphX: lienzo vacío.', 'GraphX: canvas cleared.') }
     }
     if (arg === 'caps') {
       if (rest[0] === 'reset') { await update($, overA, () => null); await detect($, e.presentation?.isFullscreen) }
@@ -805,26 +822,30 @@ export const register: Register = (on, options) => {
           else if (k === 'glyphs' && /^(unicode|basic|ascii|auto)$/.test(val ?? '')) over.glyphs = val === 'auto' ? undefined : val as Caps['glyphs']
           else if (k === 'motion' && /^(full|reduced|off|auto)$/.test(val ?? '')) over.motion = val === 'auto' ? undefined : val as Caps['motion']
           else if (k === 'theme' && /^(dark|light|auto)$/.test(val ?? '')) over.theme = val === 'auto' ? undefined : val as Caps['theme']
+          else if (k === 'lang' && /^(es|en|auto)$/.test(val ?? '')) over.lang = val === 'auto' ? undefined : val as Caps['lang']
           else if (k === 'images' && /^(kitty|none|auto)$/.test(val ?? '')) over.images = val === 'auto' ? undefined : val as Caps['images']
           else if (k === 'fps' && Number(val) > 0) over.fps = Math.min(30, Number(val))
-          else return { text: `GraphX: no entiendo «${kv}». Claves: color=truecolor|256|16|mono, glyphs=unicode|basic|ascii, motion=full|reduced|off, theme=dark|light, images=kitty|none, fps=N (auto quita lo forzado).` }
+          else return { text: tr(`GraphX: no entiendo «${kv}». Claves: color=truecolor|256|16|mono, glyphs=unicode|basic|ascii, motion=full|reduced|off, theme=dark|light, lang=es|en, images=kitty|none, fps=N (auto quita lo forzado).`, `GraphX: I don't understand “${kv}”. Keys: color=truecolor|256|16|mono, glyphs=unicode|basic|ascii, motion=full|reduced|off, theme=dark|light, lang=es|en, images=kitty|none, fps=N (auto drops the override).`) }
         }
         await update($, overA, () => over)
         await update($, seqA, n => n + 1)
       }
       const c = await capsFor($, 'terminal', e.presentation?.isFullscreen)
-      return { text: `GraphX · este terminal (${c.term || 'sin nombre'}): color ${c.color} · caracteres ${c.glyphs}${c.braille ? ' + braille' : ''} · imágenes ${c.images} · ratón ${c.pointer ? 'sí' : 'no'} · movimiento ${c.motion} · ${c.fps} fps · tema ${c.theme}\n${c.why.map(w => `  · ${w}`).join('\n')}\nCámbialo con /graphx caps color=256 glyphs=ascii motion=off theme=light … (o reset).` }
+      const why = c.why.map(w => `  · ${w}`).join('\n')
+      return { text: tr(
+        `GraphX · este terminal (${c.term || 'sin nombre'}): color ${c.color} · caracteres ${c.glyphs}${c.braille ? ' + braille' : ''} · imágenes ${c.images} · ratón ${c.pointer ? 'sí' : 'no'} · movimiento ${c.motion} · ${c.fps} fps · tema ${c.theme} · idioma ${c.lang}\n${why}\nCámbialo con /graphx-mod caps color=256 glyphs=ascii motion=off theme=light lang=en … (o reset).`,
+        `GraphX · this terminal (${c.term || 'unnamed'}): color ${c.color} · glyphs ${c.glyphs}${c.braille ? ' + braille' : ''} · images ${c.images} · mouse ${c.pointer ? 'yes' : 'no'} · motion ${c.motion} · ${c.fps} fps · theme ${c.theme} · language ${c.lang}\n${why}\nChange it with /graphx-mod caps color=256 glyphs=ascii motion=off theme=light lang=es … (or reset).`) }
     }
     if (arg === 'fx') {
-      if (!(await read($, boardA))) return { text: 'GraphX: no hay ningún diagrama.' }
+      if (!(await read($, boardA))) return { text: tr('GraphX: no hay ningún diagrama.', 'GraphX: there is no diagram.') }
       const preset = rest[0] ?? 'vivid'
       await publish($, b => (b ? { ...b, fx: preset === 'off' || preset === 'false' ? false : preset } : b))
-      return { text: `GraphX: efectos «${preset}».` }
+      return { text: tr(`GraphX: efectos «${preset}».`, `GraphX: effects “${preset}”.`) }
     }
     if (arg === 'demo') {
       const name = (rest[0] ?? '').toLowerCase()
       const list = await demos($)
-      if (!name || !list.includes(name)) return { text: `GraphX · demos: ${list.join(', ')}\nUso: /graphx demo <nombre>` }
+      if (!name || !list.includes(name)) return { text: tr(`GraphX · demos: ${list.join(', ')}\nUso: /graphx-mod demo <nombre>`, `GraphX · demos: ${list.join(', ')}\nUsage: /graphx-mod demo <name>`) }
       const file = `${$.plugin.root}/assets/demos/${name}${list.includes(name) ? '' : ''}`
       const ext = (await $.fs.list(`${$.plugin.root}/assets/demos`)).find(f => f.name.startsWith(name + '.'))?.name ?? `${name}.mmd`
       const text = await $.fs.read(`${$.plugin.root}/assets/demos/${ext}`)
@@ -833,24 +854,24 @@ export const register: Register = (on, options) => {
       await update($, detailA, () => null)
       await publish($, prev => ({ ...emptyBoard(source), view: { seq: (prev?.view.seq ?? 0) + 1 } }))
       await $.ui.open({ id: PANE, title: 'GraphX', focus: true })
-      return { text: `GraphX: demo «${name}» en el panel. r la presenta paso a paso; Esc vuelve al prompt.` }
+      return { text: tr(`GraphX: demo «${name}» en el panel. r la presenta paso a paso; Esc vuelve al prompt.`, `GraphX: demo “${name}” in the panel. r presents it step by step; Esc returns to the prompt.`) }
     }
     if (arg === 'export') {
-      if (!(await read($, boardA))) return { text: 'GraphX: no hay ningún diagrama.' }
+      if (!(await read($, boardA))) return { text: tr('GraphX: no hay ningún diagrama.', 'GraphX: there is no diagram.') }
       const s = await ensureServer($)
       const r = await call($, s, '/export')
       const j = JSON.parse(r.text) as { text?: string; error?: string }
       return { text: j.error ? `GraphX: ${j.error}` : `\`\`\`mermaid\n${j.text}\`\`\`` }
     }
     const s = await ensureServer($)
-    if (arg === 'open' || arg === 'browser') { const ok = await openBrowser($, s.url); return { text: ok ? `GraphX: abierto ${s.url}` : `GraphX: abre ${s.url} en el navegador` } }
+    if (arg === 'open' || arg === 'browser') { const ok = await openBrowser($, s.url); return { text: ok ? tr(`GraphX: abierto ${s.url}`, `GraphX: opened ${s.url}`) : tr(`GraphX: abre ${s.url} en el navegador`, `GraphX: open ${s.url} in your browser`) } }
     if (arg === 'image' || arg === 'cells' || arg === 'svg' || arg === 'auto') await update($, viewA, () => (arg === 'image' || arg === 'cells' || arg === 'svg' ? arg : 'auto'))
-    if (arg === 'imgtest') { await $.ui.open({ id: 'graphx-imgtest', title: 'Prueba de imagen' }); return { text: 'GraphX: panel de prueba de imagen abierto.' } }
+    if (arg === 'imgtest') { await $.ui.open({ id: 'graphx-imgtest', title: tr('Prueba de imagen', 'Image test') }); return { text: tr('GraphX: panel de prueba de imagen abierto.', 'GraphX: image test panel opened.') } }
     await fetchScene($, s)
     /* lo abre la persona: con el teclado (la barra de atajos), Esc lo devuelve al prompt */
     await $.ui.open({ id: PANE, title: 'GraphX', focus: true })
     if (arg === 'present' || arg === 'presentar') await update($, presentA, p => ({ n: (p?.n ?? 0) + 1, at: Date.now() }))
-    return { text: `GraphX en el panel${arg === 'image' ? ' (imagen)' : arg === 'cells' ? ' (caracteres)' : ''} · navegador: ${s.url}` }
+    return { text: tr(`GraphX en el panel${arg === 'image' ? ' (imagen)' : arg === 'cells' ? ' (caracteres)' : ''} · navegador: ${s.url}`, `GraphX in the panel${arg === 'image' ? ' (image)' : arg === 'cells' ? ' (characters)' : ''} · browser: ${s.url}`) }
   })
 
   /* ---- lo que la persona hace en el lienzo ---- */
@@ -865,11 +886,11 @@ export const register: Register = (on, options) => {
     } else if (d.type === 'detail' && str(d.id)) {
       try { const r = await call($, s, `/detail?id=${encodeURIComponent(str(d.id) ?? '')}`); if (r.ok) { const det = JSON.parse(r.text) as Detail; await update($, detailA, () => (det.error ? null : det)) } } catch { /* sin detalle */ }
     } else if (d.type === 'ask') await ask($, str(d.id) ?? '', str(d.label) ?? str(d.id) ?? '')
-    else if (d.type === 'open') { const ok = await openBrowser($, s.url); if (!ok) $.ui.toast(`GraphX: abre ${s.url}`) }
+    else if (d.type === 'open') { const ok = await openBrowser($, s.url); if (!ok) $.ui.toast(tr(`GraphX: abre ${s.url}`, `GraphX: open ${s.url}`)) }
     else if (d.type === 'pixels') {
       const caps = await capsFor($, 'terminal')
-      if (!s.rsvg) $.ui.toast('GraphX: sin rsvg-convert no hay imagen del motor')
-      else if (caps.images === 'none' && (caps.color === '16' || caps.color === 'mono')) $.ui.toast('GraphX: la foto del motor necesita 256 colores o más (o un terminal con imágenes: kitty, Ghostty, WezTerm)')
+      if (!s.rsvg) $.ui.toast(tr('GraphX: sin rsvg-convert no hay imagen del motor', 'GraphX: the engine image needs rsvg-convert'))
+      else if (caps.images === 'none' && (caps.color === '16' || caps.color === 'mono')) $.ui.toast(tr('GraphX: la foto del motor necesita 256 colores o más (o un terminal con imágenes: kitty, Ghostty, WezTerm)', 'GraphX: the engine photo needs 256 colors or more (or a terminal with images: kitty, Ghostty, WezTerm)'))
       else await update($, viewA, v => (v === 'image' ? 'cells' : 'image'))
     } else if (d.type === 'step') {
       const at = num(d.at) ?? -1
@@ -899,8 +920,8 @@ export const register: Register = (on, options) => {
       return (
         <Box flexDirection="column" gap={1}>
           <Text bold>GraphX</Text>
-          <Text dimColor>Pide a Claude un diagrama (arquitectura, un flujo en Mermaid, el árbol de un repo…), prueba una demo (/graphx demo) o recupera el último de otra sesión (/graphx last).</Text>
-          {srv && <Link href={srv.url} label="Abrir en el navegador" />}
+          <Text dimColor>{tr('Pide a Claude un diagrama (arquitectura, un flujo en Mermaid, el árbol de un repo…), prueba una demo (/graphx-mod demo) o recupera el último de otra sesión (/graphx-mod last).', 'Ask Claude for a diagram (architecture, a Mermaid flow, a repo tree…), try a demo (/graphx-mod demo) or bring back the last one from another session (/graphx-mod last).')}</Text>
+          {srv && <Link href={srv.url} label={tr('Abrir en el navegador', 'Open in the browser')} />}
         </Box>
       )
     }
@@ -923,29 +944,29 @@ export const register: Register = (on, options) => {
       const sel = detail
       return (
         <Box flexDirection="column" gap={1}>
-          <Text wrap="truncate-end"><Text bold>{sc.title || 'GraphX'}</Text><Text dimColor>{`  ${sc.diagram?.replace('mermaid:', '') ?? ''} · ${r?.nodeCount ?? (sc.nodes ?? []).length} piezas`}</Text></Text>
+          <Text wrap="truncate-end"><Text bold>{sc.title || 'GraphX'}</Text><Text dimColor>{`  ${sc.diagram?.replace('mermaid:', '') ?? ''} · ${r?.nodeCount ?? (sc.nodes ?? []).length} ${tr('piezas', 'nodes')}`}</Text></Text>
           {sc.banner ? <Text color={sc.banner.tone === 'danger' ? 'red' : sc.banner.tone === 'warn' ? 'yellow' : 'cyan'}>{`${sc.banner.title ? sc.banner.title + ': ' : ''}${sc.banner.text}`}</Text> : null}
-          {svg && svg.fits ? <Svg source={svg.svg} alt={`Diagrama ${sc.title ?? ''}`} isInteractive /> : <Text dimColor>{svg ? 'El diagrama es demasiado grande para dibujarlo aquí como SVG: se ve como caracteres (Celdas) o en el navegador.' : 'Preparando el dibujo…'}</Text>}
+          {svg && svg.fits ? <Svg source={svg.svg} alt={`${tr('Diagrama', 'Diagram')} ${sc.title ?? ''}`} isInteractive /> : <Text dimColor>{svg ? tr('El diagrama es demasiado grande para dibujarlo aquí como SVG: se ve como caracteres (Celdas) o en el navegador.', 'The diagram is too big to draw here as SVG: view it as characters (Cells) or in the browser.') : tr('Preparando el dibujo…', 'Preparing the drawing…')}</Text>}
           <Box flexDirection="row" gap={1}>
             {steps.length > 0 && <Button key="prev" label="◀" onPress={() => go(Math.max(0, at - 1))} />}
-            {steps.length > 0 && <Button key="next" label={at < 0 ? '▶ Recorrido' : '▶'} variant="primary" onPress={() => go(at + 1)} />}
+            {steps.length > 0 && <Button key="next" label={at < 0 ? tr('▶ Recorrido', '▶ Tour') : '▶'} variant="primary" onPress={() => go(at + 1)} />}
             {at >= 0 && <Button key="stop" label="■" onPress={() => go('stop')} />}
-            <Button key="less" label="Nivel −" onPress={async () => { if (srv) await fetchScene($, srv, { depth: Math.max(0, (sc.depth ?? 1) - 1) }) }} />
-            <Button key="more" label="Nivel +" onPress={async () => { if (srv) await fetchScene($, srv, { depth: (sc.depth ?? 1) + 1 }) }} />
+            <Button key="less" label={tr('Nivel −', 'Level −')} onPress={async () => { if (srv) await fetchScene($, srv, { depth: Math.max(0, (sc.depth ?? 1) - 1) }) }} />
+            <Button key="more" label={tr('Nivel +', 'Level +')} onPress={async () => { if (srv) await fetchScene($, srv, { depth: (sc.depth ?? 1) + 1 }) }} />
             <Button key="dir" label={sc.dir === 'down' ? '↦' : '↧'} onPress={async () => { if (srv) await fetchScene($, srv, { dir: sc.dir === 'down' ? 'right' : 'down' }) }} />
             {(sc.flows ?? []).map(f => <Button key={`flow-${f.i}`} label={`⇄ ${clip(f.t, 18)}`} onPress={async () => { if (srv) await fetchScene($, srv, { view: sc.view === 'flow:' + f.i ? 'graph' : 'flow:' + f.i }) }} />)}
-            <Button key="cells" label="Celdas" onPress={() => update($, viewA, () => 'cells')} />
-            {srv && <Button key="web" label="Navegador" onPress={() => openBrowser($, srv.url)} />}
+            <Button key="cells" label={tr('Celdas', 'Cells')} onPress={() => update($, viewA, () => 'cells')} />
+            {srv && <Button key="web" label={tr('Navegador', 'Browser')} onPress={() => openBrowser($, srv.url)} />}
           </Box>
           {sel || sc.timeline ? (
             <Box flexDirection="row" gap={1}>
-              {sel && !sel.edge ? <Button key="blast" label="✺ Impacto" onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, blast: sel.i, select: sel.i } } : x))} /> : null}
-              {sel && !sel.edge ? <Button key="up" label="⟵ Depende de" onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, trace: { id: sel.i, dir: 'up' } } } : x))} /> : null}
-              {sel && !sel.edge ? <Button key="down" label="Dependientes ⟶" onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, trace: { id: sel.i, dir: 'down' } } } : x))} /> : null}
-              {sel ? <Button key="clear" label="Limpiar" onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, reset: true } } : x))} /> : null}
+              {sel && !sel.edge ? <Button key="blast" label={tr('✺ Impacto', '✺ Blast radius')} onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, blast: sel.i, select: sel.i } } : x))} /> : null}
+              {sel && !sel.edge ? <Button key="up" label={tr('⟵ Depende de', '⟵ Depends on')} onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, trace: { id: sel.i, dir: 'up' } } } : x))} /> : null}
+              {sel && !sel.edge ? <Button key="down" label={tr('Dependientes ⟶', 'Dependents ⟶')} onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, trace: { id: sel.i, dir: 'down' } } } : x))} /> : null}
+              {sel ? <Button key="clear" label={tr('Limpiar', 'Clear')} onPress={() => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, reset: true } } : x))} /> : null}
               {sc.timeline ? (() => {
                 const { Select } = $.ui.resolve(e) as unknown as Elements['desktop']
-                return <Select key="time" label={sc.timeline.l ?? 'Línea de tiempo'} options={sc.timeline.labels.map((l, i) => ({ value: String(i), label: `${l}${sc.timeline!.events.find(ev => ev.i === i) ? ' · ' + sc.timeline!.events.find(ev => ev.i === i)!.l : ''}` }))} onSelect={(v: string) => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, timeline: Number(v) } } : x))} />
+                return <Select key="time" label={sc.timeline.l ?? tr('Línea de tiempo', 'Timeline')} options={sc.timeline.labels.map((l, i) => ({ value: String(i), label: `${l}${sc.timeline!.events.find(ev => ev.i === i) ? ' · ' + sc.timeline!.events.find(ev => ev.i === i)!.l : ''}` }))} onSelect={(v: string) => publish($, x => (x ? { ...x, view: { seq: x.view.seq + 1, timeline: Number(v) } } : x))} />
               })() : null}
             </Box>
           ) : null}
@@ -953,7 +974,7 @@ export const register: Register = (on, options) => {
           {e.surface !== 'mobile' && (sc.nodes ?? []).length > 0 ? (() => {
             const { Select } = $.ui.resolve(e) as unknown as Elements['desktop']
             const opts = (sc.nodes ?? []).filter(n => !n.ln).slice(0, 200).map(n => ({ value: n.i, label: `${n.g ? '▾ ' : ''}${n.l}` }))
-            return <Select key="node" label="Pieza" options={opts} value={sel?.i} onSelect={async (id: string) => { if (!srv) return; try { const r2 = await call($, srv, `/detail?id=${encodeURIComponent(id)}`); if (r2.ok) await update($, detailA, () => JSON.parse(r2.text) as Detail) } catch { /* sin detalle */ } }} />
+            return <Select key="node" label={tr('Pieza', 'Node')} options={opts} value={sel?.i} onSelect={async (id: string) => { if (!srv) return; try { const r2 = await call($, srv, `/detail?id=${encodeURIComponent(id)}`); if (r2.ok) await update($, detailA, () => JSON.parse(r2.text) as Detail) } catch { /* sin detalle */ } }} />
           })() : null}
           {sel ? <Markdown text={detailMarkdown(sel)} /> : null}
         </Box>
@@ -969,11 +990,11 @@ export const register: Register = (on, options) => {
       const ras = rasterCache.get(key)
       return (
         <Box flexDirection="column">
-          <Text wrap="truncate-end"><Text bold>{sc.title || 'GraphX'}</Text><Text dimColor>{'  foto del motor (medios bloques)'}</Text></Text>
-          {ras ? <Raster key="photo" columns={ras.cols} rows={ras.rows} cells={ras.cells} /> : <Text dimColor>No se ha podido sacar la foto.</Text>}
+          <Text wrap="truncate-end"><Text bold>{sc.title || 'GraphX'}</Text><Text dimColor>{tr('  foto del motor (medios bloques)', '  engine photo (half blocks)')}</Text></Text>
+          {ras ? <Raster key="photo" columns={ras.cols} rows={ras.rows} cells={ras.cells} /> : <Text dimColor>{tr('No se ha podido sacar la foto.', 'Could not take the photo.')}</Text>}
           <Box flexDirection="row" gap={1}>
-            <Button key="cells" label="Caracteres" hotkey="c" onPress={() => update($, viewA, () => 'cells')} />
-            <Button key="web" label="Navegador" hotkey="w" onPress={() => openBrowser($, srv.url)} />
+            <Button key="cells" label={tr('Caracteres', 'Characters')} hotkey="c" onPress={() => update($, viewA, () => 'cells')} />
+            <Button key="web" label={tr('Navegador', 'Browser')} hotkey="w" onPress={() => openBrowser($, srv.url)} />
           </Box>
         </Box>
       )
@@ -990,20 +1011,21 @@ export const register: Register = (on, options) => {
       const tall = png ? Math.max(4, Math.min(rows - 3, Math.round((cols * png.h) / png.w / 2))) : 4
       return (
         <Box flexDirection="column">
-          <Text wrap="truncate-end"><Text bold>{sc.title || 'GraphX'}</Text><Text dimColor>{'  imagen del motor'}</Text></Text>
-          {png ? <Image key="png" source={caps.imageSource === 'file' && png.file ? { file: png.file, format: 'png' } : { png: png.b64 ?? '' }} columns={cols} rows={tall} alt={`Diagrama ${sc.title ?? ''} (sin imagen en este terminal)`} /> : <Text dimColor>No se ha podido generar la imagen.</Text>}
+          <Text wrap="truncate-end"><Text bold>{sc.title || 'GraphX'}</Text><Text dimColor>{tr('  imagen del motor', '  engine image')}</Text></Text>
+          {png ? <Image key="png" source={caps.imageSource === 'file' && png.file ? { file: png.file, format: 'png' } : { png: png.b64 ?? '' }} columns={cols} rows={tall} alt={tr(`Diagrama ${sc.title ?? ''} (sin imagen en este terminal)`, `Diagram ${sc.title ?? ''} (no images in this terminal)`)} /> : <Text dimColor>{tr('No se ha podido generar la imagen.', 'Could not generate the image.')}</Text>}
           <Box flexDirection="row" gap={1}>
-            <Button key="cells" label="Caracteres" hotkey="c" onPress={() => update($, viewA, () => 'cells')} />
-            <Button key="web" label="Navegador" hotkey="w" onPress={() => openBrowser($, srv.url)} />
+            <Button key="cells" label={tr('Caracteres', 'Characters')} hotkey="c" onPress={() => update($, viewA, () => 'cells')} />
+            <Button key="web" label={tr('Navegador', 'Browser')} hotkey="w" onPress={() => openBrowser($, srv.url)} />
           </Box>
         </Box>
       )
     }
     if (e.surface === 'terminal' || e.surface === 'desktop') {
       const { Client } = $.ui.resolve(e)
-      /* con el panel enfocado (ctrl+x tab, un clic, /graphx), la barra de atajos: sin ratón también se maneja todo */
+      /* con el panel enfocado (ctrl+x tab, un clic, /graphx-mod), la barra de atajos: sin ratón también se maneja todo */
       const bar = e.props.isFocused && e.surface === 'terminal'
-      const barRows = bar ? Math.max(1, Math.ceil(KEYS.reduce((a, k) => a + k.l.length + 4, 0) / Math.max(20, cols))) : 0
+      const keys = KEYS()
+      const barRows = bar ? Math.max(1, Math.ceil(keys.reduce((a, k) => a + k.l.length + 4, 0) / Math.max(20, cols))) : 0
       const cmd = await read($, cmdA)
       const presentN = await read($, presentA)
       const canvasRows = Math.max(6, rows - barRows)
@@ -1014,7 +1036,7 @@ export const register: Register = (on, options) => {
           <Client key="canvas" module="./canvas.tsx" props={props} height={canvasRows} width="100%" />
           {bar ? (
             <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
-              {KEYS.map(k => <Button key={`k-${k.k}`} label={k.l} hotkey={k.k} plain dimColor={k.k !== 'r' && k.k !== 'n' && k.k !== 'b'} onPress={() => press(k.k)} />)}
+              {keys.map(k => <Button key={`k-${k.k}`} label={k.l} hotkey={k.k} plain dimColor={k.k !== 'r' && k.k !== 'n' && k.k !== 'b'} onPress={() => press(k.k)} />)}
             </Box>
           ) : null}
         </Box>
@@ -1025,26 +1047,26 @@ export const register: Register = (on, options) => {
 
   /* ---- las llamadas a las herramientas en el transcript: una fila corta en vez del JSON de la entrada ---- */
   on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
-    if (!String(e.props.tool).startsWith('mcp__graphx__')) return next(e)
+    if (!String(e.props.tool).startsWith('mcp__graphx-mod__')) return next(e)
     const { Box, Text } = $.ui.resolve(e)
-    const verb = String(e.props.tool).slice('mcp__graphx__'.length)
+    const verb = String(e.props.tool).slice('mcp__graphx-mod__'.length)
     const inp = isObj(e.props.input) ? e.props.input : {}
     const what = (() => {
       if (verb === 'show') {
-        if (typeof inp.mermaid === 'string') { const kind = /^\s*(?:%%.*\n|---[\s\S]*?---\s*\n)*\s*([\w-]+)/.exec(inp.mermaid)?.[1] ?? 'mermaid'; return `dibuja un ${kind} de Mermaid (${inp.mermaid.split('\n').length} líneas)` }
-        if (isObj(inp.spec)) return `dibuja «${str(inp.title) ?? str(inp.spec.title) ?? 'diagrama'}» (${Array.isArray(inp.spec.nodes) ? inp.spec.nodes.length : 0} piezas)`
-        if (Array.isArray(inp.paths)) return `dibuja el árbol de ${inp.paths.length} ficheros`
-        if (typeof inp.file === 'string') return `dibuja ${inp.file}`
-        return 'dibuja un árbol'
+        if (typeof inp.mermaid === 'string') { const kind = /^\s*(?:%%.*\n|---[\s\S]*?---\s*\n)*\s*([\w-]+)/.exec(inp.mermaid)?.[1] ?? 'mermaid'; return tr(`dibuja un ${kind} de Mermaid (${inp.mermaid.split('\n').length} líneas)`, `draws a Mermaid ${kind} (${inp.mermaid.split('\n').length} lines)`) }
+        if (isObj(inp.spec)) { const t = str(inp.title) ?? str(inp.spec.title), nn = Array.isArray(inp.spec.nodes) ? inp.spec.nodes.length : 0; return tr(`dibuja «${t ?? 'diagrama'}» (${nn} piezas)`, `draws “${t ?? 'diagram'}” (${nn} nodes)`) }
+        if (Array.isArray(inp.paths)) return tr(`dibuja el árbol de ${inp.paths.length} ficheros`, `draws a tree of ${inp.paths.length} files`)
+        if (typeof inp.file === 'string') return tr(`dibuja ${inp.file}`, `draws ${inp.file}`)
+        return tr('dibuja un árbol', 'draws a tree')
       }
-      if (verb === 'patch') return `cambia el diagrama${isObj(inp.add) ? ' (añade)' : ''}${Array.isArray(inp.remove) ? ' (quita)' : ''}${Array.isArray(inp.update) ? ' (actualiza)' : ''}`
-      if (verb === 'data') return `datos en vivo en ${Object.keys(isObj(inp.nodes) ? inp.nodes : {}).length + Object.keys(isObj(inp.edges) ? inp.edges : {}).length} elementos`
-      if (verb === 'signs') return `${Array.isArray(inp.put) ? inp.put.length : 0} cartel(es)${inp.banner ? ' y banner' : ''}`
-      if (verb === 'guide') return Array.isArray(inp.steps) ? `recorrido de ${inp.steps.length} pasos` : inp.go !== undefined ? `recorrido: ${String(inp.go)}` : str(inp.blast) ? `impacto de ${str(inp.blast)}` : 'mueve la vista'
-      if (verb === 'view') return inp.text === true ? 'mira el diagrama (y el panel del terminal)' : 'mira el diagrama'
-      if (verb === 'convert') return typeof inp.mermaid === 'string' ? 'convierte Mermaid → GraphX' : 'expresa GraphX → Mermaid'
-      if (verb === 'export') return 'exporta a Mermaid'
-      return verb === 'capabilities' ? 'capacidades' : 'referencia del formato'
+      if (verb === 'patch') return tr(`cambia el diagrama${isObj(inp.add) ? ' (añade)' : ''}${Array.isArray(inp.remove) ? ' (quita)' : ''}${Array.isArray(inp.update) ? ' (actualiza)' : ''}`, `changes the diagram${isObj(inp.add) ? ' (adds)' : ''}${Array.isArray(inp.remove) ? ' (removes)' : ''}${Array.isArray(inp.update) ? ' (updates)' : ''}`)
+      if (verb === 'data') { const ne = Object.keys(isObj(inp.nodes) ? inp.nodes : {}).length + Object.keys(isObj(inp.edges) ? inp.edges : {}).length; return tr(`datos en vivo en ${ne} elementos`, `live data on ${ne} items`) }
+      if (verb === 'signs') { const np = Array.isArray(inp.put) ? inp.put.length : 0; return tr(`${np} cartel(es)${inp.banner ? ' y banner' : ''}`, `${np} sign(s)${inp.banner ? ' and banner' : ''}`) }
+      if (verb === 'guide') return Array.isArray(inp.steps) ? tr(`recorrido de ${inp.steps.length} pasos`, `${inp.steps.length}-step tour`) : inp.go !== undefined ? tr(`recorrido: ${String(inp.go)}`, `tour: ${String(inp.go)}`) : str(inp.blast) ? tr(`impacto de ${str(inp.blast)}`, `blast radius of ${str(inp.blast)}`) : tr('mueve la vista', 'moves the view')
+      if (verb === 'view') return inp.text === true ? tr('mira el diagrama (y el panel del terminal)', 'looks at the diagram (and the terminal panel)') : tr('mira el diagrama', 'looks at the diagram')
+      if (verb === 'convert') return typeof inp.mermaid === 'string' ? tr('convierte Mermaid → GraphX', 'converts Mermaid → GraphX') : tr('expresa GraphX → Mermaid', 'writes GraphX → Mermaid')
+      if (verb === 'export') return tr('exporta a Mermaid', 'exports to Mermaid')
+      return verb === 'capabilities' ? tr('capacidades', 'capabilities') : tr('referencia del formato', 'format reference')
     })()
     const out = typeof e.props.output === 'string' ? e.props.output : Array.isArray(e.props.output) ? e.props.output.map(o => (isObj(o) && typeof o.text === 'string' ? o.text : '')).join('\n') : isObj(e.props.output) && typeof e.props.output.result === 'string' ? e.props.output.result : ''
     const line = out.split('\n').find(l => /^(Pintado|ERROR|Recorrido|Carteles|Datos en vivo|Mermaid|No hay|Pasa)/.test(l)) ?? ''
@@ -1059,7 +1081,7 @@ export const register: Register = (on, options) => {
   /* ---- prueba de imagen: ¿el terminal entiende el protocolo gráfico de kitty? ---- */
   on('ui.render', { component: 'Pane', requestId: 'graphx-imgtest' }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
-    if (e.surface !== 'terminal') return <Text>Esta prueba es para el terminal.</Text>
+    if (e.surface !== 'terminal') return <Text>{tr('Esta prueba es para el terminal.', 'This test is for the terminal.')}</Text>
     const { Image } = $.ui.resolve(e)
     const file = `${$.plugin.root}/assets/imgtest.png`
     let png = ''
@@ -1068,9 +1090,9 @@ export const register: Register = (on, options) => {
     const w = Math.max(10, Math.min(48, e.props.bodyColumns - 4))
     return (
       <Box flexDirection="column" gap={1}>
-        <Text>{`${caps.term || 'terminal'} · imágenes: ${caps.images}`}</Text>
-        {png ? <Image key="bytes" source={{ png }} columns={w} rows={Math.round(w / 4)} alt="✗ no se ve la imagen (bytes)" /> : null}
-        <Image key="file" source={{ file, format: 'png' }} columns={w} rows={Math.round(w / 4)} alt="✗ no se ve la imagen (fichero)" />
+        <Text>{`${caps.term || 'terminal'} · ${tr('imágenes', 'images')}: ${caps.images}`}</Text>
+        {png ? <Image key="bytes" source={{ png }} columns={w} rows={Math.round(w / 4)} alt={tr('✗ no se ve la imagen (bytes)', '✗ the image does not show (bytes)')} /> : null}
+        <Image key="file" source={{ file, format: 'png' }} columns={w} rows={Math.round(w / 4)} alt={tr('✗ no se ve la imagen (fichero)', '✗ the image does not show (file)')} />
       </Box>
     )
   })
@@ -1112,13 +1134,13 @@ export const register: Register = (on, options) => {
       const one = await inlineRender($, srv, p.text, caps.theme)
       if (!one || one.error) { out.push(<Markdown key={`mm${k++}`} text={'```mermaid\n' + p.text + '```'} />); if (one?.error) out.push(<Text key={`er${k++}`} dimColor>{`GraphX: ${one.error}`}</Text>); continue }
       if (e.surface === 'terminal' || e.surface === 'desktop') {
-        if (e.surface === 'desktop' && one.svg?.fits) { const { Svg } = $.ui.resolve(e); out.push(<Svg key={`sv${k++}`} source={one.svg.svg} alt={`Diagrama ${one.scene.title ?? ''}`} isInteractive />) }
+        if (e.surface === 'desktop' && one.svg?.fits) { const { Svg } = $.ui.resolve(e); out.push(<Svg key={`sv${k++}`} source={one.svg.svg} alt={`${tr('Diagrama', 'Diagram')} ${one.scene.title ?? ''}`} isInteractive />) }
         else {
           const { Client } = $.ui.resolve(e)
           const tall = Math.max(10, Math.min(28, inlineHeight(one.scene, cols)))
           out.push(<Client key={`gx${k++}`} module="./canvas.tsx" props={fitProps({ scene: one.scene, caps, detail: null, height: tall, width: cols, pane: 'transcript' })} height={tall} width="100%" />)
         }
-      } else if (one.svg?.fits) { const { Svg } = $.ui.resolve(e); out.push(<Svg key={`sv${k++}`} source={one.svg.svg} alt={`Diagrama ${one.scene.title ?? ''}`} />) }
+      } else if (one.svg?.fits) { const { Svg } = $.ui.resolve(e); out.push(<Svg key={`sv${k++}`} source={one.svg.svg} alt={`${tr('Diagrama', 'Diagram')} ${one.scene.title ?? ''}`} />) }
       else out.push(<Markdown key={`mm${k++}`} text={'```mermaid\n' + p.text + '```'} />)
     }
     return <Box flexDirection="column">{out}</Box>
@@ -1136,12 +1158,12 @@ function splitMermaid(text: string) {
 }
 const inlineCache = new Map<string, { scene: Scene; svg: { svg: string; fits: boolean } | null; error?: string } | null>()
 async function inlineRender($: D, srv: GraphxServer, text: string, theme: string) {
-  const key = `${theme}:${text}`
+  const key = `${theme}:${getLang()}:${text}`
   if (inlineCache.has(key)) return inlineCache.get(key)!
   try {
-    const r = await call($, srv, '/inline', { mermaid: text, theme })
+    const r = await call($, srv, '/inline', { mermaid: text, theme, lang: getLang() })
     const j = JSON.parse(r.text) as { scene?: Scene; svg?: { svg: string; fits: boolean }; error?: string }
-    const v = j.scene ? { scene: j.scene, svg: j.svg ?? null } : { scene: { v: 1, kind: 'error' } as Scene, svg: null, error: j.error ?? 'no se ha podido dibujar' }
+    const v = j.scene ? { scene: j.scene, svg: j.svg ?? null } : { scene: { v: 1, kind: 'error' } as Scene, svg: null, error: j.error ?? tr('no se ha podido dibujar', 'could not draw it') }
     inlineCache.set(key, v)
     if (inlineCache.size > 40) inlineCache.delete(inlineCache.keys().next().value!)
     return v
@@ -1161,7 +1183,7 @@ function detailMarkdown(d: Detail) {
   if (d.sm) out.push(d.sm)
   if (d.metrics?.length) out.push(d.metrics.map(m => `- **${m.label}**: ${String(m.value)}`).join('\n'))
   if (d.notes?.length) out.push(d.notes.map(n => `> ${n.tone ? `**${n.tone}** · ` : ''}${n.text}`).join('\n'))
-  if (d.ins?.length || d.outs?.length) out.push(`**Entradas**: ${(d.ins ?? []).map(x => x.l ?? x.i).join(', ') || '—'}  \n**Salidas**: ${(d.outs ?? []).map(x => x.l ?? x.i).join(', ') || '—'}`)
+  if (d.ins?.length || d.outs?.length) out.push(`**${tr('Entradas', 'Inputs')}**: ${(d.ins ?? []).map(x => x.l ?? x.i).join(', ') || '—'}  \n**${tr('Salidas', 'Outputs')}**: ${(d.outs ?? []).map(x => x.l ?? x.i).join(', ') || '—'}`)
   if (d.links?.length) out.push(d.links.map(l => (l.u ? `- [${l.l ?? l.u}](${l.u})` : `- ${l.l}`)).join('\n'))
   return out.join('\n\n')
 }
@@ -1170,15 +1192,32 @@ async function demos($: D) {
   try { return (await $.fs.list(`${$.plugin.root}/assets/demos`)).map(f => f.name.replace(/\.(mmd|json)$/, '')).sort() } catch { return [] }
 }
 
-const HELP = `GraphX en Claude Code
-  /graphx              el panel con el diagrama (caracteres en el terminal, SVG en el escritorio)
-  /graphx open         el navegador, con el motor interactivo
-  /graphx image        en kitty, Ghostty o WezTerm: la imagen del motor · /graphx cells vuelve a caracteres
-  /graphx caps         lo que se ha detectado del terminal; /graphx caps color=256 glyphs=ascii motion=off theme=light … lo fuerza (reset)
-  /graphx fx <preset>  efectos: calm, vivid, neon, blueprint, glass, present, off
-  /graphx demo [tipo]  una demo de cada tipo de diagrama
-  /graphx last         el último diagrama, aunque sea de otra sesión
-  /graphx export       el diagrama como Mermaid con sus anotaciones
-  /graphx clear · stop
-  /graphx present      el diagrama presentado paso a paso (r dentro del panel)
-En el panel: ? enseña todas las teclas; ctrl+x tab le da el teclado (con su barra de atajos) y Esc lo devuelve al prompt.`
+/* la ayuda del mod (/graphx-mod help); la de la skill está en skills/graphx/SKILL.md (/graphx help) */
+const help = () => tr(`GraphX · el mod (graphx-mod): el lienzo, el navegador y las herramientas mcp__graphx-mod__*
+  /graphx-mod              el panel con el diagrama (caracteres en el terminal, SVG en el escritorio)
+  /graphx-mod open         el navegador, con el motor interactivo
+  /graphx-mod present      el diagrama presentado paso a paso (r dentro del panel)
+  /graphx-mod image        en kitty, Ghostty o WezTerm: la imagen del motor · /graphx-mod cells vuelve a caracteres
+  /graphx-mod caps         lo que se ha detectado del terminal; /graphx-mod caps color=256 glyphs=ascii motion=off theme=light lang=en … lo fuerza (reset)
+  /graphx-mod fx <preset>  efectos: calm, vivid, neon, blueprint, glass, present, off
+  /graphx-mod demo [tipo]  una demo de cada tipo de diagrama
+  /graphx-mod last         el último diagrama, aunque sea de otra sesión
+  /graphx-mod export       el diagrama como Mermaid con sus anotaciones
+  /graphx-mod clear · stop el lienzo vacío · el servidor parado
+  /graphx-mod help         esta ayuda
+En el panel: ? enseña todas las teclas; ctrl+x tab le da el teclado (con su barra de atajos) y Esc lo devuelve al prompt.
+Para pedir diagramas en lenguaje natural está la skill: /graphx (y /graphx help).`,
+`GraphX · the mod (graphx-mod): the canvas, the browser and the mcp__graphx-mod__* tools
+  /graphx-mod              the panel with the diagram (characters in the terminal, SVG in the desktop app)
+  /graphx-mod open         the browser, with the interactive engine
+  /graphx-mod present      the diagram presented step by step (r inside the panel)
+  /graphx-mod image        in kitty, Ghostty or WezTerm: the engine image · /graphx-mod cells goes back to characters
+  /graphx-mod caps         what was detected about the terminal; /graphx-mod caps color=256 glyphs=ascii motion=off theme=light lang=es … forces it (reset)
+  /graphx-mod fx <preset>  effects: calm, vivid, neon, blueprint, glass, present, off
+  /graphx-mod demo [type]  a demo of each diagram type
+  /graphx-mod last         the last diagram, even from another session
+  /graphx-mod export       the diagram as Mermaid with its annotations
+  /graphx-mod clear · stop clear the canvas · stop the server
+  /graphx-mod help         this help
+In the panel: ? shows every key; ctrl+x tab gives it the keyboard (with its shortcut bar) and Esc hands it back to the prompt.
+To ask for diagrams in plain language there is the skill: /graphx (and /graphx help).`)

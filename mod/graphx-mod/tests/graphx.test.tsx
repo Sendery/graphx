@@ -4,6 +4,7 @@ import type { On } from 'claude-code'
 
 import { SCENES, DETAIL } from './fixtures'
 import { detectCaps, withOverrides } from '../hooks/term/caps'
+import { pickLang } from '../hooks/i18n'
 import { outlineRows } from '../hooks/term/lists'
 // @ts-expect-error: módulo del servidor en JS, sin tipos
 import { annotations, toMermaid } from '../server/mermaid-out.mjs'
@@ -23,7 +24,7 @@ function fakeServer(on: On, env: Record<string, string> = { TERM_PROGRAM: 'iTerm
   mock.env(on, env)
   mock.clock(on, { now: 1_000 })
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
-  on('tool.register', (_$, e) => ({ value: { tool: `mcp__graphx__${e.name}` } }))
+  on('tool.register', (_$, e) => ({ value: { tool: `mcp__graphx-mod__${e.name}` } }))
   on('command.register', (_$, e) => ({ value: { command: e.name } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('prompt.fill', (_$, e) => { filled.push(e.text); return { isFilled: true } })
@@ -82,7 +83,7 @@ function fakeServer(on: On, env: Record<string, string> = { TERM_PROGRAM: 'iTerm
 
 const start = async ($: Engine) => { await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true }) }
 const text = (r: unknown) => { const res = (r as { result?: unknown }).result; return typeof res === 'string' ? res : JSON.stringify(res) }
-const PANE = (bodyColumns: number, bodyRows: number, isFocused = true) => ({ plugin: 'graphx', component: 'Pane' as const, requestId: 'graphx', props: { title: 'GraphX', isFocused, bodyColumns, placement: 'dock' as const, scroll: { offset: 0, bodyRows }, view: {} } })
+const PANE = (bodyColumns: number, bodyRows: number, isFocused = true) => ({ plugin: 'graphx-mod', component: 'Pane' as const, requestId: 'graphx', props: { title: 'GraphX', isFocused, bodyColumns, placement: 'dock' as const, scroll: { offset: 0, bodyRows }, view: {} } })
 
 describe('capacidades del terminal', () => {
   test('se deducen del entorno, con su motivo', async () => {
@@ -152,8 +153,8 @@ describe('herramientas', () => {
   test('reference y capabilities explican el formato y el terminal', async ($, on) => {
     fakeServer(on, { TERM_PROGRAM: 'ghostty', TERM: 'xterm-ghostty', LANG: 'es_ES.UTF-8' })
     await start($)
-    expect(text(await $.tool.call({ tool: 'mcp__graphx__reference' } as never))).toContain('%% @gx')
-    const caps = text(await $.tool.call({ tool: 'mcp__graphx__capabilities' } as never))
+    expect(text(await $.tool.call({ tool: 'mcp__graphx-mod__reference' } as never))).toContain('%% @gx')
+    const caps = text(await $.tool.call({ tool: 'mcp__graphx-mod__capabilities' } as never))
     expect(caps).toContain('sequenceDiagram')
     expect(caps).toContain('imágenes kitty')
     expect(caps).toContain('blast')
@@ -162,27 +163,27 @@ describe('herramientas', () => {
   test('show publica el tablero, arranca el servidor una vez y devuelve lo pintado', async ($, on) => {
     const srv = fakeServer(on)
     await start($)
-    const r = await $.tool.call({ tool: 'mcp__graphx__show', mermaid: 'flowchart LR\n web --> api', title: 'Tienda', fx: 'neon' } as never)
+    const r = await $.tool.call({ tool: 'mcp__graphx-mod__show', mermaid: 'flowchart LR\n web --> api', title: 'Tienda', fx: 'neon' } as never)
     expect(srv.spawned.length).toBe(1)
     expect(srv.spawned[0]?.[1]).toMatch(/server\/live\.mjs$/)
     expect(srv.last()?.board).toMatchObject({ source: { kind: 'mermaid', text: 'flowchart LR\n web --> api' }, title: 'Tienda', fx: 'neon' })
     expect(text(r)).toContain('Pintado')
     expect(text(r)).toContain('efectos: heat particles')
     expect(text(r)).toContain('gateway «API Gateway»')
-    await $.tool.call({ tool: 'mcp__graphx__patch', add: { nodes: [{ id: 'cache', label: 'Caché' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__patch', add: { nodes: [{ id: 'cache', label: 'Caché' }] } } as never)
     expect(srv.spawned.length).toBe(1)
     expect(srv.last()?.board?.patches).toEqual([{ add: { nodes: [{ id: 'cache', label: 'Caché' }] } }])
-    expect(text(await $.tool.call({ tool: 'mcp__graphx__show', mermaid: 'graph TD; a-->b', spec: { nodes: [] } } as never))).toContain('exactamente una fuente')
+    expect(text(await $.tool.call({ tool: 'mcp__graphx-mod__show', mermaid: 'graph TD; a-->b', spec: { nodes: [] } } as never))).toContain('exactamente una fuente')
   })
 
   test('data acumula los datos en vivo y replace empieza de cero', async ($, on) => {
     const srv = fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'api', label: 'API' }] } } as never)
-    await $.tool.call({ tool: 'mcp__graphx__data', nodes: { api: { heat: 300 } }, edges: { e1: { rate: 90 } } } as never)
-    await $.tool.call({ tool: 'mcp__graphx__data', nodes: { api: { alert: 'crit' } } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'api', label: 'API' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__data', nodes: { api: { heat: 300 } }, edges: { e1: { rate: 90 } } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__data', nodes: { api: { alert: 'crit' } } } as never)
     expect(srv.last()?.board?.data).toEqual({ nodes: { api: { heat: 300, alert: 'crit' } }, edges: { e1: { rate: 90 } } })
-    const r = await $.tool.call({ tool: 'mcp__graphx__data', replace: true, nodes: { db: { progress: 0.5 } } } as never)
+    const r = await $.tool.call({ tool: 'mcp__graphx-mod__data', replace: true, nodes: { db: { progress: 0.5 } } } as never)
     expect(srv.last()?.board?.data).toEqual({ nodes: { db: { progress: 0.5 } }, edges: {} })
     expect(text(r)).toContain('Datos en vivo: 1 pieza')
   })
@@ -190,19 +191,19 @@ describe('herramientas', () => {
   test('guide mueve el recorrido y la vista: flujos, impacto, equipos y línea de tiempo', async ($, on) => {
     const srv = fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }, { id: 'api' }] } } as never)
-    await $.tool.call({ tool: 'mcp__graphx__guide', steps: [{ title: 'Entra', nodes: ['web'] }, { title: 'Sale', nodes: ['api'], signs: [{ at: 'api', text: 'Aquí falla' }] }], go: 2 } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }, { id: 'api' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__guide', steps: [{ title: 'Entra', nodes: ['web'] }, { title: 'Sale', nodes: ['api'], signs: [{ at: 'api', text: 'Aquí falla' }] }], go: 2 } as never)
     expect(srv.last()?.board?.guide).toMatchObject({ at: 1 })
     expect((srv.last()?.board?.signs as { step?: number }[])[0]?.step).toBe(1)
-    await $.tool.call({ tool: 'mcp__graphx__guide', flow: 'f1', blast: 'api', owners: ['pagos'], timeline: '13:00' } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__guide', flow: 'f1', blast: 'api', owners: ['pagos'], timeline: '13:00' } as never)
     expect(srv.last()?.board?.view).toMatchObject({ flow: 'f1', blast: 'api', owners: ['pagos'], timeline: '13:00' })
   })
 
   test('signs añade, sustituye y quita carteles', async ($, on) => {
     const srv = fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
-    const r = await $.tool.call({ tool: 'mcp__graphx__signs', put: [{ at: 'nope', text: 'Ancla rota' }, { text: 'Suelto', tone: 'bogus' }], banner: { text: 'Hola' } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    const r = await $.tool.call({ tool: 'mcp__graphx-mod__signs', put: [{ at: 'nope', text: 'Ancla rota' }, { text: 'Suelto', tone: 'bogus' }], banner: { text: 'Hola' } } as never)
     expect((srv.last()?.board?.signs as { id: string; tone: string }[]).map(s => s.id)).toEqual(['c1', 'c2'])
     expect(text(r)).toContain('c1→nope')
   })
@@ -210,19 +211,19 @@ describe('herramientas', () => {
   test('convert recoge las anotaciones de Mermaid y export escribe Mermaid', async ($, on) => {
     fakeServer(on)
     await start($)
-    const c = text(await $.tool.call({ tool: 'mcp__graphx__convert', mermaid: 'flowchart LR\n a@{ heat: 3 }\n%% @gx { "fx": "vivid" }' } as never))
+    const c = text(await $.tool.call({ tool: 'mcp__graphx-mod__convert', mermaid: 'flowchart LR\n a@{ heat: 3 }\n%% @gx { "fx": "vivid" }' } as never))
     expect(c).toContain('1 en @{…}, 1 comentarios %% @gx')
     expect(c).toContain('pieza a: heat')
-    expect(text(await $.tool.call({ tool: 'mcp__graphx__convert', spec: { nodes: [{ id: 'a' }] } } as never))).toContain('```mermaid')
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
-    expect(text(await $.tool.call({ tool: 'mcp__graphx__export' } as never))).toContain('%% @gx')
+    expect(text(await $.tool.call({ tool: 'mcp__graphx-mod__convert', spec: { nodes: [{ id: 'a' }] } } as never))).toContain('```mermaid')
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    expect(text(await $.tool.call({ tool: 'mcp__graphx-mod__export' } as never))).toContain('%% @gx')
   })
 
   test('view enseña la captura del motor y el panel del terminal en texto', async ($, on) => {
     fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
-    const r = await $.tool.call({ tool: 'mcp__graphx__view', text: true, cols: 110, rows: 30 } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    const r = await $.tool.call({ tool: 'mcp__graphx-mod__view', text: true, cols: 110, rows: 30 } as never)
     expect(Array.isArray((r as { result?: unknown }).result)).toBe(true)
     expect(text(r)).toContain('"type":"image"')
     expect(text(r)).toContain('Checkout')
@@ -233,7 +234,7 @@ describe('el panel', () => {
   test('en el terminal es el lienzo y en el escritorio el SVG del motor', async ($, on) => {
     fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ ...PANE(120, 36), surface })
       await ui.advance(2000)
@@ -249,7 +250,7 @@ describe('el panel', () => {
   test('a cada tamaño su vista: esquema en lo estrecho, panel lateral en lo ancho', async ($, on) => {
     fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     for (const [w, h] of [[30, 10], [56, 20], [100, 30], [170, 44]] as const) {
       const ui = await $.ui.mount({ ...PANE(w, h), surface: 'terminal' })
       await ui.advance(2000)
@@ -264,9 +265,9 @@ describe('el panel', () => {
   test('con 16 colores, sin color y en ASCII sigue dibujando', async ($, on) => {
     fakeServer(on, { TERM: 'xterm' })
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     for (const caps of ['color=16', 'color=mono glyphs=ascii', 'glyphs=basic theme=light']) {
-      await $.command.run({ command: 'graphx', args: `caps ${caps}`, presentation: { isFullscreen: true, columns: 120 } } as never)
+      await $.command.run({ command: 'graphx-mod', args: `caps ${caps}`, presentation: { isFullscreen: true, columns: 120 } } as never)
       const ui = await $.ui.mount({ ...PANE(120, 36), surface: 'terminal' })
       await ui.advance(2000)
       expect(await ui.find({ type: 'Text', text: /Checkout/, in: 'canvas' })).toBeDefined()
@@ -278,7 +279,7 @@ describe('el panel', () => {
   test('el lienzo responde al teclado: pieza, detalle, impacto, búsqueda, vista y ayuda', async ($, on) => {
     const srv = fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     const ui = await $.ui.mount({ ...PANE(170, 44), surface: 'terminal' })
     await ui.advance(2000)
     await ui.key({ key: 'tab', in: 'canvas' })
@@ -304,7 +305,7 @@ describe('el panel', () => {
   test('presentación: el recorrido paso a paso, automático si el diagrama no trae uno', async ($, on) => {
     fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', mermaid: 'sequenceDiagram\n a->>b: hola' } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', mermaid: 'sequenceDiagram\n a->>b: hola' } as never)
     const ui = await $.ui.mount({ ...PANE(110, 32), surface: 'terminal' })
     await ui.advance(1500)
     await ui.key({ key: 'r', in: 'canvas' })
@@ -319,15 +320,15 @@ describe('el panel', () => {
     await ui.unmount()
   })
 
-  test('/graphx present sobre un panel ya abierto y usado entra en la presentación a la primera', async ($, on) => {
+  test('/graphx-mod present sobre un panel ya abierto y usado entra en la presentación a la primera', async ($, on) => {
     fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     const ui = await $.ui.mount({ ...PANE(110, 32), surface: 'terminal' })
     await ui.advance(1500)
     await ui.key({ key: 's', in: 'canvas' })
     expect(JSON.stringify(await ui.drawn({ in: 'canvas' }))).not.toContain('r sale')
-    await $.command.run({ command: 'graphx', args: 'present', presentation: { isFullscreen: true, columns: 120 } } as never)
+    await $.command.run({ command: 'graphx-mod', args: 'present', presentation: { isFullscreen: true, columns: 120 } } as never)
     await ui.advance(300)
     expect(JSON.stringify(await ui.drawn({ in: 'canvas' }))).toContain('r sale')
     await ui.unmount()
@@ -336,7 +337,7 @@ describe('el panel', () => {
   test('en el árbol, q pregunta por la fila y d no se come las flechas', async ($, on) => {
     const srv = fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', paths: ['src/app.ts', 'src/lib/a.ts', 'README.md'] } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', paths: ['src/app.ts', 'src/lib/a.ts', 'README.md'] } as never)
     const ui = await $.ui.mount({ ...PANE(110, 32), surface: 'terminal' })
     await ui.advance(1500)
     const cursorRow = async () => JSON.stringify(await ui.drawn({ in: 'canvas' })).split('❯')[1]?.slice(0, 80) ?? ''
@@ -352,7 +353,7 @@ describe('el panel', () => {
   test('con el panel enfocado, la barra de atajos maneja el lienzo sin ratón', async ($, on) => {
     fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     let ui = await $.ui.mount({ ...PANE(120, 36, false), surface: 'terminal' })
     expect(await ui.find({ type: 'Button', key: 'k-r' })).toBeUndefined()
     await ui.unmount()
@@ -369,7 +370,7 @@ describe('el panel', () => {
   test('en el esquema el cursor recorre piezas, conexiones y carriles', async ($, on) => {
     fakeServer(on)
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     const ui = await $.ui.mount({ ...PANE(56, 30), surface: 'terminal' })
     await ui.advance(2000)
     const cursorRow = async () => JSON.stringify(await ui.drawn({ in: 'canvas' })).split('❯')[1]?.slice(0, 120) ?? ''
@@ -383,7 +384,7 @@ describe('el panel', () => {
     fakeServer(on)
     await start($)
     for (const [src, re] of [[{ mermaid: 'sequenceDiagram\n a->>b: hola' }, /Proveedor de identidad/], [{ mermaid: 'gantt\n title x' }, /Prototipo/], [{ paths: ['src/app.ts', 'README.md'] }, /repo/]] as const) {
-      await $.tool.call({ tool: 'mcp__graphx__show', ...src } as never)
+      await $.tool.call({ tool: 'mcp__graphx-mod__show', ...src } as never)
       const ui = await $.ui.mount({ ...PANE(110, 32), surface: 'terminal' })
       await ui.advance(2000)
       expect(await ui.find({ type: 'Text', text: re, in: 'canvas' })).toBeDefined()
@@ -399,9 +400,9 @@ describe('el panel', () => {
     on('session.append', (_$, e) => ({ message: e.message, uuid: 'u1' }))
     on('ui.invalidate', () => ({ value: undefined }))
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
     for (const surface of ['terminal', 'desktop'] as const) {
-      const ui = await $.ui.mount({ plugin: 'graphx', surface, component: 'AssistantMessage', requestId: 'm1', props: { text: 'Así queda:\n\n```mermaid\nflowchart LR\n a --> b\n```\n\nY ya.', isFirstOfReply: true } })
+      const ui = await $.ui.mount({ plugin: 'graphx-mod', surface, component: 'AssistantMessage', requestId: 'm1', props: { text: 'Así queda:\n\n```mermaid\nflowchart LR\n a --> b\n```\n\nY ya.', isFirstOfReply: true } })
       if (surface === 'terminal') expect(await ui.find({ type: 'Client' })).toBeDefined()
       else expect(await ui.find({ type: 'Svg' })).toBeDefined()
       expect(await ui.find({ type: 'Markdown' })).toBeDefined()
@@ -412,12 +413,12 @@ describe('el panel', () => {
   test('como imagen: kitty donde lo hay, la foto en medios bloques donde no', async ($, on) => {
     fakeServer(on, { TERM_PROGRAM: 'ghostty', TERM: 'xterm-ghostty' })
     await start($)
-    await $.tool.call({ tool: 'mcp__graphx__show', spec: { nodes: [{ id: 'web' }] } } as never)
-    await $.command.run({ command: 'graphx', args: 'image', presentation: { isFullscreen: true, columns: 120 } } as never)
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    await $.command.run({ command: 'graphx-mod', args: 'image', presentation: { isFullscreen: true, columns: 120 } } as never)
     let ui = await $.ui.mount({ ...PANE(100, 30), surface: 'terminal' })
     expect(await ui.find({ type: 'Image' })).toBeDefined()
     await ui.unmount()
-    await $.command.run({ command: 'graphx', args: 'caps images=none', presentation: { isFullscreen: true, columns: 120 } } as never)
+    await $.command.run({ command: 'graphx-mod', args: 'caps images=none', presentation: { isFullscreen: true, columns: 120 } } as never)
     ui = await $.ui.mount({ ...PANE(100, 30), surface: 'terminal' })
     expect(await ui.find({ type: 'Raster' })).toBeDefined()
     await ui.press({ key: 'cells' })
@@ -429,21 +430,54 @@ describe('el panel', () => {
     fakeServer(on)
     await start($)
     for (const surface of ['terminal', 'desktop'] as const) {
-      const ui = await $.ui.mount({ plugin: 'graphx', surface, component: 'ToolUse', requestId: 't1', props: { tool_use_id: 't1', tool: 'mcp__graphx__show', input: { mermaid: 'flowchart LR\n a --> b' }, isRunning: false, isErrored: false, isInterrupted: false, output: 'GraphX · rev 1\nPintado: 2 piezas' } as never })
+      const ui = await $.ui.mount({ plugin: 'graphx-mod', surface, component: 'ToolUse', requestId: 't1', props: { tool_use_id: 't1', tool: 'mcp__graphx-mod__show', input: { mermaid: 'flowchart LR\n a --> b' }, isRunning: false, isErrored: false, isInterrupted: false, output: 'GraphX · rev 1\nPintado: 2 piezas' } as never })
       expect(await ui.find({ type: 'Text', text: /dibuja un flowchart de Mermaid/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /Pintado: 2 piezas/ })).toBeDefined()
       await ui.unmount()
     }
   })
 
-  test('/graphx caps enseña lo detectado y lo deja forzar', async ($, on) => {
+  test('/graphx-mod caps enseña lo detectado y lo deja forzar', async ($, on) => {
     fakeServer(on, { TERM: 'xterm-256color', TMUX: '/tmp/x' })
     await start($)
-    const r = await $.command.run({ command: 'graphx', args: 'caps', presentation: { isFullscreen: true, columns: 120 } } as never)
+    const r = await $.command.run({ command: 'graphx-mod', args: 'caps', presentation: { isFullscreen: true, columns: 120 } } as never)
     expect(JSON.stringify(r)).toContain('color 256')
     expect(JSON.stringify(r)).toContain('tmux')
-    const r2 = await $.command.run({ command: 'graphx', args: 'caps color=mono motion=off', presentation: { isFullscreen: true, columns: 120 } } as never)
+    const r2 = await $.command.run({ command: 'graphx-mod', args: 'caps color=mono motion=off', presentation: { isFullscreen: true, columns: 120 } } as never)
     expect(JSON.stringify(r2)).toContain('color mono')
-    expect(JSON.stringify(await $.command.run({ command: 'graphx', args: 'caps color=rojo', presentation: { isFullscreen: true, columns: 120 } } as never))).toContain('no entiendo')
+    /* sin LANG ni idioma de Claude Code: inglés; lang=es lo fuerza */
+    expect(JSON.stringify(await $.command.run({ command: 'graphx-mod', args: 'caps color=rojo', presentation: { isFullscreen: true, columns: 120 } } as never))).toContain("I don't understand")
+    const r3 = await $.command.run({ command: 'graphx-mod', args: 'caps lang=es', presentation: { isFullscreen: true, columns: 120 } } as never)
+    expect(JSON.stringify(r3)).toContain('idioma es')
+    expect(JSON.stringify(await $.command.run({ command: 'graphx-mod', args: 'caps color=rojo', presentation: { isFullscreen: true, columns: 120 } } as never))).toContain('no entiendo')
+  })
+
+  test('el idioma: la opción del mod, el de Claude Code, LANG; inglés si nada lo dice', async () => {
+    expect(pickLang({}).lang).toBe('en')
+    expect(pickLang({ env: { LANG: 'es_ES.UTF-8' } }).lang).toBe('es')
+    expect(pickLang({ claude: 'Spanish', env: { LANG: 'en_US.UTF-8' } }).lang).toBe('es')
+    expect(pickLang({ claude: 'English', env: { LANG: 'es_ES.UTF-8' } }).lang).toBe('en')
+    expect(pickLang({ option: 'en', claude: 'español' }).lang).toBe('en')
+    expect(pickLang({ option: 'auto', claude: 'Japanese', env: { LANG: 'fr_FR.UTF-8' } }).lang).toBe('en')
+  })
+
+  test('en inglés: la ayuda, la barra de atajos y el panel vacío', async ($, on) => {
+    fakeServer(on, { TERM_PROGRAM: 'iTerm.app', COLORTERM: 'truecolor', LANG: 'en_US.UTF-8' })
+    await start($)
+    const h = JSON.stringify(await $.command.run({ command: 'graphx-mod', args: 'help', presentation: { isFullscreen: true, columns: 120 } } as never))
+    expect(h).toContain('the panel with the diagram')
+    expect(h).toContain('/graphx help')
+    const empty = await $.ui.mount({ ...PANE(120, 30), surface: 'terminal' })
+    expect(JSON.stringify(await empty.drawn())).toContain('Ask Claude for a diagram')
+    await empty.unmount()
+    await $.tool.call({ tool: 'mcp__graphx-mod__show', spec: { nodes: [{ id: 'web' }] } } as never)
+    const ui = await $.ui.mount({ ...PANE(120, 36, true), surface: 'terminal' })
+    await ui.advance(1500)
+    const bar = JSON.stringify(await ui.findAll({ type: 'Button' }))
+    expect(bar).toContain('present')
+    expect(bar).not.toContain('presentar')
+    await ui.press({ key: 'k-r' })
+    expect(JSON.stringify(await ui.drawn({ in: 'canvas' }))).toContain('r exits')
+    await ui.unmount()
   })
 })

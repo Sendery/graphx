@@ -24,6 +24,10 @@
   let bannerClosed = null;
   let snapT = 0;
   let version = null;
+  /* el idioma: el del tablero (llega con el estado por SSE); hasta entonces, el del navegador */
+  let lang = /^es\b/i.test(navigator.language || '') ? 'es' : 'en';
+  let online = false;
+  const tr = (es, en) => (lang === 'es' ? es : en);
 
   /* ---------- utilidades ---------- */
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -45,12 +49,35 @@
       version = version || v;
       scheduleSnap();
     });
-    es.addEventListener('state', ev => { dot.className = 'lv-dot on'; dot.title = 'Conectado'; try { receive(JSON.parse(ev.data)); } catch (err) { showError(err); } });
-    es.onopen = () => { dot.className = 'lv-dot on'; dot.title = 'Conectado'; };
-    es.onerror = () => { dot.className = 'lv-dot'; dot.title = 'Sin conexión: la sesión de Claude Code se ha cerrado o el mod se ha recargado'; };
+    es.addEventListener('state', ev => { online = true; dot.className = 'lv-dot on'; dotTitle(); try { receive(JSON.parse(ev.data)); } catch (err) { showError(err); } });
+    es.onopen = () => { online = true; dot.className = 'lv-dot on'; dotTitle(); };
+    es.onerror = () => { online = false; dot.className = 'lv-dot'; dotTitle(); };
   }
 
   const { applyPatch, buildSpec, structKey } = window.GXBoard;
+
+  /* ---------- idioma ---------- */
+  function dotTitle() {
+    $('lv-dot').title = online ? tr('Conectado', 'Connected')
+      : seenState ? tr('Sin conexión: la sesión de Claude Code se ha cerrado o el mod se ha recargado', 'Disconnected: the Claude Code session has ended or the mod has reloaded')
+        : tr('Sin conexión', 'Disconnected');
+  }
+  let seenState = false;
+  /* los textos fijos de la página; lo demás se vuelve a pintar con renderChrome y renderSigns */
+  function applyLang() {
+    document.documentElement.lang = lang;
+    dotTitle();
+    const sb = $('lv-signs'); sb.textContent = tr('Carteles', 'Signs'); sb.title = tr('Mostrar u ocultar los carteles (S)', 'Show or hide the signs (S)');
+    $('lv-theme').title = tr('Tema claro u oscuro (T)', 'Light or dark theme (T)');
+    $('lv-empty-h').textContent = tr('Lienzo en vivo', 'Live canvas');
+    $('lv-empty-p').textContent = tr('Pide a Claude que dibuje algo: un diagrama de arquitectura, un flujo en Mermaid, el árbol de un repo… Aparecerá aquí al momento, con sus carteles y su recorrido.',
+      'Ask Claude to draw something: an architecture diagram, a Mermaid flow, a repo tree… It shows up here right away, with its signs and its tour.');
+  }
+  function setLang(l) {
+    if (l !== 'es' && l !== 'en') return false;
+    if (l === lang) return false;
+    lang = l; applyLang(); return true;
+  }
 
   /* ---------- montaje ---------- */
   function fitHeight() {
@@ -66,7 +93,7 @@
     host.innerHTML = '';
     const el = document.createElement('div'); host.appendChild(el);
     $('lv-empty').hidden = !!(spec.nodes && spec.nodes.length);
-    inst = GraphX.mount(el, spec, { lang: spec.lang || 'es' });
+    inst = GraphX.mount(el, spec, { lang: spec.lang || 'en' });
     fitHeight();
     await inst.ready;
     if (prev) {
@@ -94,6 +121,9 @@
 
   async function receive(st) {
     rev = st.rev; board = st.board;
+    seenState = true;
+    setLang((board && board.lang) || st.lang);
+    dotTitle();
     if (!board) { if (inst) { inst.destroy(); inst = null; } host.innerHTML = ''; mountedKey = null; $('lv-empty').hidden = false; renderChrome(); renderSigns(); return; }
     const key = structKey(board);
     if (key !== mountedKey) {
@@ -160,23 +190,23 @@
   /* ---------- barra y banner ---------- */
   function renderChrome() {
     const b = board;
-    $('lv-title').textContent = (b && b.title) || (inst && inst.model && inst.model.M.size ? 'Diagrama' : 'GraphX');
+    $('lv-title').textContent = (b && b.title) || (inst && inst.model && inst.model.M.size ? tr('Diagrama', 'Diagram') : 'GraphX');
     document.title = ((b && b.title) ? b.title + ' · ' : '') + 'GraphX';
     const bits = [];
-    if (inst) bits.push(`${[...inst.model.M.values()].filter(n => !n.isLane).length} piezas`);
+    if (inst) { const k = [...inst.model.M.values()].filter(n => !n.isLane).length; bits.push(tr(`${k} piezas`, `${k} node${k === 1 ? '' : 's'}`)); }
     const steps = (b && b.guide && b.guide.steps) || [];
-    if (steps.length) bits.push(inst && inst.state.tour >= 0 ? `paso ${inst.state.tour + 1}/${steps.length}` : `${steps.length} pasos`);
+    if (steps.length) bits.push(inst && inst.state.tour >= 0 ? tr(`paso ${inst.state.tour + 1}/${steps.length}`, `step ${inst.state.tour + 1}/${steps.length}`) : tr(`${steps.length} pasos`, `${steps.length} step${steps.length === 1 ? '' : 's'}`));
     const signs = (b && b.signs) || [];
-    if (signs.length) bits.push(`${signs.length} cartel${signs.length === 1 ? '' : 'es'}`);
-    bits.push('Alt+clic en una pieza: preguntar a Claude');
-    $('lv-meta').textContent = b ? bits.join(' · ') : 'esperando a Claude…';
+    if (signs.length) bits.push(tr(`${signs.length} cartel${signs.length === 1 ? '' : 'es'}`, `${signs.length} sign${signs.length === 1 ? '' : 's'}`));
+    bits.push(tr('Alt+clic en una pieza: preguntar a Claude', 'Alt+click a node: ask Claude'));
+    $('lv-meta').textContent = b ? bits.join(' · ') : tr('esperando a Claude…', 'waiting for Claude…');
     if (b && b.theme && b.theme !== 'auto') document.documentElement.dataset.theme = b.theme;
     const bn = $('lv-banner'), ban = b && b.banner;
     const bkey = ban ? JSON.stringify(ban) : null;
     if (!ban || bannerClosed === bkey) { bn.hidden = true; return; }
     bn.hidden = false; bn.className = 'lv-banner lv-tone-' + tone(ban.tone);
     bn.style.setProperty('--c', `var(--lv-${tone(ban.tone)})`);
-    bn.innerHTML = `<span class="lv-pin">${ICON[tone(ban.tone)]}</span><div>${ban.title ? `<b>${esc(ban.title)}</b> ` : ''}${md(ban.text).replace(/^<p>|<\/p>$/g, '')}</div><button type="button" class="lv-btn lv-x" title="Ocultar">✕</button>`;
+    bn.innerHTML = `<span class="lv-pin">${ICON[tone(ban.tone)]}</span><div>${ban.title ? `<b>${esc(ban.title)}</b> ` : ''}${md(ban.text).replace(/^<p>|<\/p>$/g, '')}</div><button type="button" class="lv-btn lv-x" title="${tr('Ocultar', 'Hide')}">✕</button>`;
     bn.querySelector('.lv-x').onclick = () => { bannerClosed = bkey; bn.hidden = true; };
     fitHeight();
   }
@@ -209,9 +239,9 @@
     const pin = s.pin || String(i + 1);
     const M = inst && inst.model.M;
     const label = s.at && M && M.get(s.at) ? M.get(s.at).label : null;
-    card.innerHTML = `<div class="lv-sh" title="Plegar o desplegar"><span class="lv-pin">${esc(pin)}</span><span class="lv-st">${esc(s.title || (label ? label : ICON[t] + ' ' + t))}</span></div>`
+    card.innerHTML = `<div class="lv-sh" title="${tr('Plegar o desplegar', 'Collapse or expand')}"><span class="lv-pin">${esc(pin)}</span><span class="lv-st">${esc(s.title || (label ? label : ICON[t] + ' ' + t))}</span></div>`
       + `<div class="lv-sb">${md(s.text)}</div>`
-      + `<div class="lv-sa">${s.at ? '<button type="button" data-a="go">⌖ Ir</button>' : ''}<button type="button" data-a="ask">↩ Claude</button></div>`;
+      + `<div class="lv-sa">${s.at ? `<button type="button" data-a="go">⌖ ${tr('Ir', 'Go')}</button>` : ''}<button type="button" data-a="ask">↩ Claude</button></div>`;
     card.querySelector('.lv-sh').onclick = () => { minimized.has(s.id) ? minimized.delete(s.id) : minimized.add(s.id); renderSigns(); };
     card.querySelector('[data-a=ask]').onclick = () => post('/ui-event', { type: 'ask', sign: s.id, node: s.at || null, label, text: plain(s.text).slice(0, 400) });
     const go = card.querySelector('[data-a=go]'); if (go) go.onclick = () => inst && inst.focusNode(s.at);
@@ -283,7 +313,7 @@
       const cx = x.x, cy = x.y;
       x.it.card.style.left = cx + 'px'; x.it.card.style.top = cy + 'px';
       x.it.card.classList.toggle('far', x.off || x.a.inside);
-      x.it.card.title = x.a.inside ? `Dentro de «${(inst.model.M.get(x.a.id) || {}).label || x.a.id}» (plegado)` : '';
+      x.it.card.title = x.a.inside ? (lb => tr(`Dentro de «${lb}» (plegado)`, `Inside «${lb}» (collapsed)`))((inst.model.M.get(x.a.id) || {}).label || x.a.id) : '';
       /* la línea: del borde de la pieza al borde del cartel */
       const ax = x.side === 'right' ? x.box.r : x.side === 'left' ? x.box.l : Math.min(Math.max(x.box.l + 8, cx + x.cw / 2), x.box.r - 8);
       const ay = x.side === 'bottom' ? x.box.b : x.side === 'top' ? x.box.t : Math.min(Math.max(x.box.t + 8, cy + 18), x.box.b - 8);
@@ -427,7 +457,7 @@
   function scheduleSnap() { clearTimeout(snapT); snapT = setTimeout(() => { try { snapshot(); } catch (err) { console.error('graphx: captura', err); } }, 900); }
 
   /* ---------- errores y controles ---------- */
-  function showError(err) { const e = $('lv-err'); e.hidden = false; e.textContent = 'GraphX no ha podido pintar el tablero:\n' + String(err && err.message || err); console.error(err); }
+  function showError(err) { const e = $('lv-err'); e.hidden = false; e.textContent = tr('GraphX no ha podido pintar el tablero:\n', 'GraphX could not draw the board:\n') + String(err && err.message || err); console.error(err); }
   function hideError() { $('lv-err').hidden = true; }
   const signsBtn = $('lv-signs');
   signsBtn.onclick = () => { showSigns = !showSigns; signsBtn.setAttribute('aria-pressed', String(showSigns)); renderSigns(); };
@@ -441,7 +471,8 @@
     if (ev.key === 's' && !ev.metaKey && !ev.ctrlKey) signsBtn.click();
     if (ev.key === 't' && !ev.metaKey && !ev.ctrlKey) $('lv-theme').click();
   });
-  if (!window.GraphX) showError(new Error('No se ha cargado /vendor/graphx.bundle.min.js: ejecuta `node mod/build.mjs` en el repo de GraphX.'));
+  applyLang();
+  if (!window.GraphX) showError(new Error(tr('No se ha cargado /vendor/graphx.bundle.min.js: ejecuta `node mod/build.mjs` en el repo de GraphX.', 'Could not load /vendor/graphx.bundle.min.js: run `node mod/build.mjs` in the GraphX repo.')));
   else connect();
   window.__lv = { get inst() { return inst; }, get board() { return board; }, snapshot, position };
 })();

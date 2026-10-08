@@ -8,6 +8,7 @@
  *     --color truecolor|256|16|mono  profundidad de color
  *     --glyphs unicode|basic|ascii   juego de caracteres
  *     --theme dark|light
+ *     --lang es|en                   idioma de la interfaz (caps.lang; por defecto, en)
  *     --keys "tab,tab,b"             teclas a pulsar antes de pintar (nombres de ClientKeyEvent; «S-tab» con mayúscula)
  *     --at 1200                      milisegundos de reloj que avanzar (animaciones) antes de pintar
  *     --frames 3 --every 300         varios fotogramas seguidos
@@ -27,12 +28,14 @@ import { execFileSync } from 'child_process';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const MOD = path.join(HERE, '..', 'graphx');
+const MOD = path.join(HERE, '..', 'graphx-mod');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const flag = k => args.includes(k);
 const file = args.find(a => !a.startsWith('--') && (a.endsWith('.json') || a.endsWith('.mmd') || a.endsWith('.md') || a.endsWith('.txt')));
 const cols = +opt('--cols', 120), rows = +opt('--rows', 36);
+const lang = opt('--lang', 'en');
+if (lang !== 'es' && lang !== 'en') { console.error('--lang: es o en'); process.exit(2); }
 
 /* el módulo, empaquetado */
 const out = path.join(HERE, '.cache', 'canvas.mjs');
@@ -54,7 +57,7 @@ const text = fs.readFileSync(file, 'utf8');
 if (file.endsWith('.json')) source = { kind: 'spec', spec: JSON.parse(text) };
 else if (file.endsWith('.txt')) source = { kind: 'paths', entries: text.split('\n').filter(Boolean) };
 else source = { kind: 'mermaid', text: file.endsWith('.md') ? (/```mermaid\n([\s\S]*?)```/.exec(text) || [, text])[1] : text };
-const board = { source, patches: [], signs: [], banner: null, guide: { steps: [], at: -1, seq: 0 }, view: { seq: 0 }, fx: opt('--fx') ? (opt('--fx') === 'false' ? false : opt('--fx')) : undefined };
+const board = { source, lang, patches: [], signs: [], banner: null, guide: { steps: [], at: -1, seq: 0 }, view: { seq: 0 }, fx: opt('--fx') ? (opt('--fx') === 'false' ? false : opt('--fx')) : undefined };
 const ui = { open: new Set(), close: new Set() };
 if (opt('--depth')) ui.depth = +opt('--depth');
 if (opt('--view')) ui.view = opt('--view');
@@ -62,7 +65,7 @@ let { scene } = await eng.render(board, 1, ui);
 
 const caps = {
   color: opt('--color', 'truecolor'), glyphs: opt('--glyphs', 'unicode'), braille: opt('--glyphs', 'unicode') === 'unicode', images: 'none', imageSource: 'file',
-  pointer: true, fine: false, motion: opt('--motion', 'full'), fps: 10, theme: opt('--theme', 'dark'), term: 'preview', remote: false, mux: null, why: [],
+  pointer: true, fine: false, motion: opt('--motion', 'full'), fps: 10, theme: opt('--theme', 'dark'), lang, term: 'preview', remote: false, mux: null, why: [],
 };
 
 /* la superficie simulada */
@@ -198,7 +201,7 @@ for (let f = 0; f < frames; f++) {
   if (f) advance(+opt('--every', 300));
   const s = ansi(tree);
   const json = JSON.stringify(tree);
-  console.log(`┄┄ ${path.basename(file)} · ${cols}×${rows} · ${caps.color} · ${caps.glyphs} · ${caps.theme} · t=${clock - 1_000_000}ms · ${json.length} car. serializados`);
+  console.log(`┄┄ ${path.basename(file)} · ${cols}×${rows} · ${caps.color} · ${caps.glyphs} · ${caps.theme} · ${caps.lang} · t=${clock - 1_000_000}ms · ${json.length} car. serializados`);
   console.log(s);
 }
 if (flag('--posts')) console.log(posted);

@@ -69,7 +69,7 @@ export const EFFECTS: Capability[] = [
 ]
 
 export const SURFACES = `Superficies:
-- navegador: el motor de verdad, interactivo (abre con /graphx open o view: browser).
+- navegador: el motor de verdad, interactivo (abre con /graphx-mod open o view: browser).
 - escritorio, editor, móvil: el SVG del motor con sus animaciones (partículas SMIL, latidos CSS) y controles; el detalle en Markdown. También el lienzo de caracteres.
 - terminal: el lienzo de caracteres con todos los efectos animados; se adapta a 4 tamaños (micro < 40 col., estrecho < 64, normal, ancho ≥ 132 con panel lateral), a 4 profundidades de color (truecolor, 256, 16, sin color), a 3 juegos de caracteres (unicode con braille, básico, ASCII) y al ratón. En kitty, Ghostty y WezTerm, «i» lo enseña como imagen del motor.`
 
@@ -96,16 +96,16 @@ export const REFERENCE = `# GraphX · referencia rápida
 
 ## Fuentes para show (una sola)
 - spec: JSON de GraphX (abajo).
-- mermaid: texto Mermaid de cualquiera de los 19 tipos (flowchart, sequenceDiagram, classDiagram, stateDiagram, erDiagram, mindmap, gantt, journey, timeline, gitGraph, C4*, architecture-beta, block-beta, requirementDiagram, sankey-beta, kanban, treemap-beta, pie). Los ids son los de Mermaid.
+- mermaid: texto Mermaid de cualquiera de los 18 tipos (flowchart, sequenceDiagram, classDiagram, stateDiagram, erDiagram, mindmap, gantt, journey, timeline, gitGraph, C4*, architecture-beta, block-beta, requirementDiagram, sankey-beta, kanban, treemap-beta, pie). Los ids son los de Mermaid.
 - paths: rutas de ficheros ["src/a.ts", {"path":"src/b.ts","additions":3,"deletions":1,"status":"M"}] → árbol plegable. tree_options: { root, compact, focus: "changes" }.
 - tree_text: la salida del comando \`tree\`.
 - file: una ruta a .json, .mmd o .md (el primer bloque \`\`\`mermaid).
 
 ## Mermaid con datos de GraphX (sigue siendo Mermaid válido)
-- Claves que Mermaid no conoce en \`id@{ … }\`: heat, spark: "1 2 3", unit, progress, alert, owner, value, change, good, min, max, thresholds, status, kind, subtitle, delta.
-- En una arista con id (\`a e1@--> b\`): \`e1@{ rate: 900, speed: fast, emphasis: hero, animate: true }\`.
-- JSON en comentarios: \`%% @gx { "fx": "vivid", "owners": {…}, "timeline": {…}, "statuses": {…}, "tour": {…} }\` (raíz) y \`%% @gx id { "blocks": […], "metrics": […], "links": […], "shape": "kpi", "parts": […] }\` (pieza o arista).
-- convert recoge todo eso (y dice qué anotaciones lleva); export lo escribe desde cualquier diagrama.
+- Claves que Mermaid no conoce en \`id@{ … }\` (SOLO en flowchart/graph y block; valores planos): heat, spark: "1 2 3", unit, progress, alert, owner, value, change, good, min, max, thresholds, decimals, summary, subtitle, status, color, kind, tags, delta. Si la misma línea lleva shape, el kind lo pone la forma.
+- En una arista con id (\`a e1@--> b\`, y su \`@{}\` después): \`e1@{ rate: 900, speed: fast, emphasis: hero, animate: true, summary, data, trigger, weight, head, tail }\`. El tipo sale de la flecha: --> llamada, -.-> evento/asíncrona (discontinua; el impacto baja), ==> principal. \`kind\` en @{} se ignora.
+- JSON en comentarios, UNA línea cada uno (vale en los 18 tipos): \`%% @gx { "fx": "vivid", "owners": {…}, "timeline": {…}, "statuses": {…}, "tour": {…}, "filters": […], "legend": {…} }\` (raíz; levels, layout, theme, icons, links, collapsed, direction y lanes se ignoran ahí) y \`%% @gx id { "blocks": […], "metrics": […], "links": […], "shape": "kpi", "parts": […] }\` (pieza, carril o arista). Fuera de flowchart/block, los datos de una pieza van siempre aquí.
+- convert recoge todo eso (y dice qué anotaciones lleva: lo que no sale, no se aplicó); export lo escribe desde cualquier diagrama, pero la ida y vuelta pierde carriles, niveles, tema y el tipo de las aristas.
 
 ## JSON de GraphX
 { "title", "summary", "lang": "es", "direction": "right" | "down", "initialDepth": 1, "fx": "vivid",

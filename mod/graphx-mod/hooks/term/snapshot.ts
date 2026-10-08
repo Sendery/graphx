@@ -3,6 +3,7 @@
 import Canvas from '../canvas'
 import type { Caps, Scene } from '../../types'
 import { Grid } from './grid'
+import { tr } from '../i18n'
 
 export function textFrame(scene: Scene, caps: Caps, cols: number, rows: number): string {
   const surface = {
@@ -11,5 +12,5 @@ export function textFrame(scene: Scene, caps: Caps, cols: number, rows: number):
   }
   const still: Caps = { ...caps, motion: 'off' }
   const out = (Canvas as unknown as (p: unknown, s: unknown) => unknown)({ scene: { ...scene, fresh: false }, caps: still, detail: null, height: rows, width: cols, pane: 'dock' }, surface)
-  return out instanceof Grid ? out.plain() : '(el lienzo no ha dibujado nada)'
+  return out instanceof Grid ? out.plain() : tr('(el lienzo no ha dibujado nada)', '(the canvas drew nothing)')
 }

@@ -4,7 +4,7 @@
  *   node mod/build.mjs [--to <carpeta>] [--watch]
  *
  * Copia dist/graphx.bundle.min.js (motor + ELK + formas + layouts + árbol + Mermaid + efectos) al visor
- * del mod, en mod/graphx/viewer/vendor/, que git ignora: el bundle se genera con
+ * del mod, en mod/graphx-mod/viewer/vendor/, que git ignora: el bundle se genera con
  * `node tools/build-dist.mjs`. Empaqueta jsdom (del node_modules del repo: `npm install`) en
  * server/vendor/jsdom.cjs, con el que el servidor monta GraphX sin navegador para el terminal, el
  * escritorio y las capturas.
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.dirname(HERE);
-const MOD = path.join(HERE, 'graphx');
+const MOD = path.join(HERE, 'graphx-mod');
 const args = process.argv.slice(2);
 const opt = k => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
 const to = opt('--to') ? path.resolve(opt('--to').replace(/^~(?=\/|$)/, process.env.HOME)) : null;
@@ -29,7 +29,7 @@ if (!fs.existsSync(bundle)) { console.error('✗ falta dist/graphx.bundle.min.js
 const hashFile = path.join(ROOT, 'dist', 'SOURCE_HASH');
 const hash = fs.existsSync(hashFile) ? fs.readFileSync(hashFile, 'utf8').trim() : 'sin-hash';
 
-const SKIP = new Set(['node_modules', '.DS_Store']);
+const SKIP = new Set(['node_modules', '.DS_Store', 'node-path']);
 const skip = rel => rel.split(path.sep).some(p => SKIP.has(p)) || rel.startsWith(path.join('.claude-plugin', 'types'));
 function copyTree(src, dst, rel = '') {
   let n = 0;
@@ -95,5 +95,5 @@ build();
 if (args.includes('--watch')) {
   let t = 0;
   fs.watch(MOD, { recursive: true }, (_, f) => { if (f && skip(f)) return; clearTimeout(t); t = setTimeout(build, 200); });
-  console.log('… vigilando mod/graphx');
+  console.log('… vigilando mod/graphx-mod');
 }

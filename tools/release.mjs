@@ -22,7 +22,7 @@ const r = (...p) => path.join(ROOT, ...p);
 const args = process.argv.slice(2);
 const opt = k => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
 const VERSION = JSON.parse(fs.readFileSync(r('package.json'), 'utf8')).version;
-const MOD_VERSION = JSON.parse(fs.readFileSync(r('mod', 'graphx', '.claude-plugin', 'plugin.json'), 'utf8')).version;
+const MOD_VERSION = JSON.parse(fs.readFileSync(r('mod', 'graphx-mod', '.claude-plugin', 'plugin.json'), 'utf8')).version;
 const TAG = opt('--tag') ?? `v${VERSION}`;
 const V = TAG.replace(/^v/, '');
 if (!V.startsWith(VERSION)) { console.error(`✗ la etiqueta ${TAG} no es de la versión ${VERSION} de package.json`); process.exit(1); }
@@ -66,9 +66,9 @@ for (const f of fs.readdirSync(r('dist'))) copy(r('dist', f), path.join(kit, 'di
 zip(`graphx-${V}-kit.zip`, kit);
 
 /* el mod de Claude Code, montado */
-execFileSync(process.execPath, [r('mod', 'build.mjs'), '--to', path.join(STAGE, 'graphx')], { stdio: ['ignore', 'ignore', 'inherit'] });
-fs.rmSync(path.join(STAGE, 'graphx', 'tests'), { recursive: true, force: true });
-zip(`graphx-mod-${MV}.zip`, path.join(STAGE, 'graphx'));
+execFileSync(process.execPath, [r('mod', 'build.mjs'), '--to', path.join(STAGE, 'graphx-mod')], { stdio: ['ignore', 'ignore', 'inherit'] });
+fs.rmSync(path.join(STAGE, 'graphx-mod', 'tests'), { recursive: true, force: true });
+zip(`graphx-mod-${MV}.zip`, path.join(STAGE, 'graphx-mod'));
 
 fs.rmSync(STAGE, { recursive: true, force: true });
 const files = fs.readdirSync(OUT).filter(f => !f.startsWith('.')).sort();

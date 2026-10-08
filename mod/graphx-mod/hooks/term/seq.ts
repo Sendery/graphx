@@ -8,6 +8,7 @@ import { BOLD, DIM, Grid, ITALIC, UNDER } from './grid'
 import { fit, strWidth, wrap } from './glyphs'
 import { inkOn } from './paint'
 import type { Box, Look } from './graph'
+import { tr } from '../i18n'
 
 export type SeqLayout = { cols: Map<string, number>; width: number; rows: { id: string; y: number; h: number }[]; height: number; head: number }
 const CIRCLED = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'
@@ -120,7 +121,7 @@ export function drawSeq(sq: SSeq, lay: SeqLayout, cols: number, rows: number, ox
   const frames: { y0: number; y1: number; x0: number; x1: number; title: string; label?: string; elses: { y: number; label?: string }[] }[] = []
   sq.rows.forEach((r, k) => {
     const ry = lay.rows[k]!
-    if (r.k === 'block') stack.push({ k, y: ry.y, title: (r.t ?? r.bl ?? 'bloque').toUpperCase(), label: r.l, elses: [], xs: [] })
+    if (r.k === 'block') stack.push({ k, y: ry.y, title: (r.t ?? r.bl ?? tr('bloque', 'block')).toUpperCase(), label: r.l, elses: [], xs: [] })
     else if (r.k === 'else' && stack.length) stack[stack.length - 1]!.elses.push({ y: ry.y, label: `${r.t ? r.t.toUpperCase() + ' ' : ''}${r.l ? `[${r.l}]` : ''}` })
     else if (r.k === 'end' && stack.length) {
       const f = stack.pop()!

@@ -27,7 +27,8 @@ const ROOT_JSON = ['fx', 'owners', 'timeline', 'statuses', 'tour', 'filters', 'l
 const RICH = new Set(['heat', 'spark', 'unit', 'progress', 'alert', 'owner', 'value', 'change', 'good', 'min', 'max', 'thresholds', 'decimals', 'parts', 'summary', 'subtitle', 'metrics', 'blocks', 'links', 'notes', 'status', 'color', 'tags', 'kind', 'files', 'delta', 'rate', 'speed', 'weight', 'emphasis', 'data', 'trigger', 'animated']);
 
 /* ---------- recoger ---------- */
-export function annotations(text) {
+export function annotations(text, lang) {
+  const tr = (es, en) => (lang === 'es' ? es : en);
   const out = { nodes: {}, edges: {}, root: [], comments: 0, inline: 0, lines: [] };
   const lines = String(text || '').split(/\r?\n/);
   lines.forEach((line, i) => {
@@ -35,10 +36,10 @@ export function annotations(text) {
     if (gx) {
       out.comments++;
       let keys = [];
-      try { keys = Object.keys(JSON.parse(gx[2])); } catch (_) { keys = ['(JSON no válido)']; }
+      try { keys = Object.keys(JSON.parse(gx[2])); } catch (_) { keys = [tr('(JSON no válido)', '(invalid JSON)')]; }
       if (gx[1]) { (out.nodes[gx[1]] = out.nodes[gx[1]] || new Set()); keys.forEach(k => out.nodes[gx[1]].add(k)); }
       else keys.forEach(k => out.root.push(k));
-      out.lines.push({ line: i + 1, target: gx[1] || '(raíz)', keys });
+      out.lines.push({ line: i + 1, target: gx[1] || tr('(raíz)', '(root)'), keys });
       return;
     }
     if (/^\s*%%/.test(line)) return;
@@ -198,9 +199,10 @@ export function toMermaid(spec, opts = {}) {
     if (f) return { text: sequence(spec, f), type: 'sequenceDiagram', lossy: [] };
   }
   const lossy = [];
+  const lang = opts.lang || spec.lang, tr = (es, en) => (lang === 'es' ? es : en);
   const mode = spec.layout && spec.layout.mode;
-  if (mode && mode !== 'graph' && mode !== 'tree') lossy.push(`layout.mode «${mode}» (se expresa como flowchart; el layout propio va en %% @gx)`);
-  if (flows.length) lossy.push(`${flows.length} flujo(s) de secuencia: pide cada uno con flow: <id>`);
+  if (mode && mode !== 'graph' && mode !== 'tree') lossy.push(tr(`layout.mode «${mode}» (se expresa como flowchart; el layout propio va en %% @gx)`, `layout.mode «${mode}» (written as a flowchart; the custom layout goes in %% @gx)`));
+  if (flows.length) lossy.push(tr(`${flows.length} flujo(s) de secuencia: pide cada uno con flow: <id>`, `${flows.length} sequence flow(s): request each one with flow: <id>`));
   const text = flowchart(spec, opts);
   const extra = mode && mode !== 'graph' ? `%% @gx ${JSON.stringify({ layout: spec.layout })}\n` : '';
   return { text: text + extra, type: 'flowchart', lossy };

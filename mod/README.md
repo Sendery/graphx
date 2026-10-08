@@ -1,11 +1,11 @@
 <div align="center">
 
-# graphx · el mod de GraphX para Claude Code
+# graphx-mod · el mod de GraphX para Claude Code
 
 **Cualquier diagrama de GraphX dentro de Claude Code, en cada superficie y a cualquier tamaño.**
 Claude lo dibuja con herramientas; tú lo navegas con el teclado y el ratón.
 
-![mermaid](https://img.shields.io/badge/Mermaid-19%20tipos-ff3670)
+![mermaid](https://img.shields.io/badge/Mermaid-18%20tipos-ff3670)
 ![terminal](https://img.shields.io/badge/terminal-truecolor%20·%20256%20·%2016%20·%20mono-142120)
 ![superficies](https://img.shields.io/badge/superficies-terminal%20·%20escritorio%20·%20navegador-0b7480)
 ![versión](https://img.shields.io/badge/versión-0.1.0-d97757)
@@ -55,22 +55,41 @@ Claude lo dibuja con herramientas; tú lo navegas con el teclado y el ratón.
 </table>
 
 ```sh
-node mod/build.mjs && claude --plugin-dir mod/graphx     # y en la sesión: /graphx demo software
+node install.mjs                   # casillas: la skill graphx, el mod para el terminal, el mod para el escritorio
 ```
+
+<sub>La skill (<code>/graphx</code>, pides diagramas en lenguaje normal) y el mod (<code>/graphx-mod</code>, el lienzo) son
+dos cosas y cada una tiene su <code>help</code>. Todo el mod está en español y en inglés.</sub>
 
 ---
 
 <details>
-<summary><h3>📥 Cargarlo</h3></summary>
+<summary><h3>📥 Instalarlo o cargarlo</h3></summary>
+
+**Instalarlo** con `node install.mjs` desde la raíz del repo ([el README general](../README.es.md)
+lo explica): copia el mod montado a `~/.claude/skills/graphx-mod`, que Claude Code carga en cada sesión nueva como
+`graphx-mod@skills-dir`, en el terminal y en la app de escritorio. La casilla del escritorio deja además en
+`node-path` la ruta absoluta de `node`: la app abierta desde el Dock no hereda el `PATH` de la shell y el servidor del
+mod no arrancaría (el mod lee ese fichero antes de lanzar `node`).
+
+**Cargarlo para desarrollar**, sin instalar:
 
 ```sh
 node tools/build-dist.mjs          # si dist/ no está al día
 node mod/build.mjs                 # copia el bundle al visor y empaqueta jsdom para el servidor (ignorados por git)
-claude --plugin-dir mod/graphx     # o: node mod/build.mjs --to <carpeta de mods de la sesión> [--watch]
+claude --plugin-dir mod/graphx-mod # o: node mod/build.mjs --to <carpeta de mods de la sesión> [--watch]
 ```
 
-Hace falta `node` en el PATH. Con `rsvg-convert` (librsvg) hay además imagen del motor para kitty/Ghostty/WezTerm, la
-foto en medios bloques y la captura que ve Claude con `view`.
+Hace falta `node` en el PATH (o fijado en `node-path`). Con `rsvg-convert` (librsvg) hay además imagen del motor para
+kitty/Ghostty/WezTerm, la foto en medios bloques y la captura que ve Claude con `view`.
+
+**Comandos.** `/graphx-mod help` los enseña todos: `/graphx-mod` (el panel), `open` (el navegador), `present`, `image` ·
+`cells`, `caps`, `fx <preset>`, `demo [tipo]`, `last`, `export`, `clear`, `stop`. Las herramientas son
+`mcp__graphx-mod__*`. La skill `graphx` (`skills/graphx/` en la raíz del repo) es aparte: `/graphx help`.
+
+**Idioma.** Botones, mensajes, ayudas, el visor y lo que genera el servidor, en español y en inglés (`hooks/i18n.ts`):
+manda la opción `language` del mod (`/config`); si no, el `language` de Claude Code; si no, `LANG`; si nada lo dice,
+inglés. `/graphx-mod caps lang=en` lo cambia en la sesión y `node mod/tools/term-preview.mjs … --lang en` lo previsualiza.
 
 </details>
 
@@ -101,8 +120,8 @@ foto en medios bloques y la captura que ve Claude con `view`.
 | Tema | oscuro o claro, el de Claude Code |
 
 Lo detecta solo al arrancar (`TERM`, `COLORTERM`, `TERM_PROGRAM`, `NO_COLOR`, `FORCE_COLOR`, la configuración regional,
-tmux/screen/zellij, SSH, el tema de Claude Code…) y `/graphx caps` dice qué ha visto y por qué; `/graphx caps
-color=256 glyphs=ascii motion=off theme=light` (o las opciones del mod en `/config`) lo fuerzan.
+tmux/screen/zellij, SSH, el tema de Claude Code…) y `/graphx-mod caps` dice qué ha visto y por qué; `/graphx-mod caps
+color=256 glyphs=ascii motion=off theme=light lang=en` (o las opciones del mod en `/config`) lo fuerzan.
 
 ![El flowchart en truecolor, 256 colores, 16 colores y sin color](docs/img/color.png)
 
@@ -116,7 +135,7 @@ color=256 glyphs=ascii motion=off theme=light` (o las opciones del mod en `/conf
 <summary><h3>⌨️ Teclado y presentación</h3></summary>
 
 Un solo mapa, en minúsculas, igual con el foco en el lienzo (un clic) que en el panel (`ctrl+x tab`, o al abrirlo con
-`/graphx`, que ya le da el teclado; `Esc` lo devuelve al prompt). Con el panel enfocado aparece una barra con un botón
+`/graphx-mod`, que ya le da el teclado; `Esc` lo devuelve al prompt). Con el panel enfocado aparece una barra con un botón
 por atajo, así que sin ratón también se maneja todo:
 
 | | |
@@ -130,7 +149,7 @@ por atajo, así que sin ratón también se maneja todo:
 | `e` · `m` · `u` · `q` · `w` · `i` · `?` | equipos · minimapa · efectos · preguntar a Claude · navegador · imagen · ayuda |
 
 Una tecla sin uso en la vista lo dice en el pie. Claude también puede abrir la presentación (`guide` con `present: true`)
-y tú con `/graphx present`.
+y tú con `/graphx-mod present`.
 
 </details>
 
@@ -139,7 +158,7 @@ y tú con `/graphx present`.
 
 | Herramienta | Para qué |
 |---|---|
-| `show` | Dibuja: `spec` (JSON de GraphX), `mermaid` (19 tipos, con datos en `@{…}` y `%% @gx`), `paths`, `tree_text` o `file`. `fx` elige los efectos. |
+| `show` | Dibuja: `spec` (JSON de GraphX), `mermaid` (18 tipos, con datos en `@{…}` y `%% @gx`), `paths`, `tree_text` o `file`. `fx` elige los efectos. |
 | `patch` | Lo cambia sin rehacerlo: `add`, `update`, `remove`, `set`. |
 | `data` | Datos en vivo sin recolocar (el `setData` del motor): calor, series, progreso, alertas, caudal… |
 | `signs` | Carteles anclados, sueltos o de un paso, y un banner. |
@@ -166,20 +185,20 @@ su detalle en Markdown. En el escritorio, «Celdas» enseña el mismo lienzo que
   <img alt="El SVG del motor que ve el panel de Claude Desktop: carriles, tarjetas con datos, donut, KPI y gauge" src="docs/img/escritorio-light.png">
 </picture>
 
-**Navegador.** `/graphx open`: el motor de verdad, interactivo, con los carteles y lo que Claude va cambiando.
+**Navegador.** `/graphx-mod open`: el motor de verdad, interactivo, con los carteles y lo que Claude va cambiando.
 
 </details>
 
 <details>
 <summary><h3>🧜 Mermaid de ida y vuelta</h3></summary>
 
-Los 19 tipos de Mermaid se dibujan en el terminal con su propia forma: barras de gantt con el día de hoy, ramas
+Los 18 tipos de Mermaid se dibujan en el terminal con su propia forma: barras de gantt con el día de hoy, ramas
 de git, clases, entidades, mapas mentales, donuts, sankey, journeys, tableros kanban, líneas de tiempo, C4 y
 arquitectura.
 
 ![Doce tipos de Mermaid en el terminal: gantt, git, class, er, mindmap, pie, sankey, journey, kanban, timeline, C4 y architecture](docs/img/mermaid.png)
 
-- **Recoger**: `convert` (o `show` con `mermaid`) lee los 19 tipos y dice qué anotaciones de GraphX lleva cada pieza,
+- **Recoger**: `convert` (o `show` con `mermaid`) lee los 18 tipos y dice qué anotaciones de GraphX lleva cada pieza,
   arista y la raíz: las claves que Mermaid no conoce en `id@{ heat: 85, spark: "1 2 3", owner: pagos }` y el JSON de
   `%% @gx [id] {…}` (bloques, métricas, enlaces, formas que Mermaid no tiene, `fx`, equipos, línea de tiempo, recorrido…).
 - **Expresar**: `export` y `convert` con `spec` escriben Mermaid válido que el conversor vuelve a leer igual: un
@@ -201,15 +220,16 @@ Claude ──herramientas──▶ hooks (register.tsx, $.state) ──HTTP─�
 
 | Fichero | |
 |---|---|
-| `graphx/hooks/register.tsx` | herramientas, `/graphx`, el panel por superficie, el render de los bloques Mermaid, la línea de estado |
-| `graphx/hooks/canvas.tsx` | el lienzo del terminal (módulo `Client`): tamaños, vistas, teclado, ratón, reloj de las animaciones |
-| `graphx/hooks/term/` | `caps` (detección), `paint` (color por profundidad), `glyphs`, `grid` (rejilla de celdas con aristas por bits y braille), `graph` (grafo, formas, efectos), `seq`, `lists` (árbol y esquema), `detail` (panel y bloques), `charts`, `snapshot` |
-| `graphx/hooks/catalog.ts` | el mapa de capacidades y la chuleta |
-| `graphx/server/engine.mjs` | el motor en jsdom: la escena, los layouts en celdas (ELK), el detalle, la conversión, los diagramas en línea |
-| `graphx/server/svgout.mjs` | tokens por tema y piel (cascada CSS), SVG autocontenido, PNG, foto en medios bloques |
-| `graphx/server/mermaid-out.mjs` | anotaciones de Mermaid y GraphX → Mermaid |
-| `graphx/server/live.mjs` | el servidor HTTP local (token por sesión; se va con su proceso padre) |
-| `graphx/viewer/` | el visor del navegador |
+| `graphx-mod/hooks/register.tsx` | herramientas, `/graphx-mod`, el panel por superficie, el render de los bloques Mermaid, la línea de estado |
+| `graphx-mod/hooks/canvas.tsx` | el lienzo del terminal (módulo `Client`): tamaños, vistas, teclado, ratón, reloj de las animaciones |
+| `graphx-mod/hooks/term/` | `caps` (detección), `paint` (color por profundidad), `glyphs`, `grid` (rejilla de celdas con aristas por bits y braille), `graph` (grafo, formas, efectos), `seq`, `lists` (árbol y esquema), `detail` (panel y bloques), `charts`, `snapshot` |
+| `graphx-mod/hooks/catalog.ts` | el mapa de capacidades y la chuleta |
+| `graphx-mod/hooks/i18n.ts` | el idioma de la interfaz: `tr('español', 'English')` y cómo se elige |
+| `graphx-mod/server/engine.mjs` | el motor en jsdom: la escena, los layouts en celdas (ELK), el detalle, la conversión, los diagramas en línea |
+| `graphx-mod/server/svgout.mjs` | tokens por tema y piel (cascada CSS), SVG autocontenido, PNG, foto en medios bloques |
+| `graphx-mod/server/mermaid-out.mjs` | anotaciones de Mermaid y GraphX → Mermaid |
+| `graphx-mod/server/live.mjs` | el servidor HTTP local (token por sesión; se va con su proceso padre) |
+| `graphx-mod/viewer/` | el visor del navegador |
 
 </details>
 

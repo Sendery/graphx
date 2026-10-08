@@ -19,7 +19,7 @@ import type { SDeco, SEdge, SLane, SNode, Scene } from '../../types'
 import { BOLD, DIM, Grid, INV, ITALIC, UNDER, type LineStyle } from './grid'
 import { fit, strWidth, type Glyphs } from './glyphs'
 import { inkOn, type Painter } from './paint'
-import { bars, donutCells, fmtNum, spark } from './charts'
+import { bars, decimalMark, donutCells, fmtNum, spark } from './charts'
 
 export type Cam = { cw: number; ch: number; ox: number; oy: number }
 export type Look = {
@@ -600,7 +600,7 @@ function drawNode(g: Grid, n: SNode, b0: Box, L: Look, s: Scene, auto: Map<strin
     for (const r of n.rw ?? []) lines.push({ t: `${r.vi ?? ''}${r.n}${r.t ? `: ${r.t}` : ''}${r.k ? `  ${r.k}` : ''}`, fg: r.k ? P.c(P.tok('accent')) : P.c(P.tok('ink')) })
   } else if (n.sh === 'kpi') {
     const val = `${fmtNum(n.v ?? 0, n.dc)}${n.u ? ' ' + n.u : ''}`
-    const ch = n.ch != null ? `${n.ch >= 0 ? G.up : G.down} ${Math.abs(n.ch).toFixed(1).replace('.', ',')}%` : ''
+    const ch = n.ch != null ? `${n.ch >= 0 ? G.up : G.down} ${decimalMark(Math.abs(n.ch).toFixed(1))}%` : ''
     const good = n.ch == null ? undefined : (n.ch >= 0) === (n.gd !== 'down')
     lines.push({ t: val, fg: P.c(P.tok('ink')), a: BOLD, extra: ch ? ` ${ch}` : undefined, bg: undefined })
     if (ch) lines[lines.length - 1]!.extra = ch

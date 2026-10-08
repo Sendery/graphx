@@ -8,6 +8,7 @@ import { fit, strWidth } from './glyphs'
 import { inkOn } from './paint'
 import { fmtNum, spark } from './charts'
 import { blastColor, edgeRate, nodeColor, type Look } from './graph'
+import { tr } from '../i18n'
 
 const TONE: Record<string, string> = { info: 'accent', tip: 'p2', ok: 'add', warn: 'warn', danger: 'del', note: 'muted', crit: 'del', good: 'add' }
 
@@ -34,7 +35,7 @@ export function drawTree(rows: SRow[], cols: number, h: number, top: number, cur
     const conn = r.d === 0 ? '' : r.la ? (G.name === 'ascii' ? '`-' : '╰─') : (G.name === 'ascii' ? '|-' : '├─')
     x += g.text(x, y, rails + conn, onPath.has(i) || on ? accent : muted, bg, onPath.has(i) || on ? 0 : DIM)
     g.markRect(0, y, cols - 1, y, r.i)
-    if (r.mo) { g.text(x, y, ` ${G.ellipsis} ${r.mo} más`, muted, bg, DIM); continue }
+    if (r.mo) { g.text(x, y, tr(` ${G.ellipsis} ${r.mo} más`, ` ${G.ellipsis} ${r.mo} more`), muted, bg, DIM); continue }
     if (r.fo) x += g.text(x, y, (r.o ? G.caretD : G.caretR) + ' ', accent, bg)
     else {
       const bc = r.c ?? P.tok('faint')
@@ -46,8 +47,8 @@ export function drawTree(rows: SRow[], cols: number, h: number, top: number, cur
     x += g.text(x, y, fit(r.l ?? r.i, Math.max(4, cols - x - 2)), on ? accent : r.fo ? P.c(P.tok('ink')) : P.c(dc) ?? P.c(P.tok('ink')), bg, (r.fo || on ? BOLD : 0) | (P.depth === 'mono' && on ? INV : 0) | (r.dl === 'removed' ? DIM : 0))
     const meta: { t: string; fg?: string; a?: number }[] = []
     if (r.fo) {
-      if (r.fc != null) meta.push({ t: `  ${r.fc} fich.`, fg: muted, a: DIM })
-      if (r.cg) meta.push({ t: ` · ${r.cg} cambio${r.cg === 1 ? '' : 's'}`, fg: P.c(P.tok('mod')) })
+      if (r.fc != null) meta.push({ t: tr(`  ${r.fc} fich.`, `  ${r.fc} file${r.fc === 1 ? '' : 's'}`), fg: muted, a: DIM })
+      if (r.cg) meta.push({ t: tr(` · ${r.cg} cambio${r.cg === 1 ? '' : 's'}`, ` · ${r.cg} change${r.cg === 1 ? '' : 's'}`), fg: P.c(P.tok('mod')) })
       if (!r.o && r.k) meta.push({ t: `  +${r.k}`, fg: accent })
     } else {
       if (r.s) meta.push({ t: `  ${r.s}`, fg: muted, a: DIM })

@@ -6,7 +6,7 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, '..', '..');
-const MOD = path.join(HERE, '..', 'graphx');
+const MOD = path.join(HERE, '..', 'graphx-mod');
 const { createEngine } = await import(pathToFileURL(path.join(MOD, 'server', 'engine.mjs')).href);
 const eng = createEngine(MOD);
 const R = f => fs.readFileSync(path.join(ROOT, f), 'utf8');

@@ -11,6 +11,9 @@
   'use strict';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const clone = o => JSON.parse(JSON.stringify(o));
+  /* el idioma de la interfaz que dice el tablero (los hooks siempre lo ponen); sin él, inglés */
+  const langOf = b => (b && (b.lang === 'es' || b.lang === 'en') ? b.lang : 'en');
+  const trIn = lang => (es, en) => (lang === 'es' ? es : en);
   /* Markdown mínimo y seguro: párrafos, listas con «- », **negrita**, *cursiva*, `código` y enlaces http(s) */
   function md(src) {
     const inline = s => esc(s)
@@ -24,7 +27,8 @@
       return '<p>' + lines.map(inline).join('<br>') + '</p>';
     }).join('');
   }
-  function applyPatch(spec, p, warnings) {
+  function applyPatch(spec, p, warnings, lang) {
+    const tr = trIn(lang);
     spec.nodes = spec.nodes || []; spec.edges = spec.edges || [];
     if (p.set && typeof p.set === 'object') for (const [k, v] of Object.entries(p.set)) if (k !== 'nodes' && k !== 'edges') spec[k] = v;
     const add = p.add || {};
@@ -38,7 +42,7 @@
     for (const f of add.flows || []) { spec.flows = spec.flows || []; const i = spec.flows.findIndex(x => x.id === f.id); if (i >= 0) spec.flows[i] = f; else spec.flows.push(f); }
     for (const u of p.update || []) {
       const n = spec.nodes.find(x => x.id === u.id) || spec.edges.find(x => x.id === u.id) || (spec.lanes || []).find(x => x.id === u.id);
-      if (n) Object.assign(n, u); else warnings.push(`parche: no hay ninguna pieza ni arista «${u.id}» que actualizar`);
+      if (n) Object.assign(n, u); else warnings.push(tr(`parche: no hay ninguna pieza ni arista «${u.id}» que actualizar`, `patch: there is no node or edge «${u.id}» to update`));
     }
     if (p.remove && p.remove.length) {
       const gone = new Set(p.remove);
@@ -59,18 +63,19 @@
   }
   function buildSpec(b) {
     const warnings = [];
+    const lang = langOf(b), tr = trIn(lang);
     const src = b.source || { kind: 'spec', spec: { nodes: [] } };
     let spec, type = 'graphx';
     if (src.kind === 'mermaid') {
-      if (!root.GraphX.fromMermaid) throw new Error('El bundle de GraphX no trae el conversor de Mermaid');
-      const r = root.GraphX.fromMermaid(src.text, { lang: b.lang || 'es' });
+      if (!root.GraphX.fromMermaid) throw new Error(tr('El bundle de GraphX no trae el conversor de Mermaid', 'The GraphX bundle has no Mermaid converter'));
+      const r = root.GraphX.fromMermaid(src.text, { lang });
       spec = r.spec; type = 'mermaid:' + r.type; (r.warnings || []).forEach(w => warnings.push('mermaid: ' + w));
     } else if (src.kind === 'paths') {
-      spec = root.GraphX.tree.fromPaths(src.entries || [], Object.assign({ lang: b.lang || 'es' }, src.options || {})); type = 'tree';
+      spec = root.GraphX.tree.fromPaths(src.entries || [], Object.assign({ lang }, src.options || {})); type = 'tree';
     } else if (src.kind === 'tree-text') {
-      spec = root.GraphX.tree.fromTreeText(src.text || '', Object.assign({ lang: b.lang || 'es' }, src.options || {})); type = 'tree';
+      spec = root.GraphX.tree.fromTreeText(src.text || '', Object.assign({ lang }, src.options || {})); type = 'tree';
     } else spec = clone(src.spec || {});
-    for (const p of b.patches || []) applyPatch(spec, p, warnings);
+    for (const p of b.patches || []) applyPatch(spec, p, warnings, lang);
     applyData(spec, b.data);
     if (b.title) spec.title = b.title;
     if (b.lang && !spec.lang) spec.lang = b.lang;
@@ -83,11 +88,11 @@
     const steps = (b.guide && b.guide.steps) || [];
     if (steps.length) {
       spec.tour = {
-        title: (b.guide && b.guide.title) || 'Recorrido',
+        title: (b.guide && b.guide.title) || tr('Recorrido', 'Tour'),
         steps: steps.map((s, i) => {
           const miss = (s.nodes || []).filter(id => !ids.has(id));
-          if (miss.length) warnings.push(`paso ${i + 1}: piezas desconocidas ${miss.join(', ')}`);
-          const st = { title: s.title || `Paso ${i + 1}`, body_html: md(s.body || ''), focus: { nodes: (s.nodes || []).filter(id => ids.has(id)), edges: (s.edges || []).filter(id => eids.has(id)) } };
+          if (miss.length) warnings.push(tr(`paso ${i + 1}: piezas desconocidas ${miss.join(', ')}`, `step ${i + 1}: unknown nodes ${miss.join(', ')}`));
+          const st = { title: s.title || tr(`Paso ${i + 1}`, `Step ${i + 1}`), body_html: md(s.body || ''), focus: { nodes: (s.nodes || []).filter(id => ids.has(id)), edges: (s.edges || []).filter(id => eids.has(id)) } };
           if (s.expand) st.expand = s.expand.filter(id => ids.has(id));
           if (s.depth != null) st.depth = s.depth;
           if (s.select && ids.has(s.select)) st.select = s.select;
@@ -103,5 +108,5 @@
   const structKey = b => JSON.stringify([b.source, b.patches, b.title, b.lang, b.fx, b.guide && b.guide.title, b.guide && b.guide.steps]);
 
   const plain = s => String(s || '').replace(/\*\*|`|\*/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-  root.GXBoard = { md, plain, esc, applyPatch, applyData, buildSpec, structKey };
+  root.GXBoard = { md, plain, esc, applyPatch, applyData, buildSpec, structKey, langOf };
 })(typeof window !== 'undefined' ? window : globalThis);

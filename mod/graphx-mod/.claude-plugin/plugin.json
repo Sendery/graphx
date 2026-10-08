@@ -1,10 +1,17 @@
 {
-  "name": "graphx",
+  "name": "graphx-mod",
   "version": "0.1.0",
-  "description": "GraphX en Claude Code: cualquier diagrama (19 tipos de Mermaid, grafos, árboles) con sus efectos, en el terminal a cualquier tamaño y en el escritorio",
+  "description": "GraphX en Claude Code: cualquier diagrama (18 tipos de Mermaid, grafos, árboles) con sus efectos, en el terminal a cualquier tamaño y en el escritorio",
   "author": { "name": "Sendery" },
   "types": "./types/index.d.ts",
   "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Idioma · Language",
+      "description": "auto: el de Claude Code (o LANG), inglés si no se sabe · es: español · en: English",
+      "options": ["auto", "es", "en"],
+      "default": "auto"
+    },
     "view": {
       "type": "string",
       "title": "Dónde se abre el diagrama",

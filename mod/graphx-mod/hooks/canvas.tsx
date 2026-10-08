@@ -17,6 +17,7 @@ import { drawSeq, layoutSeq } from './term/seq'
 import { drawOutline, drawTree, outlineRows } from './term/lists'
 import { drawDetail } from './term/detail'
 import { fmtNum } from './term/charts'
+import { setLang, tr } from './i18n'
 
 type Mode = 'graph' | 'outline' | 'seq' | 'tree'
 /* el nivel de zoom del grafo: tarjetas y fichas en celdas (legibles, 1:1) o la vista general (la geometría del motor, encajada) */
@@ -76,35 +77,35 @@ type TourStep = { t: string; b?: string; n: string[]; e: string[]; sel?: string 
 function autoTour(s: Scene): TourStep[] {
   if (s.kind === 'seq' && s.sq) {
     const parts = new Map(s.sq.parts.map(p => [p.i, p.l]))
-    const out: TourStep[] = [{ t: s.sq.t || s.title || 'La secuencia', b: s.sq.sm ?? `${s.sq.parts.length} participantes: ${s.sq.parts.map(p => p.l).join(', ')}.`, n: [], e: [] }]
+    const out: TourStep[] = [{ t: s.sq.t || s.title || tr('La secuencia', 'The sequence'), b: s.sq.sm ?? tr(`${s.sq.parts.length} participantes: ${s.sq.parts.map(p => p.l).join(', ')}.`, `${s.sq.parts.length} participants: ${s.sq.parts.map(p => p.l).join(', ')}.`), n: [], e: [] }]
     let k = 0
     for (const r of s.sq.rows) {
       if (r.a == null || r.b == null) continue
       k++
-      out.push({ t: `${k}. ${r.l ?? ''}`, b: [`${parts.get(r.a) ?? r.a} → ${parts.get(r.b) ?? r.b}${r.k === 'return' ? ' (respuesta)' : r.k === 'async' ? ' (asíncrono)' : r.k === 'self' ? ' (a sí mismo)' : ''}`, r.sm, r.dt ? `Viaja: ${r.dt}` : ''].filter(Boolean).join('. '), n: [r.a, r.b], e: [], sel: r.i })
+      out.push({ t: `${k}. ${r.l ?? ''}`, b: [`${parts.get(r.a) ?? r.a} → ${parts.get(r.b) ?? r.b}${r.k === 'return' ? tr(' (respuesta)', ' (reply)') : r.k === 'async' ? tr(' (asíncrono)', ' (async)') : r.k === 'self' ? tr(' (a sí mismo)', ' (to itself)') : ''}`, r.sm, r.dt ? tr(`Viaja: ${r.dt}`, `Carries: ${r.dt}`) : ''].filter(Boolean).join('. '), n: [r.a, r.b], e: [], sel: r.i })
     }
     return out.slice(0, 80)
   }
   if (s.kind === 'tree' && s.rows) {
-    const out: TourStep[] = [{ t: s.title || 'El árbol', b: s.sm ?? `${s.rows.length} filas a la vista.`, n: [], e: [] }]
-    for (const r of s.rows.filter(r => r.dl || r.d <= 1).slice(0, 40)) out.push({ t: r.l ?? r.i, b: [r.sm, r.dl ? `Cambio: ${r.dl}` : '', r.ad || r.de ? `+${r.ad ?? 0} −${r.de ?? 0}` : ''].filter(Boolean).join('. '), n: [r.i], e: [], sel: r.i })
+    const out: TourStep[] = [{ t: s.title || tr('El árbol', 'The tree'), b: s.sm ?? tr(`${s.rows.length} filas a la vista.`, `${s.rows.length} rows in view.`), n: [], e: [] }]
+    for (const r of s.rows.filter(r => r.dl || r.d <= 1).slice(0, 40)) out.push({ t: r.l ?? r.i, b: [r.sm, r.dl ? tr(`Cambio: ${r.dl}`, `Change: ${r.dl}`) : '', r.ad || r.de ? `+${r.ad ?? 0} −${r.de ?? 0}` : ''].filter(Boolean).join('. '), n: [r.i], e: [], sel: r.i })
     return out
   }
   const nodes = (s.nodes ?? []).filter(n => !n.ln && !(n.g && n.o))
   const fm = flowMap(s)
   const labels = new Map((s.nodes ?? []).map(n => [n.i, n.l]))
   nodes.sort((a, b) => (fm.get(a.i) ?? 1e9) - (fm.get(b.i) ?? 1e9) || a.y - b.y || a.x - b.x)
-  const out: TourStep[] = [{ t: s.title || 'El diagrama', b: s.sm ?? `${nodes.length} piezas y ${(s.edges ?? []).length} conexiones${(s.lanes ?? []).length ? ` en ${(s.lanes ?? []).length} carriles` : ''}. Recórrelas paso a paso.`, n: [], e: [] }]
+  const out: TourStep[] = [{ t: s.title || tr('El diagrama', 'The diagram'), b: s.sm ?? tr(`${nodes.length} piezas y ${(s.edges ?? []).length} conexiones${(s.lanes ?? []).length ? ` en ${(s.lanes ?? []).length} carriles` : ''}. Recórrelas paso a paso.`, `${nodes.length} nodes and ${(s.edges ?? []).length} connections${(s.lanes ?? []).length ? ` in ${(s.lanes ?? []).length} lanes` : ''}. Walk through them step by step.`), n: [], e: [] }]
   for (const n of nodes.slice(0, 60)) {
     const ins = (s.edges ?? []).filter(e => e.b === n.i), outs = (s.edges ?? []).filter(e => e.a === n.i)
     const data: string[] = []
-    if (n.st) data.push(`Estado: ${n.st}`)
-    if (n.hv != null) data.push(`${s.heat?.label ?? 'Calor'}: ${fmtNum(n.hv)}${s.heat?.unit ? ' ' + s.heat.unit : ''}`)
-    if (n.al) data.push(`Alerta: ${n.al}`)
-    if (n.pr != null) data.push(`Progreso: ${Math.round(n.pr * 100)} %`)
-    if (n.v != null && (n.sh === 'kpi' || n.sh === 'gauge')) data.push(`Valor: ${fmtNum(n.v, n.dc)}${n.u ? ' ' + n.u : ''}`)
-    if (n.ow) data.push(`Equipo: ${s.owners?.[n.ow]?.label ?? n.ow}`)
-    const rel = [ins.length ? `Recibe de ${[...new Set(ins.map(e => labels.get(e.a) ?? e.a))].slice(0, 4).join(', ')}` : '', outs.length ? `envía a ${[...new Set(outs.map(e => labels.get(e.b) ?? e.b))].slice(0, 4).join(', ')}` : ''].filter(Boolean).join(' y ')
+    if (n.st) data.push(tr(`Estado: ${n.st}`, `Status: ${n.st}`))
+    if (n.hv != null) data.push(`${s.heat?.label ?? tr('Calor', 'Heat')}: ${fmtNum(n.hv)}${s.heat?.unit ? ' ' + s.heat.unit : ''}`)
+    if (n.al) data.push(tr(`Alerta: ${n.al}`, `Alert: ${n.al}`))
+    if (n.pr != null) data.push(tr(`Progreso: ${Math.round(n.pr * 100)} %`, `Progress: ${Math.round(n.pr * 100)}%`))
+    if (n.v != null && (n.sh === 'kpi' || n.sh === 'gauge')) data.push(`${tr('Valor', 'Value')}: ${fmtNum(n.v, n.dc)}${n.u ? ' ' + n.u : ''}`)
+    if (n.ow) data.push(`${tr('Equipo', 'Team')}: ${s.owners?.[n.ow]?.label ?? n.ow}`)
+    const rel = [ins.length ? `${tr('Recibe de', 'Receives from')} ${[...new Set(ins.map(e => labels.get(e.a) ?? e.a))].slice(0, 4).join(', ')}` : '', outs.length ? `${tr('envía a', 'sends to')} ${[...new Set(outs.map(e => labels.get(e.b) ?? e.b))].slice(0, 4).join(', ')}` : ''].filter(Boolean).join(tr(' y ', ' and '))
     out.push({ t: n.l, b: [n.sm ?? n.s, data.join(' · '), rel ? rel + '.' : ''].filter(Boolean).join('\n'), n: [n.i], e: [...ins, ...outs].map(e => e.i), sel: n.i })
   }
   return out
@@ -296,20 +297,22 @@ function minimap(g: Grid, s: Scene, cam: Cam, x0: number, y0: number, w: number,
   for (let y = clamp(vy0, 0, h - 1); y <= clamp(vy1, 0, h - 1); y++) { g.set(x0 + clamp(vx0, 0, w - 1), y0 + y, lb, ac, bg); g.set(x0 + clamp(vx1, 0, w - 1), y0 + y, rb, ac, bg) }
 }
 
-/* la ayuda: todas las teclas */
-const HELP: [string, string][] = [
-  ['r', 'presentación: el recorrido paso a paso, con su explicación (sin recorrido, uno automático)'],
-  ['n · b  (→ ← en la presentación)', 'paso siguiente · anterior'],
-  ['flechas · h j k l · arrastrar', 'mover'], ['z · x  (+ −) · 0', 'acercar · alejar · encuadrar'],
-  ['s · a  (tab · mayús+tab)', 'pieza siguiente · anterior'], ['o  (⏎) · doble clic', 'abrir o plegar el contenedor'],
-  ['d  (espacio)', 'detalle de la pieza'], ['1–9 · g', 'niveles · orientación ↦ ↧'], ['v · /', 'vista (grafo, esquema, flujos) · buscar'],
-  ['t · c · f', 'trazar · ✺ impacto · ▶ flujo (o reproducir la secuencia)'], ['y · , .', 'línea de tiempo: reproducir · paso atrás, adelante'],
-  ['e · m · u', 'equipos · minimapa · efectos'], ['q · clic derecho', 'preguntar a Claude por la pieza'], ['w · i', 'navegador · imagen del motor'],
-  ['ctrl+x tab · Esc', 'el panel toma el teclado (barra de atajos) · lo devuelve'], ['?', 'esta ayuda'],
+/* la ayuda: todas las teclas (en inglés, la tecla cabe en 24 columnas y su explicación en 41, el ancho de la ayuda a 70) */
+const helpRows = (): [string, string][] => [
+  ['r', tr('presentación: el recorrido paso a paso, con su explicación (sin recorrido, uno automático)', 'present: step-by-step tour (auto if none)')],
+  [tr('n · b  (→ ← en la presentación)', 'n · b  (→ ← presenting)'), tr('paso siguiente · anterior', 'next · previous step')],
+  [tr('flechas · h j k l · arrastrar', 'arrows · h j k l · drag'), tr('mover', 'move')], ['z · x  (+ −) · 0', tr('acercar · alejar · encuadrar', 'zoom in · zoom out · fit')],
+  [tr('s · a  (tab · mayús+tab)', 's · a  (tab · shift+tab)'), tr('pieza siguiente · anterior', 'next · previous node')], [tr('o  (⏎) · doble clic', 'o  (⏎) · double-click'), tr('abrir o plegar el contenedor', 'expand or collapse the container')],
+  [tr('d  (espacio)', 'd  (space)'), tr('detalle de la pieza', 'node detail')], ['1–9 · g', tr('niveles · orientación ↦ ↧', 'levels · direction ↦ ↧')], ['v · /', tr('vista (grafo, esquema, flujos) · buscar', 'view (graph, outline, flows) · search')],
+  ['t · c · f', tr('trazar · ✺ impacto · ▶ flujo (o reproducir la secuencia)', 'trace · ✺ impact · ▶ flow (play sequence)')], ['y · , .', tr('línea de tiempo: reproducir · paso atrás, adelante', 'timeline: play · step back, forward')],
+  ['e · m · u', tr('equipos · minimapa · efectos', 'teams · minimap · effects')], [tr('q · clic derecho', 'q · right-click'), tr('preguntar a Claude por la pieza', 'ask Claude about the node')], ['w · i', tr('navegador · imagen del motor', 'browser · engine image')],
+  ['ctrl+x tab · Esc', tr('el panel toma el teclado (barra de atajos) · lo devuelve', 'focus the shortcut bar · give keys back')], ['?', tr('esta ayuda', 'this help')],
 ]
 
 const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
   const props = raw as unknown as CanvasProps
+  /* el idioma, antes de cualquier texto: el de este lienzo y el de los dibujos de term/* que llama */
+  setLang(props.caps?.lang)
   const { Box, Text } = surface.elements
   const T = (p: Record<string, unknown>) => (Text as unknown as (p: Record<string, unknown>) => RenderElement)(p)
   const s = props.scene
@@ -354,8 +357,8 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
       {sub ? <Text dimColor>{sub}</Text> : null}
     </Box>
   )
-  if (!s || s.kind === 'empty') { tick.set(surface, { anim: false, tl: null }); return empty('El lienzo está vacío.', 'Pide a Claude un diagrama: arquitectura, un flujo en Mermaid, el árbol de un repo…') }
-  if (s.kind === 'error') { tick.set(surface, { anim: false, tl: null }); return empty(`GraphX: ${s.error ?? 'no se ha podido pintar'}`) }
+  if (!s || s.kind === 'empty') { tick.set(surface, { anim: false, tl: null }); return empty(tr('El lienzo está vacío.', 'The canvas is empty.'), tr('Pide a Claude un diagrama: arquitectura, un flujo en Mermaid, el árbol de un repo…', 'Ask Claude for a diagram: an architecture, a Mermaid flow, a repo tree…')) }
+  if (s.kind === 'error') { tick.set(surface, { anim: false, tl: null }); return empty(`GraphX: ${s.error ?? tr('no se ha podido pintar', 'could not be drawn')}`) }
 
   const theme = caps.theme
   const P: Painter = painter(caps.color, theme, s.theme?.[theme], s.heat ?? null)
@@ -431,14 +434,14 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     let x = frameG.text(0, 0, fit(s.title || 'GraphX', Math.max(10, Math.floor(cols * 0.45))), ink, canvasBg, BOLD)
     const bits: string[] = []
     if (s.diagram) bits.push(s.diagram.replace(/^mermaid:/, ''))
-    if (mode === 'graph' && s.maxDepth) bits.push(`nivel ${(s.depth ?? 1)}/${s.maxDepth}`)
-    if (mode === 'graph') { const lvl = st.lv ?? autoLevel(s, mainW, bodyRows); bits.push(lvl.k === 'cards' ? 'tarjetas' : lvl.k === 'chips' ? 'fichas' : lvl.k === 'mini' ? 'compacto' : 'vista general') }
-    if (mode !== 'graph') bits.push(mode === 'outline' ? 'esquema' : mode === 'seq' ? 'secuencia' : 'árbol')
+    if (mode === 'graph' && s.maxDepth) bits.push(`${tr('nivel', 'level')} ${(s.depth ?? 1)}/${s.maxDepth}`)
+    if (mode === 'graph') { const lvl = st.lv ?? autoLevel(s, mainW, bodyRows); bits.push(lvl.k === 'cards' ? tr('tarjetas', 'cards') : lvl.k === 'chips' ? tr('fichas', 'chips') : lvl.k === 'mini' ? tr('compacto', 'compact') : tr('vista general', 'overview')) }
+    if (mode !== 'graph') bits.push(mode === 'outline' ? tr('esquema', 'outline') : mode === 'seq' ? tr('secuencia', 'sequence') : tr('árbol', 'tree'))
     if (s.dir && mode === 'graph') bits.push(s.dir === 'down' ? '↧' : '↦')
     if (st.search?.q) bits.push(`“${st.search.q}”`)
-    if (blast) bits.push(`✺ ${blast.size - 1} afectadas`)
-    if (st.trace) bits.push(st.trace.dir === 'up' ? 'de qué depende' : 'qué depende')
-    if (st.ownerOn?.length) bits.push(`equipos: ${st.ownerOn.join(',')}`)
+    if (blast) bits.push(tr(`✺ ${blast.size - 1} afectadas`, `✺ ${blast.size - 1} affected`))
+    if (st.trace) bits.push(st.trace.dir === 'up' ? tr('de qué depende', 'what it depends on') : tr('qué depende', 'what depends on it'))
+    if (st.ownerOn?.length) bits.push(`${tr('equipos', 'teams')}: ${st.ownerOn.join(',')}`)
     x += frameG.text(x, 0, fit(`  ${bits.join(' · ')}`, cols - x - 12), muted, canvasBg)
     const capsTag = `${caps.color === 'truecolor' ? '24b' : caps.color}${motionMode === 'full' ? '' : motionMode === 'reduced' ? ' ◌' : ' ■'} ?`
     frameG.text(cols - strWidth(capsTag), 0, capsTag, faint, canvasBg, DIM)
@@ -591,7 +594,7 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     frameG.text(9 + w + 1, y, fit(TL.labels[tlNow.i] ?? '', 8), ink, canvasBg, BOLD)
     if (tlRows >= 2) {
       const ev = tlNow.ev && t - tlNow.ev.t < 4000 ? tlNow.ev : null
-      const txt = ev ? `${G.tones[ev.tn] ?? G.info} ${ev.l}` : `${TL.l ?? 'Línea de tiempo'} · ${TL.labels[0]} → ${TL.labels[n - 1]}`
+      const txt = ev ? `${G.tones[ev.tn] ?? G.info} ${ev.l}` : `${TL.l ?? tr('Línea de tiempo', 'Timeline')} · ${TL.labels[0]} → ${TL.labels[n - 1]}`
       frameG.text(9, y + 1, fit(txt, w), ev ? P.c(P.tok(ev.tn === 'crit' ? 'del' : 'warn')) : muted, canvasBg, ev ? BOLD : DIM)
     }
     if (tlRows >= 3) {
@@ -608,10 +611,10 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     const tbg = P_ && P.depth !== 'mono' ? P.c(P.mix(P.tok('canvas'), P.tok('accent'), 0.07)) : canvasBg
     if (P_) frameG.fill(0, y, cols - 1, y + tourRows - 1, ' ', undefined, tbg)
     let x = frameG.text(0, y, `${G.prev} `, accent, tbg, BOLD)
-    x += frameG.text(x, y, at >= 0 ? `${at + 1}/${n} ` : `${serverTour ? s.tour!.t : 'Recorrido automático'} · ${n} pasos `, ink, tbg, BOLD)
+    x += frameG.text(x, y, at >= 0 ? `${at + 1}/${n} ` : `${serverTour ? s.tour!.t : tr('Recorrido automático', 'Automatic tour')} · ${n} ${tr('pasos', 'steps')} `, ink, tbg, BOLD)
     x += frameG.text(x, y, `${G.next} `, accent, tbg, BOLD)
     /* las pistas, si caben junto al título del paso (primero la larga, luego la corta; en lo estrecho, ninguna) */
-    const hints = P_ ? ['n ▶ · b ◀ · r sale', 'n b r'] : at >= 0 ? ['n ▶ · b ◀ · r presentar', 'n b r'] : ['r presentar · n empezar', 'r n']
+    const hints = P_ ? [tr('n ▶ · b ◀ · r sale', 'n ▶ · b ◀ · r exits'), 'n b r'] : at >= 0 ? [tr('n ▶ · b ◀ · r presentar', 'n ▶ · b ◀ · r present'), 'n b r'] : [tr('r presentar · n empezar', 'r present · n start'), 'r n']
     const hint = hints.find(t => cols - x - strWidth(t) - 1 >= (cs ? Math.min(12, strWidth(cs.t)) : 0)) ?? ''
     if (cs) x += frameG.text(x, y, fit(cs.t, cols - x - (hint ? strWidth(hint) + 1 : 0)), accent, tbg, BOLD | (P_ ? UNDER : 0))
     if (hint) frameG.text(cols - strWidth(hint), y, hint, faint, tbg, DIM)
@@ -641,13 +644,13 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     const fy = height - footRows
     if (st.search?.on) {
       frameG.text(0, fy, `/ ${st.search.q}${motion && Math.floor(t / 500) % 2 ? '▏' : ' '}`, accent, canvasBg, BOLD)
-      frameG.text(cols - 26, fy, '⏎ buscar · vacío limpia', faint, canvasBg, DIM)
+      frameG.text(cols - 26, fy, tr('⏎ buscar · vacío limpia', '⏎ search · empty clears'), faint, canvasBg, DIM)
     } else if (st.msg && t - st.msg.at < 3500) frameG.text(0, fy, fit(st.msg.t, cols), accent, canvasBg, BOLD)
     else if (current) {
       const cc = P.c(P.dual(current.c)) ?? accent
       let x = frameG.text(0, fy, fit(current.l, Math.floor(cols * 0.4)), cc, canvasBg, BOLD)
       const bits: string[] = []
-      if (current.hv != null) bits.push(`${s.heat?.label ?? 'calor'} ${fmtNum((data?.[current.i]?.hv as number) ?? current.hv)}${s.heat?.unit ? ' ' + s.heat.unit : ''}`)
+      if (current.hv != null) bits.push(`${s.heat?.label ?? tr('calor', 'heat')} ${fmtNum((data?.[current.i]?.hv as number) ?? current.hv)}${s.heat?.unit ? ' ' + s.heat.unit : ''}`)
       if (current.st) bits.push(current.st)
       if (current.ow) bits.push(s.owners?.[current.ow]?.label ?? current.ow)
       const outs = (s.edges ?? []).filter(e => e.a === current!.i).length, ins = (s.edges ?? []).filter(e => e.b === current!.i).length
@@ -657,22 +660,23 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     } else if (s.sm) frameG.text(0, fy, fit(s.sm, cols), muted, canvasBg)
     if (footRows >= 2 || !current) {
       const hy = height - 1
-      const hints = mode === 'tree' ? 's a mover · o abrir · q preguntar · r presentar · ? ayuda'
-        : mode === 'outline' ? 's a mover · o abrir · d detalle · v vista · r presentar · ? ayuda'
-          : mode === 'seq' ? 'r presentar · s a mensaje · f reproducir · flechas desplazar · v vista · ? ayuda'
-            : `r presentar · s a pieza · z x zoom · hjkl mover · o abrir · d detalle${s.edges?.length ? ' · t trazar · c impacto' : ''}${TL ? ' · y tiempo' : ''} · ? ayuda`
+      const hints = mode === 'tree' ? tr('s a mover · o abrir · q preguntar · r presentar · ? ayuda', 's a move · o open · q ask · r present · ? help')
+        : mode === 'outline' ? tr('s a mover · o abrir · d detalle · v vista · r presentar · ? ayuda', 's a move · o open · d detail · v view · r present · ? help')
+          : mode === 'seq' ? tr('r presentar · s a mensaje · f reproducir · flechas desplazar · v vista · ? ayuda', 'r present · s a message · f play · arrows scroll · v view · ? help')
+            : tr(`r presentar · s a pieza · z x zoom · hjkl mover · o abrir · d detalle${s.edges?.length ? ' · t trazar · c impacto' : ''}${TL ? ' · y tiempo' : ''} · ? ayuda`, `r present · s a node · z x zoom · hjkl move · o open · d detail${s.edges?.length ? ' · t trace · c impact' : ''}${TL ? ' · y timeline' : ''} · ? help`)
       if (footRows >= 2) frameG.text(0, hy, fit(hints, cols), faint, canvasBg, DIM)
     }
   }
 
   /* ---- la ayuda, encima de todo ---- */
   if (st.help) {
+    const HELP = helpRows()
     const w = Math.min(cols - 2, 70), h = Math.min(height - 1, HELP.length + 3)
     const x0 = Math.max(0, Math.floor((cols - w) / 2)), y0 = Math.max(0, Math.floor((height - h) / 2))
     const hb = P.depth === 'mono' ? undefined : P.c(P.mix(P.tok('canvas'), P.tok('ink'), 0.08))
     frameG.fill(x0, y0, x0 + w - 1, y0 + h - 1, ' ', undefined, hb)
-    frameG.text(x0 + 2, y0, 'Teclas del lienzo', accent, hb, BOLD)
-    const capsLine = `${caps.term || 'terminal'} · ${caps.color} · ${caps.glyphs}${caps.braille ? ' + braille' : ''} · imágenes ${caps.images} · ratón ${caps.pointer ? 'sí' : 'no'} · ${caps.fps} fps`
+    frameG.text(x0 + 2, y0, tr('Teclas del lienzo', 'Canvas keys'), accent, hb, BOLD)
+    const capsLine = `${caps.term || 'terminal'} · ${caps.color} · ${caps.glyphs}${caps.braille ? ' + braille' : ''} · ${tr('imágenes', 'images')} ${caps.images} · ${tr('ratón', 'mouse')} ${caps.pointer ? tr('sí', 'yes') : 'no'} · ${caps.fps} fps`
     frameG.text(x0 + 2, y0 + h - 1, fit(capsLine, w - 4), faint, hb, DIM)
     HELP.slice(0, h - 3).forEach(([k, v], i) => { frameG.text(x0 + 2, y0 + 2 + i, fit(k, 24), accent, hb, BOLD); frameG.text(x0 + 27, y0 + 2 + i, fit(v, w - 29), ink, hb) })
   }
@@ -728,13 +732,13 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     if (i < 0 || i >= ladder.length) return
     const lv: Level = { k: ladder[i]!, dir: level.dir }
     const nc: Cam = lv.k === 'fit' ? fitCam(s!, mainW, bodyRows) : { cw: 1, ch: 1, ox: 0, oy: 0 }
-    save({ lv, cam: center(lv, nc), msg: { t: lv.k === 'cards' ? 'Tarjetas (1:1)' : lv.k === 'chips' ? 'Fichas (1:1)' : lv.k === 'mini' ? 'Fichas compactas' : 'Vista general', at: now() } })
+    save({ lv, cam: center(lv, nc), msg: { t: lv.k === 'cards' ? tr('Tarjetas (1:1)', 'Cards (1:1)') : lv.k === 'chips' ? tr('Fichas (1:1)', 'Chips (1:1)') : lv.k === 'mini' ? tr('Fichas compactas', 'Compact chips') : tr('Vista general', 'Overview'), at: now() } })
   }
   function msg(t: string) { save({ msg: { t, at: now() } }) }
   /* el detalle completo (bloques, vecindad) solo se pide cuando se ve: panel lateral o detalle abierto */
   function wantDetail(id: string, force = false) { if (side || st.det || force) act('detail', { id }) }
   function stepTo(at: number) {
-    if (!tourSteps || !tourSteps.length) { msg('Este diagrama no tiene recorrido: r empieza uno automático'); return }
+    if (!tourSteps || !tourSteps.length) { msg(tr('Este diagrama no tiene recorrido: r empieza uno automático', 'This diagram has no tour: r starts an automatic one')); return }
     const i = clamp(at, 0, tourSteps.length - 1)
     followOf.set(surface, true)
     if (serverTour) act('step', { at: i })
@@ -746,7 +750,7 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     if (st.help) { save({ help: false }); return true }
     /* presentación: el recorrido paso a paso, con su explicación */
     if (c === 'r') {
-      if (st.present) { save({ present: false, msg: { t: 'Fin de la presentación', at: now() } }); return true }
+      if (st.present) { save({ present: false, msg: { t: tr('Fin de la presentación', 'Presentation ended'), at: now() } }); return true }
       followOf.set(surface, true)
       save({ present: true, det: false, lt: serverTour ? st.lt : Math.max(0, st.lt), msg: null })
       if (serverTour && (s!.step?.at ?? -1) < 0) act('step', { at: 0 })
@@ -754,14 +758,14 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     }
     const at = serverTour ? (s!.step?.at ?? -1) : st.lt
     if (st.present && tourSteps) {
-      if (c === 'n' || c === 'right' || c === ' ' || c === 'return' || c === 'l' || c === 'j' || c === 'down') { if (at >= tourSteps.length - 1) msg('Último paso · r sale de la presentación'); else stepTo(at + 1); return true }
+      if (c === 'n' || c === 'right' || c === ' ' || c === 'return' || c === 'l' || c === 'j' || c === 'down') { if (at >= tourSteps.length - 1) msg(tr('Último paso · r sale de la presentación', 'Last step · r exits the presentation')); else stepTo(at + 1); return true }
       if (c === 'b' || c === 'p' || c === 'left' || c === 'h' || c === 'k' || c === 'up') { stepTo(Math.max(0, at - 1)); return true }
       if (c === 'home') { stepTo(0); return true }
     }
     if (c === 'n') { stepTo(at + 1); return true }
     if (c === 'b' || c === 'p') { stepTo(Math.max(0, at - 1)); return true }
     if (c === '/') { save({ search: { on: true, q: st.search?.q ?? '' } }); return true }
-    if (c === 'v' && mode === 'tree') { msg('El árbol no tiene otras vistas'); return true }
+    if (c === 'v' && mode === 'tree') { msg(tr('El árbol no tiene otras vistas', 'The tree has no other views')); return true }
     if (c === 'v') {
       const views: string[] = []
       if (s!.graphTab !== false) views.push('graph', 'outline')
@@ -771,42 +775,42 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
       if (nxt.startsWith('flow:')) act('ui', { view: nxt })
       else if (mode === 'seq') { act('ui', { view: 'graph' }); save({ mode: nxt as Mode }) }
       else save({ mode: nxt as Mode })
-      msg(`Vista: ${nxt === 'graph' ? 'grafo' : nxt === 'outline' ? 'esquema' : 'secuencia'}`)
+      msg(`${tr('Vista', 'View')}: ${nxt === 'graph' ? tr('grafo', 'graph') : nxt === 'outline' ? tr('esquema', 'outline') : tr('secuencia', 'sequence')}`)
       return true
     }
-    if (c === 'u') { const m = motionMode === 'full' ? 'reduced' : motionMode === 'reduced' ? 'off' : 'full'; save({ motion: m, msg: { t: `Efectos: ${m === 'full' ? 'todos' : m === 'reduced' ? 'reducidos (sin partículas)' : 'quietos'}`, at: now() } }); return true }
-    if (c === 'm') { save({ mini: !st.mini, msg: { t: st.mini ? 'Sin minimapa' : 'Minimapa', at: now() } }); return true }
-    if (c === 'w' && mode !== 'tree') { act('open'); msg('Abriendo el navegador…'); return true }
+    if (c === 'u') { const m = motionMode === 'full' ? 'reduced' : motionMode === 'reduced' ? 'off' : 'full'; save({ motion: m, msg: { t: `${tr('Efectos', 'Effects')}: ${m === 'full' ? tr('todos', 'all') : m === 'reduced' ? tr('reducidos (sin partículas)', 'reduced (no particles)') : tr('quietos', 'still')}`, at: now() } }); return true }
+    if (c === 'm') { save({ mini: !st.mini, msg: { t: st.mini ? tr('Sin minimapa', 'Minimap off') : tr('Minimapa', 'Minimap'), at: now() } }); return true }
+    if (c === 'w' && mode !== 'tree') { act('open'); msg(tr('Abriendo el navegador…', 'Opening the browser…')); return true }
     if (c === 'i') { act('pixels'); return true }
-    if (c === 'y') { if (TL && tl) { save({ tl: { ...tl, on: !tl.on, last: now() }, msg: { t: tl.on ? 'Línea de tiempo en pausa' : 'Reproduciendo la línea de tiempo', at: now() } }) } else msg('Este diagrama no tiene línea de tiempo'); return true }
+    if (c === 'y') { if (TL && tl) { save({ tl: { ...tl, on: !tl.on, last: now() }, msg: { t: tl.on ? tr('Línea de tiempo en pausa', 'Timeline paused') : tr('Reproduciendo la línea de tiempo', 'Playing the timeline'), at: now() } }) } else msg(tr('Este diagrama no tiene línea de tiempo', 'This diagram has no timeline')); return true }
     if ((c === ',' || c === '.') && TL && tl) { const i = clamp(tl.i + (c === '.' ? 1 : -1), 0, TL.labels.length - 1); save({ tl: { ...tl, i, on: false } }); return true }
     if ((c === '<' || c === '>') && TL && tl) { save({ tl: { ...tl, speed: c === '>' ? Math.min(8, tl.speed * 2) : Math.max(0.5, tl.speed / 2) } }); return true }
     if (c === 'e') {
-      if (!s!.owners) { msg('Este diagrama no tiene equipos'); return true }
+      if (!s!.owners) { msg(tr('Este diagrama no tiene equipos', 'This diagram has no teams')); return true }
       /* equipos: colorear → cada equipo → todos */
       const ids = Object.keys(s!.owners)
-      if (!st.ownerColor && !st.ownerOn) { save({ ownerColor: true, msg: { t: 'Color por equipo', at: now() } }); return true }
+      if (!st.ownerColor && !st.ownerOn) { save({ ownerColor: true, msg: { t: tr('Color por equipo', 'Color by team'), at: now() } }); return true }
       const curO = st.ownerOn?.[0]
       const nx = curO == null ? ids[0] : ids[ids.indexOf(curO) + 1]
-      save({ ownerOn: nx ? [nx] : null, ownerColor: !!nx, msg: { t: nx ? `Equipo: ${s!.owners[nx]?.label ?? nx}` : 'Todos los equipos', at: now() } })
+      save({ ownerOn: nx ? [nx] : null, ownerColor: !!nx, msg: { t: nx ? `${tr('Equipo', 'Team')}: ${s!.owners[nx]?.label ?? nx}` : tr('Todos los equipos', 'All teams'), at: now() } })
       return true
     }
-    if (c === 'q' && mode !== 'tree') { if (st.sel) { const n = nodesById.get(st.sel); act('ask', { id: st.sel, label: n?.l ?? st.sel }) } else msg('Elige antes una pieza (s / a)'); return true }
+    if (c === 'q' && mode !== 'tree') { if (st.sel) { const n = nodesById.get(st.sel); act('ask', { id: st.sel, label: n?.l ?? st.sel }) } else msg(tr('Elige antes una pieza (s / a)', 'Pick a node first (s / a)')); return true }
     if (c === 'g' && mode !== 'seq' && mode !== 'tree') {
       const cur = st.lv ?? autoLevel(s!, mainW, bodyRows)
       const dir = cur.dir === 'down' ? 'right' : 'down'
       act('ui', { dir })
-      save({ lv: { k: cur.k, dir }, cam: null, msg: { t: dir === 'down' ? 'Orientación ↧' : 'Orientación ↦', at: now() } })
+      save({ lv: { k: cur.k, dir }, cam: null, msg: { t: dir === 'down' ? tr('Orientación ↧', 'Direction ↧') : tr('Orientación ↦', 'Direction ↦'), at: now() } })
       return true
     }
-    if (/^[1-9]$/.test(c) && mode !== 'seq' && mode !== 'tree') { act('ui', { depth: Number(c) - 1 }); save({ cam: null, lv: null, msg: { t: `Nivel ${c}`, at: now() } }); return true }
+    if (/^[1-9]$/.test(c) && mode !== 'seq' && mode !== 'tree') { act('ui', { depth: Number(c) - 1 }); save({ cam: null, lv: null, msg: { t: `${tr('Nivel', 'Level')} ${c}`, at: now() } }); return true }
     if (c === '0') { save({ cam: null, lv: null, sx: 0, sy: 0 }); return true }
     if (c === 'f') {
-      if (mode === 'seq') { save({ play: st.play ? null : { k: 0, t0: now() }, msg: { t: st.play ? 'Reproducción parada' : 'Reproduciendo la secuencia', at: now() } }); return true }
-      save({ flowT0: st.flowT0 != null ? null : now(), msg: { t: st.flowT0 != null ? 'Flujo parado' : '▶ Flujo desde los orígenes', at: now() } }); return true
+      if (mode === 'seq') { save({ play: st.play ? null : { k: 0, t0: now() }, msg: { t: st.play ? tr('Reproducción parada', 'Playback stopped') : tr('Reproduciendo la secuencia', 'Playing the sequence'), at: now() } }); return true }
+      save({ flowT0: st.flowT0 != null ? null : now(), msg: { t: st.flowT0 != null ? tr('Flujo parado', 'Flow stopped') : tr('▶ Flujo desde los orígenes', '▶ Flow from the sources'), at: now() } }); return true
     }
-    if (c === 'c') { if (!st.sel) { msg('Elige antes una pieza (s / a) para ver su impacto'); return true } save({ blast: st.blast === st.sel ? null : st.sel, msg: { t: st.blast === st.sel ? 'Sin impacto' : `✺ Impacto de ${nodesById.get(st.sel)?.l ?? st.sel}`, at: now() } }); return true }
-    if (c === 't') { if (!st.sel) { msg('Elige antes una pieza (s / a) para trazar'); return true } const dir = !st.trace || st.trace.id !== st.sel ? 'up' : st.trace.dir === 'up' ? 'down' : null; save({ trace: dir ? { id: st.sel, dir } : null, msg: { t: dir === 'up' ? 'De qué depende' : dir === 'down' ? 'Qué depende de esto' : 'Sin trazado', at: now() } }); return true }
+    if (c === 'c') { if (!st.sel) { msg(tr('Elige antes una pieza (s / a) para ver su impacto', 'Pick a node first (s / a) to see its impact')); return true } save({ blast: st.blast === st.sel ? null : st.sel, msg: { t: st.blast === st.sel ? tr('Sin impacto', 'Impact off') : `✺ ${tr('Impacto de', 'Impact of')} ${nodesById.get(st.sel)?.l ?? st.sel}`, at: now() } }); return true }
+    if (c === 't') { if (!st.sel) { msg(tr('Elige antes una pieza (s / a) para trazar', 'Pick a node first (s / a) to trace')); return true } const dir = !st.trace || st.trace.id !== st.sel ? 'up' : st.trace.dir === 'up' ? 'down' : null; save({ trace: dir ? { id: st.sel, dir } : null, msg: { t: dir === 'up' ? tr('De qué depende', 'What it depends on') : dir === 'down' ? tr('Qué depende de esto', 'What depends on it') : tr('Sin trazado', 'Trace off'), at: now() } }); return true }
     if ((c === 'd' || c === ' ') && mode !== 'tree') {
       if (tier === 'wide') save({ side: !st.side })
       else { if (!st.det && st.sel) wantDetail(st.sel, true); save({ det: !st.det, detailTop: 0 }) }
@@ -828,6 +832,7 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
   }
   function dispatch(k0: ClientKeyEvent) {
     lastInput.set(surface, Date.now())
+    setLang(caps.lang)
     if (st.search?.on) {
       const c = k0.key
       if (c === 'return') { act('ui', { search: st.search.q }); save({ search: st.search.q ? { on: false, q: st.search.q } : null }) }
@@ -838,7 +843,7 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     const k = keyOf(k0)
     if (common(k)) return
     if (modeKey && modeKey(k) !== false) return
-    if (k.key.length === 1) msg(`«${k.key}» no hace nada aquí · ? enseña las teclas`)
+    if (k.key.length === 1) msg(tr(`«${k.key}» no hace nada aquí · ? enseña las teclas`, `“${k.key}” does nothing here · ? shows the keys`))
   }
   function outlineKeys(rows: ReturnType<typeof outlineRows>, cur: number, top: number) {
     const move = (to: number) => { const c = clamp(to, 0, Math.max(0, rows.length - 1)); const r = rows[c]; const id = r?.node ? r.id : null; if (id && id !== st.sel) wantDetail(id); save({ cur: c, curId: r?.id ?? null, top, sel: id ?? st.sel }) }
@@ -857,6 +862,7 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
       else if (k.key === 'left' || k.key === 'h') { for (let i = cur - 1; i >= 0; i--) if (rows[i]!.depth < r.depth) { move(i); break } }
     }
     surface.onPointer(p => {
+      setLang(caps.lang)
       if (p.type !== 'up' || p.y < bodyY || p.y >= bodyY + bodyRows) { if (p.type === 'up') clickChrome(p); return }
       const i = top + p.y - bodyY, r = rows[i]
       if (!r) return
@@ -886,6 +892,7 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
       return true
     }
     surface.onPointer(p => {
+      setLang(caps.lang)
       if (p.type !== 'up' || p.y < bodyY || p.y >= bodyY + bodyRows) { if (p.type === 'up') clickChrome(p); return }
       const i = top + p.y - bodyY, r = rows[i]
       if (!r) return
@@ -933,12 +940,13 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
         const i = st.sel ? leaves.indexOf(st.sel) : -1
         const id = leaves[(i + (c === 'a' ? -1 : 1) + leaves.length) % leaves.length]!
         selectNode(id, reveal(id))
-      } else if ((c === 'return' || c === 'o') && st.sel) { const n = nodesById.get(st.sel); if (n?.k || n?.g) act('ui', n.o ? { close: n.i } : { open: n.i }); else msg('Esta pieza no tiene nada dentro') }
-      else if (c === 'o') msg('Elige antes una pieza (s / a)')
+      } else if ((c === 'return' || c === 'o') && st.sel) { const n = nodesById.get(st.sel); if (n?.k || n?.g) act('ui', n.o ? { close: n.i } : { open: n.i }); else msg(tr('Esta pieza no tiene nada dentro', 'This node has nothing inside')) }
+      else if (c === 'o') msg(tr('Elige antes una pieza (s / a)', 'Pick a node first (s / a)'))
       else return false
       return true
     }
     surface.onPointer(p => {
+      setLang(caps.lang)
       if (p.type !== 'move' || p.button) lastInput.set(surface, Date.now())
       if (p.type === 'move' && !p.button) {
         const id = hitAt(p.x, p.y)
@@ -977,7 +985,7 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     })
   }
 
-  /* ---- Claude pide presentar (guide present, /graphx present): se entra una vez por cada petición nueva; al montarse,
+  /* ---- Claude pide presentar (guide present, /graphx-mod present): se entra una vez por cada petición nueva; al montarse,
      solo si la petición acaba de llegar (si no, volver de la imagen al lienzo la repetiría) ---- */
   {
     const pr = props.present, prevP = lastPresent.get(surface)

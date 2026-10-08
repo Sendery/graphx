@@ -1,4 +1,4 @@
-/* Contrato del mod graphx: lo que guarda en $.state y los datos que viajan entre el servidor, los hooks y el
+/* Contrato del mod graphx-mod: lo que guarda en $.state y los datos que viajan entre el servidor, los hooks y el
  * lienzo del terminal (el módulo Client). Las claves de la escena son cortas porque viaja como props. */
 
 export type GraphxTone = 'info' | 'tip' | 'ok' | 'warn' | 'danger' | 'note'
@@ -104,6 +104,8 @@ export type Caps = {
   motion: 'full' | 'reduced' | 'off'
   fps: number
   theme: 'dark' | 'light'
+  /* el idioma de la interfaz (hooks/i18n.ts) */
+  lang: 'es' | 'en'
   term: string
   remote: boolean
   mux: string | null
@@ -129,7 +131,7 @@ export type CanvasProps = {
 
 declare module 'claude-code' {
   interface PluginState {
-    graphx: {
+    'graphx-mod': {
       board: GraphxBoard | null
       rev: number
       server: GraphxServer | null

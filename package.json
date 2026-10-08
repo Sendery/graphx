@@ -14,7 +14,7 @@
     "tree": "node tools/tree-spec.mjs",
     "gallery": "node examples/gallery/build.mjs",
     "mod": "node mod/build.mjs",
-    "mod:test": "claude plugin validate mod/graphx && claude plugin test mod/graphx",
+    "mod:test": "claude plugin validate mod/graphx-mod && claude plugin test mod/graphx-mod",
     "mod:preview": "node mod/tools/term-preview.mjs",
     "mod:fixtures": "node mod/tools/gen-fixtures.mjs"
   },

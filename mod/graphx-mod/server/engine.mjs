@@ -93,7 +93,7 @@ export function createEngine(root, { log = () => { } } = {}) {
     try {
       const r = GXBoard.buildSpec(board);
       spec = r.spec; warnings = r.warnings; type = r.type;
-      inst = GraphX.mount(host, spec, { lang: spec.lang || 'es', minimap: false });
+      inst = GraphX.mount(host, spec, { lang: spec.lang || GXBoard.langOf(board), minimap: false });
       await inst.ready;
       if (board.direction) await inst.setDirection(board.direction);
       (inst.model.warn || []).forEach(x => warnings.push(x));
@@ -628,10 +628,11 @@ export function createEngine(root, { log = () => { } } = {}) {
 
   async function sceneOf(board, rev) {
     const S = inst.state;
+    const tr = (es, en) => (GXBoard.langOf(board) === 'es' ? es : en);
     const fx = inst.fx || null;
     const g = board.guide || { steps: [], at: -1 };
     const own = !(g.steps || []).length && spec.tour && spec.tour.steps ? spec.tour.steps : null;
-    const step = g.at >= 0 && g.steps[g.at] ? { at: g.at, n: g.steps.length, t: g.steps[g.at].title, b: clip(g.steps[g.at].body || '', 600) }
+    const step = g.at >= 0 && g.steps[g.at] ? { at: g.at, n: g.steps.length, t: g.steps[g.at].title || tr(`Paso ${g.at + 1}`, `Step ${g.at + 1}`), b: clip(g.steps[g.at].body || '', 600) }
       : own && g.at >= 0 && own[g.at] ? { at: g.at, n: own.length, t: own[g.at].title, b: clip(plainMd(own[g.at].body_html || ''), 600) }
         : { at: -1, n: (g.steps || []).length || (own ? own.length : 0) };
     const visibleOf = id => { const M = inst.model.M; let cur = id; while (cur != null && M.has(cur)) { if (S.rects.has(cur) || S.visible.has(cur)) return cur; cur = M.get(cur).parent; } return null; };
@@ -646,7 +647,7 @@ export function createEngine(root, { log = () => { } } = {}) {
       heat: heatLut(), owners: spec.owners || null, statuses: spec.statuses ? Object.fromEntries(Object.entries(spec.statuses).map(([k, v]) => [k, { l: v.label || k, c: colorOf(v.color), pu: v.pulse ? 1 : undefined }])) : null,
       legend: spec.legend || null, theme: themeScene(), skin: fx && fx.skin || null,
       flows: (spec.flows || []).map(f => ({ i: f.id, t: clip(f.title || f.id, 40) })), graphTab: spec.graphTab !== false,
-      tour: g.steps && g.steps.length ? { t: g.title || 'Recorrido', steps: g.steps.map(s => ({ t: clip(s.title, 60), n: s.nodes || [], e: s.edges || [] })) } : (spec.tour && spec.tour.steps ? { t: spec.tour.title || 'Recorrido', steps: spec.tour.steps.map(s => ({ t: clip(s.title, 60), b: clip(plainMd(s.body_html || ''), 400), n: (s.focus && s.focus.nodes) || [], e: (s.focus && s.focus.edges) || [] })), own: 1 } : null),
+      tour: g.steps && g.steps.length ? { t: g.title || tr('Recorrido', 'Tour'), steps: g.steps.map((s, i) => ({ t: clip(s.title || tr(`Paso ${i + 1}`, `Step ${i + 1}`), 60), n: s.nodes || [], e: s.edges || [] })) } : (spec.tour && spec.tour.steps ? { t: spec.tour.title || tr('Recorrido', 'Tour'), steps: spec.tour.steps.map(s => ({ t: clip(s.title, 60), b: clip(plainMd(s.body_html || ''), 400), n: (s.focus && s.focus.nodes) || [], e: (s.focus && s.focus.edges) || [] })), own: 1 } : null),
       timeline: timelineScene(), model: modelScene(), view, rsvg
     };
     if (flat) return Object.assign(base, { kind: 'tree', rows: treeRows() });
@@ -708,7 +709,7 @@ export function createEngine(root, { log = () => { } } = {}) {
     /* Mermaid → JSON de GraphX con el conversor del bundle, sin tocar el lienzo */
     convert(text, lang) {
       try {
-        const r = GraphX.fromMermaid(String(text || ''), { lang: lang === 'en' ? 'en' : 'es' });
+        const r = GraphX.fromMermaid(String(text || ''), { lang: lang === 'es' ? 'es' : 'en' });
         const s = r.spec;
         const count = {
           nodes: (s.nodes || []).length, edges: (s.edges || []).length, lanes: (s.lanes || []).length, flows: (s.flows || []).length,
@@ -734,11 +735,11 @@ export function createEngine(root, { log = () => { } } = {}) {
       return rasterize(s.svg, opts);
     },
     /* un diagrama suelto (un bloque ```mermaid de una respuesta), sin tocar el del lienzo */
-    async inline(text, theme = 'light') {
+    async inline(text, theme = 'light', lang = 'en') {
       const saved = { inst, host, key, spec, type, warnings, error, viewSeq, guideSeq, mountRev, dataKey, uiKey, tokenCache, timelineCache };
       inst = null; host = null;
       try {
-        const board = { source: { kind: 'mermaid', text: String(text || '') }, patches: [], signs: [], banner: null, guide: { steps: [], at: -1, seq: 0 }, view: { seq: 0 } };
+        const board = { source: { kind: 'mermaid', text: String(text || '') }, lang: lang === 'es' ? 'es' : 'en', patches: [], signs: [], banner: null, guide: { steps: [], at: -1, seq: 0 }, view: { seq: 0 } };
         await mount(board);
         if (!inst) return { error };
         const sc = await sceneOf(board, 0);

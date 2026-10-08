@@ -11,6 +11,7 @@ import { fit, strWidth, wrap, type Glyphs } from './glyphs'
 import { inkOn, type Painter } from './paint'
 import { bars, brailleSpark, donutCells, fmtNum, spark } from './charts'
 import type { Look } from './graph'
+import { tr } from '../i18n'
 
 type Line = (g: Grid, y: number) => void
 const TONES: Record<string, string> = { info: 'accent', warn: 'warn', good: 'add', ok: 'add', crit: 'del', danger: 'del', tip: 'p2', note: 'muted', done: 'add', active: 'accent', todo: 'faint' }
@@ -33,8 +34,8 @@ export function drawDetail(s: Scene, n: SNode | null, d: Detail | null, w: numbe
     if (s.sm) text(s.sm, muted)
     const nodes = (s.nodes ?? []).filter(x => !x.g)
     gap()
-    text(`${nodes.length} piezas visibles · ${(s.edges ?? []).length} aristas${(s.lanes ?? []).length ? ` · ${(s.lanes ?? []).length} carriles` : ''}`, muted)
-    if (s.diagram) text(`Tipo: ${s.diagram}`, faint)
+    { const ne = (s.edges ?? []).length, nl = (s.lanes ?? []).length; text(tr(`${nodes.length} piezas visibles · ${ne} aristas${nl ? ` · ${nl} carriles` : ''}`, `${nodes.length} visible nodes · ${ne} edge${ne === 1 ? '' : 's'}${nl ? ` · ${nl} lane${nl === 1 ? '' : 's'}` : ''}`), muted) }
+    if (s.diagram) text(tr(`Tipo: ${s.diagram}`, `Type: ${s.diagram}`), faint)
     legend(s, lines, W, L)
     return render(lines, w, L)
   }
@@ -47,14 +48,14 @@ export function drawDetail(s: Scene, n: SNode | null, d: Detail | null, w: numbe
   if (sub) text(sub, muted)
   const chips: { t: string; c: string }[] = []
   if (d?.st || node?.st) chips.push({ t: String(d?.st ?? node?.st), c: P.dual(node?.stc) ?? P.tok('accent') })
-  if (node?.dl) chips.push({ t: node.dl === 'added' ? 'nuevo' : node.dl === 'removed' ? 'eliminado' : 'modificado', c: P.tok(node.dl === 'added' ? 'add' : node.dl === 'removed' ? 'del' : 'mod') })
-  if (node?.al) chips.push({ t: `alerta ${node.al}`, c: P.tok(TONES[node.al] ?? 'warn') })
+  if (node?.dl) chips.push({ t: node.dl === 'added' ? tr('nuevo', 'new') : node.dl === 'removed' ? tr('eliminado', 'removed') : tr('modificado', 'modified'), c: P.tok(node.dl === 'added' ? 'add' : node.dl === 'removed' ? 'del' : 'mod') })
+  if (node?.al) chips.push({ t: tr(`alerta ${node.al}`, `alert ${node.al}`), c: P.tok(TONES[node.al] ?? 'warn') })
   if (d?.owner) chips.push({ t: d.owner.l, c: s.owners?.[d.owner.i]?.color ?? P.tok('p2', P.tok('accent')) })
   if (d?.kd || node?.kd) chips.push({ t: String(d?.kd ?? node?.kd), c: P.tok('faint') })
   if (chips.length) push((g, y) => { let x = 0; for (const c of chips) { if (x + strWidth(c.t) + 3 > W) break; x += g.text(x, y, ` ${c.t} `, P.c(inkOn(c.c)), P.c(c.c), BOLD) + 1 } })
   if (d?.edge) {
     text(`${d.from} ${G.head.r} ${d.to}${d.k ? `  (${d.k})` : ''}`, ink)
-    if (d.r != null) text(`Caudal: ${fmtNum(d.r)}`, muted)
+    if (d.r != null) text(tr(`Caudal: ${fmtNum(d.r)}`, `Flow: ${fmtNum(d.r)}`), muted)
   }
   const sm = d?.sm || node?.sm
   if (sm) { gap(); text(sm, ink) }
@@ -62,34 +63,34 @@ export function drawDetail(s: Scene, n: SNode | null, d: Detail | null, w: numbe
 
   /* los datos de los efectos */
   if (node && (node.hv != null || node.sp || node.pr != null || node.v != null)) {
-    head('Datos')
-    if (node.hv != null) push((g, y) => { const hc = P.heat(node.hv); const x = g.text(0, y, `${s.heat?.label ?? 'Calor'}: `, muted, bg); g.text(x, y, ` ${fmtNum(node.hv!)}${s.heat?.unit ? ' ' + s.heat.unit : ''} `, P.c(inkOn(hc)), P.c(hc), BOLD) })
+    head(tr('Datos', 'Data'))
+    if (node.hv != null) push((g, y) => { const hc = P.heat(node.hv); const x = g.text(0, y, `${s.heat?.label ?? tr('Calor', 'Heat')}: `, muted, bg); g.text(x, y, ` ${fmtNum(node.hv!)}${s.heat?.unit ? ' ' + s.heat.unit : ''} `, P.c(inkOn(hc)), P.c(hc), BOLD) })
     if (node.sp && node.sp.length > 1) {
-      if (G.name === 'unicode' && L.P.depth !== 'mono') { push(() => { }); push(() => { }); const at = lines.length - 2; lines[at] = (g, y) => brailleSpark(g, 0, y, Math.min(W - 10, 36), 2, node.sp!, P.c(P.tok('accent'))); lines[at + 1] = (g, y) => { g.text(Math.min(W - 10, 36) + 1, y - 1, `${fmtNum(node.sp![node.sp!.length - 1]!)}${node.u ? ' ' + node.u : ''}`, ink, bg, BOLD); g.text(Math.min(W - 10, 36) + 1, y, `min ${fmtNum(Math.min(...node.sp!))} · máx ${fmtNum(Math.max(...node.sp!))}`, faint, bg, DIM) } }
+      if (G.name === 'unicode' && L.P.depth !== 'mono') { push(() => { }); push(() => { }); const at = lines.length - 2; lines[at] = (g, y) => brailleSpark(g, 0, y, Math.min(W - 10, 36), 2, node.sp!, P.c(P.tok('accent'))); lines[at + 1] = (g, y) => { g.text(Math.min(W - 10, 36) + 1, y - 1, `${fmtNum(node.sp![node.sp!.length - 1]!)}${node.u ? ' ' + node.u : ''}`, ink, bg, BOLD); g.text(Math.min(W - 10, 36) + 1, y, tr(`min ${fmtNum(Math.min(...node.sp!))} · máx ${fmtNum(Math.max(...node.sp!))}`, `min ${fmtNum(Math.min(...node.sp!))} · max ${fmtNum(Math.max(...node.sp!))}`), faint, bg, DIM) } }
       else push((g, y) => { g.text(0, y, spark(node.sp!, Math.min(W - 8, 30), G), P.c(P.tok('accent')), bg); g.text(Math.min(W - 8, 30) + 1, y, fmtNum(node.sp![node.sp!.length - 1]!), ink, bg, BOLD) })
     }
     if (node.pr != null) push((g, y) => { const bw = Math.min(W - 6, 30), f = Math.round(Math.max(0, Math.min(1, node.pr!)) * bw); for (let x = 0; x < bw; x++) g.set(x, y, x < f ? G.bar.full : G.bar.empty, P.c(x < f ? (node.pr! >= 1 ? P.tok('add') : P.tok('accent')) : P.tok('line')), bg); g.text(bw + 1, y, `${Math.round(node.pr! * 100)}%`, ink, bg, BOLD) })
-    if (node.v != null && !node.sp) text(`Valor: ${fmtNum(node.v, node.dc)}${node.u ? ' ' + node.u : ''}${node.ch != null ? `  ${node.ch >= 0 ? G.up : G.down} ${Math.abs(node.ch)}%` : ''}`, ink, BOLD)
+    if (node.v != null && !node.sp) text(`${tr('Valor', 'Value')}: ${fmtNum(node.v, node.dc)}${node.u ? ' ' + node.u : ''}${node.ch != null ? `  ${node.ch >= 0 ? G.up : G.down} ${Math.abs(node.ch)}%` : ''}`, ink, BOLD)
   }
-  if (node?.pt?.length) { head('Reparto'); blockDonut(lines, { parts: node.pt.map(p => ({ label: p.l, value: p.v, color: P.dual(p.c) })) }, W, L) }
+  if (node?.pt?.length) { head(tr('Reparto', 'Breakdown')); blockDonut(lines, { parts: node.pt.map(p => ({ label: p.l, value: p.v, color: P.dual(p.c) })) }, W, L) }
   if (node?.rw?.length && (node.sh === 'table' || node.sh === 'class' || node.sh === 'requirement')) {
-    head(node.sh === 'class' ? 'Miembros' : 'Atributos')
+    head(node.sh === 'class' ? tr('Miembros', 'Members') : tr('Atributos', 'Attributes'))
     for (const r of node.rw) push((g, y) => { let x = g.text(0, y, fit(`${r.vi ?? ''}${r.n}`, Math.floor(W / 2)), ink, bg, r.k ? BOLD : 0); if (r.t) x += g.text(x + 1, y, fit(r.t, W - x - 6), muted, bg); if (r.k) g.text(W - strWidth(r.k), y, r.k, accent, bg, BOLD) })
   }
-  if (d?.metrics?.length) { head('Métricas'); for (const m of d.metrics) push((g, y) => { const v = String(m.value ?? ''); g.text(0, y, fit(String(m.label), W - strWidth(v) - 2), muted, bg); g.text(W - strWidth(v), y, fit(v, W), ink, bg, BOLD) }) }
-  if (d?.notes?.length) { head('Notas'); for (const nt of d.notes) { const c = P.c(P.tok(TONES[nt.tone ?? 'info'] ?? 'accent')); push((g, y) => { g.text(0, y, G.dot, c, bg) }); const at = lines.length - 1; const ls = wrap(md(nt.text), W - 2, 6); lines[at] = (g, y) => { g.text(0, y, G.dot, c, bg); g.text(2, y, ls[0] ?? '', ink, bg) }; for (const l of ls.slice(1)) push((g, y) => { g.text(2, y, l, ink, bg) }) } }
+  if (d?.metrics?.length) { head(tr('Métricas', 'Metrics')); for (const m of d.metrics) push((g, y) => { const v = String(m.value ?? ''); g.text(0, y, fit(String(m.label), W - strWidth(v) - 2), muted, bg); g.text(W - strWidth(v), y, fit(v, W), ink, bg, BOLD) }) }
+  if (d?.notes?.length) { head(tr('Notas', 'Notes')); for (const nt of d.notes) { const c = P.c(P.tok(TONES[nt.tone ?? 'info'] ?? 'accent')); push((g, y) => { g.text(0, y, G.dot, c, bg) }); const at = lines.length - 1; const ls = wrap(md(nt.text), W - 2, 6); lines[at] = (g, y) => { g.text(0, y, G.dot, c, bg); g.text(2, y, ls[0] ?? '', ink, bg) }; for (const l of ls.slice(1)) push((g, y) => { g.text(2, y, l, ink, bg) }) } }
   if (d?.blocks?.length) for (const b of d.blocks) block(lines, b as Record<string, unknown>, W, L, s)
   if (d && !d.edge && ((d.ins?.length ?? 0) + (d.outs?.length ?? 0)) > 0) {
-    head('Vecindad')
+    head(tr('Vecindad', 'Neighbors'))
     push((g, y) => { const ni = d.ins?.length ?? 0, no = d.outs?.length ?? 0; g.text(0, y, `${ni} ${G.head.r} `, muted, bg); const x = g.text(strWidth(`${ni} ${G.head.r} `), y, ` ${fit(d.l ?? '', W - 14)} `, P.c(inkOn(P.tok('accent'))), accent, BOLD); g.text(strWidth(`${ni} ${G.head.r} `) + x, y, ` ${G.head.r} ${no}`, muted, bg) })
     for (const e of (d.ins ?? []).slice(0, 8)) push((g, y) => { g.text(0, y, `${G.head.l} `, muted, bg); g.text(2, y, fit(`${e.l ?? e.i}${e.k ? `  ·${e.k}` : ''}`, W - 2), ink, bg); g.markRect(0, y, W, y, e.i) })
     for (const e of (d.outs ?? []).slice(0, 8)) push((g, y) => { g.text(0, y, `${G.head.r} `, accent, bg); g.text(2, y, fit(`${e.l ?? e.i}${e.k ? `  ·${e.k}` : ''}`, W - 2), ink, bg); g.markRect(0, y, W, y, e.i) })
   }
-  if (d?.steps?.length && s.tour) { head('En el recorrido'); text(d.steps.map(i => `${i + 1}. ${s.tour!.steps[i]?.t ?? ''}`).join('  ·  '), muted) }
-  if (d?.files?.length) { head('Ficheros'); for (const f of d.files.slice(0, 12)) push((g, y) => { const st = `${f.additions ? '+' + f.additions : ''}${f.deletions ? ' −' + f.deletions : ''}`; g.text(0, y, fit(f.path, W - strWidth(st) - 1), ink, bg); if (f.additions) g.text(W - strWidth(st), y, '+' + f.additions, P.c(P.tok('add')), bg); if (f.deletions) g.text(W - strWidth(` −${f.deletions}`) + 1, y, '−' + f.deletions, P.c(P.tok('del')), bg) }) }
-  if (d?.links?.length) { head('Enlaces'); for (const l of d.links.slice(0, 10)) push((g, y) => { const dot = l.st ? G.dot + ' ' : ''; g.text(0, y, dot, P.c(/merged|done|cerrad|hecho/i.test(l.st ?? '') ? P.tok('add') : /draft|borrador/i.test(l.st ?? '') ? P.tok('faint') : P.tok('accent')), bg); g.text(strWidth(dot), y, fit(`${l.k ? `[${l.k}] ` : ''}${l.l ?? l.u ?? ''}`, W - strWidth(dot)), accent, bg, UNDER) }) }
+  if (d?.steps?.length && s.tour) { head(tr('En el recorrido', 'In the tour')); text(d.steps.map(i => `${i + 1}. ${s.tour!.steps[i]?.t ?? ''}`).join('  ·  '), muted) }
+  if (d?.files?.length) { head(tr('Ficheros', 'Files')); for (const f of d.files.slice(0, 12)) push((g, y) => { const st = `${f.additions ? '+' + f.additions : ''}${f.deletions ? ' −' + f.deletions : ''}`; g.text(0, y, fit(f.path, W - strWidth(st) - 1), ink, bg); if (f.additions) g.text(W - strWidth(st), y, '+' + f.additions, P.c(P.tok('add')), bg); if (f.deletions) g.text(W - strWidth(` −${f.deletions}`) + 1, y, '−' + f.deletions, P.c(P.tok('del')), bg) }) }
+  if (d?.links?.length) { head(tr('Enlaces', 'Links')); for (const l of d.links.slice(0, 10)) push((g, y) => { const dot = l.st ? G.dot + ' ' : ''; g.text(0, y, dot, P.c(/merged|done|cerrad|hecho/i.test(l.st ?? '') ? P.tok('add') : /draft|borrador/i.test(l.st ?? '') ? P.tok('faint') : P.tok('accent')), bg); g.text(strWidth(dot), y, fit(`${l.k ? `[${l.k}] ` : ''}${l.l ?? l.u ?? ''}`, W - strWidth(dot)), accent, bg, UNDER) }) }
   if (d?.tags?.length) { gap(); text(d.tags.map(t => '#' + t).join(' '), faint) }
-  if (d?.owner?.c) text(`Contacto: ${d.owner.c}`, muted)
+  if (d?.owner?.c) text(`${tr('Contacto', 'Contact')}: ${d.owner.c}`, muted)
   return render(lines, w, L)
 }
 
@@ -107,20 +108,20 @@ function legend(s: Scene, lines: Line[], W: number, L: Look) {
   const push = (f: Line) => lines.push(f)
   if (s.heat?.lut && L.fx.heat && (s.nodes ?? []).some(n => n.hv != null || L.data?.[n.i]?.hv != null)) {
     push(() => { })
-    push((g, y) => { g.text(0, y, (s.heat!.label ?? 'Calor').toUpperCase(), muted, bg, BOLD | DIM) })
+    push((g, y) => { g.text(0, y, (s.heat!.label ?? tr('Calor', 'Heat')).toUpperCase(), muted, bg, BOLD | DIM) })
     push((g, y) => { const n = Math.min(W - 12, 24); for (let x = 0; x < n; x++) g.set(x, y, G.bar.full, P.c(P.heat((s.heat!.domain?.[0] ?? 0) + ((s.heat!.domain?.[1] ?? 100) - (s.heat!.domain?.[0] ?? 0)) * (x / (n - 1)))), bg); g.text(n + 1, y, `${fmtNum(s.heat!.domain?.[0] ?? 0)}–${fmtNum(s.heat!.domain?.[1] ?? 100)}${s.heat!.unit ? ' ' + s.heat!.unit : ''}`, ink, bg) })
   }
   if (s.statuses && Object.keys(s.statuses).length) {
-    push(() => { }); push((g, y) => { g.text(0, y, 'ESTADOS', muted, bg, BOLD | DIM) })
+    push(() => { }); push((g, y) => { g.text(0, y, tr('ESTADOS', 'STATUSES'), muted, bg, BOLD | DIM) })
     for (const [, st] of Object.entries(s.statuses)) push((g, y) => { g.set(0, y, G.dot, P.c(P.dual(st.c) ?? P.tok('accent')), bg); g.text(2, y, fit(st.l, W - 2), ink, bg) })
   }
   if (s.owners && Object.keys(s.owners).length && L.fx.owners) {
-    push(() => { }); push((g, y) => { g.text(0, y, 'EQUIPOS', muted, bg, BOLD | DIM) })
+    push(() => { }); push((g, y) => { g.text(0, y, tr('EQUIPOS', 'TEAMS'), muted, bg, BOLD | DIM) })
     for (const [id, o] of Object.entries(s.owners)) push((g, y) => { const c = o.color ?? P.tok('accent'); const x = g.text(0, y, ` ${(o.short ?? id.slice(0, 2)).toUpperCase()} `, P.c(inkOn(c)), P.c(c), BOLD); g.text(x + 1, y, fit(o.label ?? id, W - x - 1), ink, bg) })
   }
   const lg = s.legend as { edges?: { label: string; style?: string; color?: string }[]; kinds?: Record<string, string> } | null
   if (lg?.edges?.length) {
-    push(() => { }); push((g, y) => { g.text(0, y, 'CONEXIONES', muted, bg, BOLD | DIM) })
+    push(() => { }); push((g, y) => { g.text(0, y, tr('CONEXIONES', 'CONNECTIONS'), muted, bg, BOLD | DIM) })
     for (const e of lg.edges) push((g, y) => { const st = e.style ?? 'solid'; const glyph = st === 'dashed' ? '┄┄┄' : st === 'hero' ? '━━━' : st === 'flow' ? '─•─' : '───'; g.text(0, y, G.name === 'ascii' ? '---' : glyph, P.c(e.color ?? (st === 'hero' ? P.tok('accent') : P.tok('neu'))), bg, st === 'muted' ? DIM : 0); g.text(4, y, fit(e.label, W - 4), ink, bg) })
   }
 }
@@ -224,7 +225,7 @@ function block(lines: Line[], b: Record<string, unknown>, W: number, L: Look, s:
       rows.forEach((r, i) => push((g, y) => { if (lw) g.text(0, y, fit(lab[i] ?? '', lw), muted, bg); r.slice(0, W - lw - 1).forEach((v, k) => { const t = (Number(v) - mn) / ((mx - mn) || 1); g.set(lw + 1 + k, y, P.depth === 'mono' ? G.shade[Math.min(3, Math.floor(t * 4))]! : G.bar.full, P.c(P.mix(P.tok('canvas'), P.tok('del'), 0.15 + t * 0.85)), bg) }) }))
       break
     }
-    case 'image': text(`${G.icons.ui ?? '▢'} imagen${b.caption ? `: ${md(b.caption)}` : ''}${typeof b.src === 'string' && /^https?:/.test(b.src) ? ` (${b.src})` : ''}`, muted, ITALIC); break
+    case 'image': text(`${G.icons.ui ?? '▢'} ${tr('imagen', 'image')}${b.caption ? `: ${md(b.caption)}` : ''}${typeof b.src === 'string' && /^https?:/.test(b.src) ? ` (${b.src})` : ''}`, muted, ITALIC); break
     default: if (b.text) text(b.text, ink)
   }
   void s
