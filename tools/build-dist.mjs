@@ -36,15 +36,17 @@ esb(r('graphx-tree.js'), path.join(DIST, 'graphx-tree.min.js'));
 const elkMin = path.join(DIST, '.elk.min.js');
 esb(r('vendor/elk.bundled.js'), elkMin);
 
+/* la versión de los comentarios de cabecera, la de package.json (la misma que GraphX.version) */
+const VERSION = JSON.parse(fs.readFileSync(r('package.json'), 'utf8')).version;
 const css = fs.readFileSync(path.join(DIST, 'graphx.min.css'), 'utf8').trim();
 const mermaid = fs.readFileSync(path.join(DIST, 'graphx-mermaid.min.js'), 'utf8').trim();
 const shapes = fs.readFileSync(path.join(DIST, 'graphx-shapes.min.js'), 'utf8').trim() + '\n' + fs.readFileSync(path.join(DIST, 'graphx-layouts.min.js'), 'utf8').trim() + '\n' + fs.readFileSync(path.join(DIST, 'graphx-tree.min.js'), 'utf8').trim() + '\n' + fs.readFileSync(path.join(DIST, 'graphx-fx.min.js'), 'utf8').trim();
-const inject = `;(function(){if(typeof document==="undefined")return;function css(){if(document.querySelector("style[data-gx-css]"))return;var s=document.createElement("style");s.setAttribute("data-gx-css","1.4");s.textContent=${JSON.stringify(css)};(document.head||document.documentElement).appendChild(s)}function go(){css();window.GraphX&&window.GraphX.mountAll(document)}window.GraphX&&(window.GraphX.injectCSS=css);if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",go);else go()})();`;
-const header = `/*! GraphX 1.4 · motor de diagramas navegables · incluye ELK 0.12 (EPL-2.0, https://eclipse.dev/elk) */\n`;
+const inject = `;(function(){if(typeof document==="undefined")return;function css(){if(document.querySelector("style[data-gx-css]"))return;var s=document.createElement("style");s.setAttribute("data-gx-css","${VERSION}");s.textContent=${JSON.stringify(css)};(document.head||document.documentElement).appendChild(s)}function go(){css();window.GraphX&&window.GraphX.mountAll(document)}window.GraphX&&(window.GraphX.injectCSS=css);if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",go);else go()})();`;
+const header = `/*! GraphX ${VERSION} · motor de diagramas navegables · incluye ELK 0.12 (EPL-2.0, https://eclipse.dev/elk) */\n`;
 fs.writeFileSync(path.join(DIST, 'graphx.bundle.min.js'),
   header + fs.readFileSync(elkMin, 'utf8').trim() + '\n' + shapes + '\n' + fs.readFileSync(path.join(DIST, 'graphx.min.js'), 'utf8').trim() + '\n' + mermaid + '\n' + inject + '\n');
 fs.writeFileSync(path.join(DIST, 'graphx.lite.min.js'),
-  `/*! GraphX 1.4 · motor sin ELK: lo carga bajo demanda desde jsDelivr (o desde GraphX.elkURL) */\n` + shapes + '\n' + fs.readFileSync(path.join(DIST, 'graphx.min.js'), 'utf8').trim() + '\n' + mermaid + '\n' + inject + '\n');
+  `/*! GraphX ${VERSION} · motor sin ELK: lo carga bajo demanda desde jsDelivr (o desde GraphX.elkURL) */\n` + shapes + '\n' + fs.readFileSync(path.join(DIST, 'graphx.min.js'), 'utf8').trim() + '\n' + mermaid + '\n' + inject + '\n');
 fs.unlinkSync(elkMin);
 /* huella de las fuentes: los ensambladores la comparan para saber si dist/ está al día. Las fechas
    de fichero no sirven: una copia o un git clone las cambian. */

@@ -3,3 +3,6 @@ node_modules/
 *.bak-*
 # páginas generadas desde su JSON con graphx-build.mjs
 examples/*.html
+
+# distribuibles de una versión (tools/release.mjs)
+release/

@@ -370,6 +370,7 @@ node tools/verify-shapes.mjs && node tools/verify-tree.mjs && node tools/verify-
 node examples/fx/build.mjs docs/demo/index.html --standalone --lang en   # rebuild the live demo
 node tools/capture-gifs.mjs                                 # re-record the GIFs (Playwright + ffmpeg)
 node mod/tools/capture-media.mjs                            # re-record the Claude Code mod's captures (ffmpeg)
+node tools/release.mjs --tag v1.9.0-rc.1                    # the classified release assets, in release/<tag>/
 ```
 
 The English page is generated from the same template: `examples/fx/showcase.en.txt` holds the translations and
