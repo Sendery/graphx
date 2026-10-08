@@ -1,7 +1,7 @@
 # La página de demostración
 
 El showcase de GraphX 1.9: una página autocontenida (motor, ELK, datos y estilos dentro) que enseña todo lo
-que dibuja el motor en ocho pestañas, en castellano y en inglés. Solo dos pestañas tiran de la red: Diagramas
+que dibuja el motor en nueve pestañas, en castellano y en inglés. Solo dos pestañas tiran de la red: Diagramas
 carga Mermaid de jsDelivr para compararlo y Formas carga React de cdnjs. Se genera con:
 
 ```bash
@@ -15,7 +15,7 @@ Las dos versiones construidas están en el repositorio como demo en vivo: [`docs
 y [`docs/demo/`](demo/index.html) (con GitHub Pages sobre `/docs`, quedan en `/demo/es/` y `/demo/`).
 
 Pesa unos 2,2 MB. Cada pestaña se monta la primera vez que se abre; la dirección recuerda la pestaña
-(`#software`, `#ejemplos`, `#diagramas`, `#galeria`, `#formas`, `#arbol`, `#vivo`, `#referencia`; `#mermaid`
+(`#software`, `#ejemplos`, `#diagramas`, `#galeria`, `#formas`, `#arbol`, `#atlas`, `#vivo`, `#referencia`; `#mermaid`
 lleva a Diagramas). Las capturas de este documento se regeneran con `node tools/capture-docs.mjs` y los GIF de
 los README con `node tools/capture-gifs.mjs` (ver [README](README.md)).
 
@@ -32,6 +32,7 @@ cambiar un texto de la página, añade su traducción al diccionario; al cambiar
 | Piezas | cada clase de pieza con datos en vivo, los 24 bloques del panel y los iconos |
 | Formas | el catálogo de formas en React (`GraphXShape`) con estados, cambios, colores y puntas de arista |
 | Árbol | este repositorio como árbol de ficheros con los cambios de la rama, o un árbol pegado |
+| Atlas | la misma tienda vista desde cinco perspectivas y dos interiores, con las piezas compartidas |
 | En vivo | datos que cambian cada segundo y medio, presets y efectos uno a uno |
 | Guía | la clasificación de assets y efectos y la referencia de configuración |
 
@@ -119,6 +120,18 @@ respecto a `main`) o un árbol pegado: la salida de `tree`, una ruta por línea 
 navega con el teclado y se puede ver con otra piel.
 
 ![El árbol del repositorio](img/demo-arbol.webp)
+
+## Atlas
+
+Varias perspectivas del mismo sistema en una sola vista (`examples/fx/atlas.json`, montado con
+`examples/fx/atlas.js`): arquitectura con calor y partículas, el ciclo de un pedido como secuencia, el flujo de
+datos con su línea de tiempo, el radio de impacto en piel neón y los cambios de un sprint como diff; y por dentro,
+Pagos en blueprint y los estados de un pedido desde Mermaid. Las piezas se declaran una vez (`entities`) y cada
+perspectiva las usa por id: su ficha dice en qué otras aparece y salta a ellas, con su contexto, restricciones,
+riesgos y pendientes. «Por dentro ▸» entra con un zoom desde la pieza; `1`–`7` cambian de perspectiva y `/` busca.
+`node examples/fx/build-atlas.mjs [atlas.json] <página>.html [--lang en]` hace una página suelta con cualquier atlas.
+
+![El atlas: la ficha de Pagos con las perspectivas en las que aparece](img/demo-atlas.webp)
 
 ## Guía
 

@@ -338,6 +338,18 @@
 @@ ' cambiados'
 => ' changed'
 
+## atlas
+@@ <span class="kicker">Un sistema, varias preguntas</span><h2 id="h-atlas">Un atlas: la misma tienda vista desde cinco perspectivas</h2>
+=> <span class="kicker">One system, many questions</span><h2 id="h-atlas">An atlas: the same store seen from five perspectives</h2>
+@@ <p>Arquitectura, el ciclo de un pedido, el flujo de datos, el impacto de un fallo y los cambios del sprint, cada una con sus efectos. Las piezas son las mismas en todas: su ficha dice en qué otras perspectivas aparece, qué la condiciona y qué preocupa de ella, y algunas se abren por dentro.</p>
+=> <p>Architecture, the life of an order, the data flow, the impact of a failure and the sprint's changes, each with its own effects. The nodes are the same in all of them: a node's card says which other perspectives it appears in, what constrains it and what worries us about it, and some of them open up inside.</p>
+@@ <li><b>Pulsa una pieza:</b> la constelación de su ficha enseña en qué perspectivas aparece; cada chip salta a ella con la pieza ya seleccionada.</li>
+=> <li><b>Pick a node:</b> the constellation on its card shows which perspectives it appears in; each chip jumps there with the node already selected.</li>
+@@ <li><b>Por dentro ▸</b> abre su interior (Pagos, los estados de un pedido) con un zoom desde la pieza; las migas vuelven.</li>
+=> <li><b>Look inside ▸</b> opens its inside (Payments, the states of an order) with a zoom from the node; the breadcrumbs take you back.</li>
+@@ <li><b>Teclas:</b> <kbd>1</kbd>–<kbd>7</kbd> cambian de perspectiva, <kbd>/</kbd> busca dónde aparece una pieza y <kbd>⌫</kbd> sube de nivel.</li>
+=> <li><b>Keys:</b> <kbd>1</kbd>–<kbd>7</kbd> switch perspective, <kbd>/</kbd> finds where a node appears and <kbd>⌫</kbd> goes up a level.</li>
+
 ## guía
 @@ <span class="kicker">Guía · 1</span><h2 id="h-assets">Qué se puede dibujar</h2>
 => <span class="kicker">Guide · 1</span><h2 id="h-assets">What you can draw</h2>

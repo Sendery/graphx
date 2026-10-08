@@ -1,7 +1,7 @@
 /* El showcase de GraphX, en pestañas: software (servicios, línea de tiempo, impacto, equipos, paneles ricos y
  * Mermaid con datos), casos de uso, los 19 tipos de Mermaid frente a Mermaid (con y sin efectos, colores),
  * piezas (tarjetas, bloques, iconos), el catálogo de formas en React, el árbol de ficheros de este repo, efectos
- * en vivo y la guía de assets y efectos.
+ * en vivo, un atlas (varias perspectivas del mismo sistema, examples/fx/atlas.js) y la guía de assets y efectos.
  *   node examples/fx/build.mjs <salida.html> [--standalone] [--base <ref>] [--lang es|en]
  * Usa dist/graphx.bundle.min.js (ELK dentro). React (cdnjs) y Mermaid (jsDelivr) se cargan solo en las
  * pestañas que los usan. La salida es el cuerpo de la página, sin <!doctype> ni <head>, tal como lo publica
@@ -103,6 +103,7 @@ const data = {
       { id: 'x-despliegue', name: L('Despliegue: forest y a mano', 'Deploy: forest, hand-drawn'), file: local('examples/fx/despliegue.mmd'), code: mmd('examples/fx/despliegue.mmd') }
     ]
   },
+  atlas: json('examples/fx/atlas.json'),
   treeBase: BASE,
   treeRepo: repoTree(),
   treeSample: L(TREE_SAMPLE_ES, TREE_SAMPLE_EN)
@@ -134,6 +135,8 @@ let page = tpl
   .replace(/__LANG__/g, LANG)
   .replace(/__NSHAPES__/g, String(nShapes)).replace('__NEX__', String(data.ejemplos.length))
   .replace('__REACT_BRIDGE__', () => noClose(R('react/graphx-react.js')))
+  .replace('__ATLAS_JS__', () => noClose(R('examples/fx/atlas.js')))
+  .replace('__NATLAS__', String(data.atlas.perspectives.length))
   .replace('__FXKB__', kb(fxMin.length)).replace('__FXGZ__', kb((await import('zlib')).gzipSync(fxMin, { level: 9 }).length))
   .replace('__ENGINE__', () => noClose(R('dist/graphx.bundle.min.js')))
   .replace('__DATA__', () => noClose(JSON.stringify(data)).replace(/<!--/g, '<\\!--'));

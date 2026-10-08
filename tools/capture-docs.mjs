@@ -58,6 +58,7 @@ const S = [
   { name: 'demo-mermaid', url: P.demo + '#diagramas', act: async p => { await p.waitForFunction(() => document.querySelector('#dg-mmd svg'), null, { timeout: 60000 }); }, wait: 1500, sel: '#p-diagramas .console' },
   { name: 'demo-formas', url: P.demo + '#formas', act: async p => { await p.waitForSelector('.cat-item svg', { timeout: 60000 }); }, wait: 800, clip: '#p-formas', h: 1500 },
   { name: 'demo-arbol', url: P.demo + '#arbol', sel: '#p-arbol .console', wait: 3000 },
+  { name: 'demo-atlas', url: P.demo + '#atlas', act: async p => { await p.waitForSelector('#g-atlas .gxa-chip[data-sel="pagos"]', { timeout: 60000 }); await p.click('#g-atlas .gxa-chip[data-sel="pagos"]'); }, wait: 2000, sel: '#g-atlas .gxa-grid' },
   { name: 'demo-guia', url: P.demo + '#referencia', sel: 'section[aria-labelledby="h-efectos"]' },
   /* los efectos, de cerca */
   { name: 'fx-particulas', url: P.viva, dark: true, act: async p => { await p.evaluate(`${gx}.focusNode('gateway')`); await p.mouse.click(4, 4); await p.evaluate(`${gx}.state.selected = null; document.querySelector('.gx-panel').classList.remove('on')`); }, wait: 1500, sel: '.gx-stage' },

@@ -271,6 +271,7 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
     <button type="button" role="tab" id="t-galeria" aria-controls="p-galeria" aria-selected="false">Piezas <small>24</small></button>
     <button type="button" role="tab" id="t-formas" aria-controls="p-formas" aria-selected="false">Formas <small>__NSHAPES__</small></button>
     <button type="button" role="tab" id="t-arbol" aria-controls="p-arbol" aria-selected="false">Árbol <small>repo</small></button>
+    <button type="button" role="tab" id="t-atlas" aria-controls="p-atlas" aria-selected="false">Atlas <small>__NATLAS__</small></button>
     <button type="button" role="tab" id="t-vivo" aria-controls="p-vivo" aria-selected="false">En vivo <small>fx</small></button>
     <button type="button" role="tab" id="t-referencia" aria-controls="p-referencia" aria-selected="false">Guía <small>ref</small></button>
   </nav>
@@ -488,6 +489,22 @@ footer { color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--hai
     </section>
   </div>
 
+  <!-- ===================== ATLAS ===================== -->
+  <div class="tabpanel" role="tabpanel" id="p-atlas" aria-labelledby="t-atlas" hidden>
+    <section aria-labelledby="h-atlas">
+      <div class="sh">
+        <div><span class="kicker">Un sistema, varias preguntas</span><h2 id="h-atlas">Un atlas: la misma tienda vista desde cinco perspectivas</h2></div>
+        <p>Arquitectura, el ciclo de un pedido, el flujo de datos, el impacto de un fallo y los cambios del sprint, cada una con sus efectos. Las piezas son las mismas en todas: su ficha dice en qué otras perspectivas aparece, qué la condiciona y qué preocupa de ella, y algunas se abren por dentro.</p>
+      </div>
+      <div id="g-atlas"></div>
+      <ul class="how">
+        <li><b>Pulsa una pieza:</b> la constelación de su ficha enseña en qué perspectivas aparece; cada chip salta a ella con la pieza ya seleccionada.</li>
+        <li><b>Por dentro ▸</b> abre su interior (Pagos, los estados de un pedido) con un zoom desde la pieza; las migas vuelven.</li>
+        <li><b>Teclas:</b> <kbd>1</kbd>–<kbd>7</kbd> cambian de perspectiva, <kbd>/</kbd> busca dónde aparece una pieza y <kbd>⌫</kbd> sube de nivel.</li>
+      </ul>
+    </section>
+  </div>
+
   <!-- ===================== REFERENCIA ===================== -->
   <div class="tabpanel" role="tabpanel" id="p-referencia" aria-labelledby="t-referencia" hidden>
     <section aria-labelledby="h-assets">
@@ -556,6 +573,7 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
 
 <script>__ENGINE__</script>
 <script>__REACT_BRIDGE__</script>
+<script>__ATLAS_JS__</script>
 <script>
 (function () {
   'use strict';
@@ -571,8 +589,8 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
   var visible = function (id) { return !$(id).hidden && !document.hidden; };
 
   /* ---------- pestañas: cada una se monta la primera vez que se abre ---------- */
-  var TABS = ['software', 'ejemplos', 'diagramas', 'galeria', 'formas', 'arbol', 'vivo', 'referencia'], inited = {};
-  var INIT = { software: initSoftware, ejemplos: initEjemplos, diagramas: initDiagramas, galeria: initGaleria, formas: initFormas, arbol: initArbol, vivo: initVivo, referencia: initRef };
+  var TABS = ['software', 'ejemplos', 'diagramas', 'galeria', 'formas', 'arbol', 'atlas', 'vivo', 'referencia'], inited = {};
+  var INIT = { software: initSoftware, ejemplos: initEjemplos, diagramas: initDiagramas, galeria: initGaleria, formas: initFormas, arbol: initArbol, atlas: initAtlas, vivo: initVivo, referencia: initRef };
   /* direcciones de versiones anteriores de la página */
   var ALIAS = { mermaid: 'diagramas', shapes: 'formas', tree: 'arbol', casos: 'ejemplos', piezas: 'galeria' };
   /* preferencias del lector (la vista, el tema de colores): solo comodidad, la página funciona sin ellas */
@@ -1027,6 +1045,11 @@ g.timeline.seek('13:00'); g.blast('antifraude'); g.filterOwners(['pagos']);</pre
     (window.React && window.ReactDOM ? Promise.resolve() : REACT_URLS.reduce(function (p, u) { return p.then(function () { return loadScript(u); }); }, Promise.resolve()))
       .then(function () { RX = window.GraphXReactFactory(window.React, function () { return window.GraphX; }); $('catalog').innerHTML = ''; root = window.ReactDOM.createRoot($('catalog')); draw(); })
       .catch(function (e) { $('catalog').innerHTML = '<p class="msg">' + esc(e.message) + '. El catálogo necesita React desde cdnjs.</p>'; });
+  }
+
+  /* ---------- ATLAS: varias perspectivas del mismo sistema (examples/fx/atlas.js) ---------- */
+  function initAtlas() {
+    window.GraphXAtlas.mount($('g-atlas'), clone(DATA.atlas), { lang: LANG, height: 760, header: false });
   }
 
   /* ---------- ÁRBOL: este repositorio o uno pegado ---------- */

@@ -17,6 +17,7 @@ Los que llevan datos sintéticos se regeneran con su script.
 | [Incorporación de una persona](#incorporación-de-una-persona) | proceso de RR. HH. sin código: carriles, niveles, flujo | (a mano) |
 | [Radar de PRs](#radar-de-prs) | estados propios, enlaces y recorrido generados desde datos | `node examples/warehouses-pr-radar/gen-graph.mjs` |
 | [Revisión de una PR](#revisión-de-una-pr) | diff de 73 piezas en cuatro niveles | (a mano) |
+| [Atlas de una tienda](#atlas-de-una-tienda) | varias perspectivas con las piezas compartidas, fichas e interiores | `node examples/fx/build-atlas.mjs <salida.html>` |
 | Mermaid, uno por tipo | `examples/mermaid/*.mmd`: flowchart, secuencia, clases, estados, ER, gantt, git, C4… | (a mano) |
 
 ## Checkout de la tienda
@@ -102,3 +103,13 @@ etapa como calor, el canario con su progreso, los equipos y, por `%% @gx`, los r
 `examples/pr-review-stack-202.json` · el ejemplo con el que nació GraphX: un diff en cuatro niveles.
 
 ![Revisión de una PR](img/ej-pr-review.webp)
+
+## Atlas de una tienda
+
+`examples/fx/atlas.json` (en inglés, `examples/en/fx/atlas.json`) · no es un diagrama sino un atlas: 20 piezas
+declaradas una vez y siete perspectivas que las usan (arquitectura, ciclo de un pedido, flujo de datos, impacto,
+cambios del sprint y, por dentro, Pagos y los estados de un pedido). Se monta con `examples/fx/atlas.js`;
+`node examples/fx/build-atlas.mjs <salida.html> [--lang en]` hace la página. Ver [la demo](demo.md#atlas).
+
+![El atlas](img/demo-atlas.webp)
+

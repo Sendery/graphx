@@ -1,0 +1,1423 @@
+{
+ "title": "Online store",
+ "summary": "An atlas: the same system seen from five questions. The nodes are the same in every perspective: each node's card says where else it appears, what constrains it and what worries us about it.",
+ "owners": {
+  "web": {
+   "label": "Web team",
+   "short": "WB",
+   "color": "#2563eb",
+   "contact": "#web"
+  },
+  "checkout": {
+   "label": "Checkout",
+   "short": "CO",
+   "color": "#0b7480",
+   "contact": "#checkout"
+  },
+  "pagos": {
+   "label": "Payments",
+   "short": "PG",
+   "color": "#8250df",
+   "contact": "#payments"
+  },
+  "plataforma": {
+   "label": "Platform",
+   "short": "PF",
+   "color": "#b45309",
+   "contact": "#platform"
+  },
+  "datos": {
+   "label": "Data",
+   "short": "DT",
+   "color": "#16a34a",
+   "contact": "#data"
+  }
+ },
+ "entities": {
+  "web": {
+   "label": "Web store",
+   "kind": "ui",
+   "owner": "web",
+   "path": "apps/web",
+   "summary": "The store in the browser: catalog, cart and checkout."
+  },
+  "app": {
+   "label": "Mobile app",
+   "kind": "mobile",
+   "owner": "web",
+   "path": "apps/mobile",
+   "summary": "The iOS and Android app; it talks to the same gateway."
+  },
+  "gateway": {
+   "label": "API Gateway",
+   "kind": "service",
+   "owner": "plataforma",
+   "path": "infra/gateway",
+   "summary": "The single way in: authenticates, rate-limits and routes.",
+   "doc": {
+    "context": "All client traffic has come in here since 2024; before that, every service had its own domain.",
+    "constraints": [
+     "No business logic in the gateway",
+     "Limit of 50 requests/s per client"
+    ]
+   }
+  },
+  "auth": {
+   "label": "Identity",
+   "kind": "lock",
+   "owner": "plataforma",
+   "path": "services/auth",
+   "summary": "Sessions and tokens; validates every gateway request."
+  },
+  "catalogo": {
+   "label": "Catalog",
+   "kind": "search",
+   "owner": "web",
+   "path": "services/catalog",
+   "summary": "Products, prices and search; almost everything comes from Redis."
+  },
+  "carrito": {
+   "label": "Cart",
+   "kind": "cart",
+   "owner": "checkout",
+   "path": "services/cart",
+   "summary": "Each customer's cart and the step to an order."
+  },
+  "pedidos": {
+   "label": "Orders",
+   "kind": "service",
+   "owner": "checkout",
+   "path": "services/orders",
+   "inner": "pedido-estados",
+   "summary": "Creates the order, charges it through Payments and tells everyone else through Kafka.",
+   "doc": {
+    "context": "The heart of checkout. It owns the order's state: nobody else changes it.",
+    "constraints": [
+     "No order is created without an authorized charge",
+     "Every state change publishes an event"
+    ],
+    "risks": [
+     "If Kafka doesn't accept the event, stock isn't reserved: today it's retried in memory"
+    ],
+    "todo": [
+     {
+      "text": "Transactional outbox for events",
+      "done": false
+     },
+     {
+      "text": "Idempotent “Create order”",
+      "done": true
+     }
+    ]
+   }
+  },
+  "pagos": {
+   "label": "Payments",
+   "kind": "card",
+   "owner": "pagos",
+   "path": "services/payments",
+   "inner": "pagos-dentro",
+   "summary": "Authorizes the charge: asks Fraud check, then the gateway.",
+   "doc": {
+    "context": "Replaces the monolith's payments module since sprint 42.",
+    "constraints": [
+     "PCI: the card number never leaves the tokenizer",
+     "3 s total timeout towards the payment gateway"
+    ],
+    "risks": [
+     "Fraud check is on the critical path: if it's slow, the charge is slow"
+    ],
+    "todo": [
+     {
+      "text": "Retry queue for the payment gateway",
+      "done": true
+     },
+     {
+      "text": "Asynchronous fraud check under €30",
+      "done": false
+     }
+    ]
+   }
+  },
+  "antifraude": {
+   "label": "Fraud check",
+   "kind": "shield",
+   "owner": "pagos",
+   "path": "services/fraud",
+   "summary": "Scores each charge's risk with a model; above 0.8 it rejects it.",
+   "doc": {
+    "context": "An in-house model retrained every week with chargebacks.",
+    "constraints": [
+     "Answer in under 300 ms or the charge goes on unscored"
+    ],
+    "risks": [
+     "p95 is around 480 ms during sales: above its target",
+     "A badly deployed model rejects good charges"
+    ],
+    "todo": [
+     {
+      "text": "Per-customer score cache",
+      "done": false
+     },
+     {
+      "text": "Canary deployment for the model",
+      "done": false
+     }
+    ]
+   }
+  },
+  "stock": {
+   "label": "Stock",
+   "kind": "service",
+   "owner": "checkout",
+   "path": "services/inventory",
+   "summary": "Reserves units when “order.created” arrives and tells the warehouse.",
+   "doc": {
+    "risks": [
+     "If the event arrives late, we can sell what we don't have"
+    ]
+   }
+  },
+  "notificaciones": {
+   "label": "Notifications",
+   "kind": "bell",
+   "owner": "plataforma",
+   "path": "services/notify",
+   "summary": "Emails and push notifications from the events."
+  },
+  "postgres": {
+   "label": "PostgreSQL",
+   "kind": "datastore",
+   "owner": "datos",
+   "path": "infra/postgres",
+   "summary": "Orders and charges. One primary and two replicas.",
+   "doc": {
+    "constraints": [
+     "Only Orders and Payments write",
+     "Hourly backups, kept 30 days"
+    ],
+    "risks": [
+     "A single primary: if it goes down, all of checkout stops"
+    ]
+   }
+  },
+  "redis": {
+   "label": "Redis",
+   "kind": "cache",
+   "owner": "plataforma",
+   "path": "infra/redis",
+   "summary": "Cache for the catalog and the sessions."
+  },
+  "kafka": {
+   "label": "Kafka",
+   "kind": "queue",
+   "owner": "datos",
+   "path": "infra/kafka",
+   "summary": "The event bus: order.created, payment.completed, stock.reserved.",
+   "doc": {
+    "context": "Three brokers; events are kept for 7 days.",
+    "risks": [
+     "During sales, consumer lag reaches 90 s"
+    ]
+   }
+  },
+  "pasarela": {
+   "label": "Payment gateway",
+   "kind": "external",
+   "path": "—",
+   "summary": "The external provider that authorizes cards."
+  },
+  "almacen": {
+   "label": "Warehouse (WMS)",
+   "kind": "external",
+   "summary": "The warehouse system: receives reservations and prepares shipments."
+  },
+  "lake": {
+   "label": "Data lake",
+   "kind": "cloud",
+   "owner": "datos",
+   "path": "data/lake",
+   "summary": "Every event, for analytics and to retrain Fraud check."
+  },
+  "email": {
+   "label": "Email provider",
+   "kind": "mail",
+   "summary": "The external service that sends the emails."
+  },
+  "reintentos": {
+   "label": "Retry queue",
+   "kind": "queue",
+   "owner": "pagos",
+   "path": "services/payments/retry",
+   "summary": "Retries charges that fail at the payment gateway, with growing back-off.",
+   "doc": {
+    "context": "New in sprint 42.",
+    "todo": [
+     {
+      "text": "Alert if the queue goes over 100",
+      "done": false
+     }
+    ]
+   }
+  },
+  "pagos-legado": {
+   "label": "Payments (monolith)",
+   "kind": "package",
+   "owner": "pagos",
+   "path": "legacy/monolith/payments",
+   "summary": "The monolith's payments module. Retired in sprint 42."
+  }
+ },
+ "perspectives": [
+  {
+   "id": "arquitectura",
+   "title": "Overall architecture",
+   "icon": "◇",
+   "question": "What nodes are there and how do they talk?",
+   "spec": {
+    "lanes": [
+     {
+      "id": "clientes",
+      "label": "Clients"
+     },
+     {
+      "id": "borde",
+      "label": "Edge"
+     },
+     {
+      "id": "servicios",
+      "label": "Services"
+     },
+     {
+      "id": "datos",
+      "label": "Data"
+     },
+     {
+      "id": "terceros",
+      "label": "Third parties"
+     },
+     {
+      "id": "panel",
+      "label": "Indicators"
+     }
+    ],
+    "nodes": [
+     {
+      "id": "web",
+      "lane": "clientes"
+     },
+     {
+      "id": "app",
+      "lane": "clientes"
+     },
+     {
+      "id": "gateway",
+      "lane": "borde",
+      "heat": 35
+     },
+     {
+      "id": "auth",
+      "lane": "borde",
+      "heat": 60
+     },
+     {
+      "id": "catalogo",
+      "lane": "servicios",
+      "heat": 90,
+      "spark": [
+       70,
+       75,
+       82,
+       88,
+       95,
+       90
+      ],
+      "unit": "ms"
+     },
+     {
+      "id": "carrito",
+      "lane": "servicios",
+      "heat": 70
+     },
+     {
+      "id": "pedidos",
+      "lane": "servicios",
+      "heat": 160
+     },
+     {
+      "id": "pagos",
+      "lane": "servicios",
+      "heat": 260,
+      "spark": [
+       180,
+       190,
+       210,
+       240,
+       262,
+       255
+      ],
+      "unit": "ms"
+     },
+     {
+      "id": "antifraude",
+      "lane": "servicios",
+      "heat": 480,
+      "alert": "warn",
+      "spark": [
+       210,
+       260,
+       330,
+       410,
+       470,
+       480
+      ],
+      "unit": "ms"
+     },
+     {
+      "id": "stock",
+      "lane": "servicios",
+      "heat": 120
+     },
+     {
+      "id": "notificaciones",
+      "lane": "servicios",
+      "heat": 40
+     },
+     {
+      "id": "postgres",
+      "lane": "datos",
+      "heat": 30
+     },
+     {
+      "id": "redis",
+      "lane": "datos",
+      "heat": 4
+     },
+     {
+      "id": "kafka",
+      "lane": "datos",
+      "heat": 20
+     },
+     {
+      "id": "pasarela",
+      "lane": "terceros",
+      "heat": 310
+     },
+     {
+      "id": "almacen",
+      "lane": "terceros"
+     },
+     {
+      "id": "k-pedidos",
+      "lane": "panel",
+      "label": "Orders per hour",
+      "shape": "kpi",
+      "kind": "cart",
+      "value": 820,
+      "change": 4.2,
+      "spark": [
+       610,
+       650,
+       700,
+       760,
+       790,
+       820
+      ],
+      "summary": "Charged orders in the last hour."
+     },
+     {
+      "id": "k-error",
+      "lane": "panel",
+      "label": "Error budget",
+      "shape": "gauge",
+      "kind": "gauge",
+      "value": 64,
+      "unit": "%",
+      "thresholds": [
+       40,
+       20
+      ],
+      "good": "high",
+      "summary": "What's left of this month's error budget."
+     },
+     {
+      "id": "k-metodos",
+      "lane": "panel",
+      "label": "Payment methods",
+      "shape": "donut",
+      "kind": "card",
+      "parts": [
+       {
+        "label": "Card",
+        "value": 61
+       },
+       {
+        "label": "Bizum",
+        "value": 22
+       },
+       {
+        "label": "PayPal",
+        "value": 12
+       },
+       {
+        "label": "Other",
+        "value": 5
+       }
+      ],
+      "summary": "Today's charges by method."
+     }
+    ],
+    "edges": [
+     {
+      "id": "a1",
+      "from": "web",
+      "to": "gateway",
+      "kind": "http",
+      "label": "HTTPS",
+      "rate": 600
+     },
+     {
+      "id": "a2",
+      "from": "app",
+      "to": "gateway",
+      "kind": "http",
+      "label": "HTTPS",
+      "rate": 300
+     },
+     {
+      "id": "a3",
+      "from": "gateway",
+      "to": "auth",
+      "kind": "rpc",
+      "label": "valid token?",
+      "rate": 900
+     },
+     {
+      "id": "a4",
+      "from": "gateway",
+      "to": "catalogo",
+      "kind": "http",
+      "rate": 500
+     },
+     {
+      "id": "a5",
+      "from": "gateway",
+      "to": "carrito",
+      "kind": "http",
+      "rate": 200
+     },
+     {
+      "id": "a6",
+      "from": "carrito",
+      "to": "pedidos",
+      "kind": "call",
+      "label": "Create order",
+      "rate": 60
+     },
+     {
+      "id": "a7",
+      "from": "pedidos",
+      "to": "pagos",
+      "kind": "call",
+      "label": "Charge",
+      "rate": 40,
+      "emphasis": "hero",
+      "animated": true
+     },
+     {
+      "id": "a8",
+      "from": "pagos",
+      "to": "antifraude",
+      "kind": "rpc",
+      "label": "Score",
+      "rate": 40
+     },
+     {
+      "id": "a9",
+      "from": "pagos",
+      "to": "pasarela",
+      "kind": "http",
+      "label": "Authorize",
+      "rate": 38
+     },
+     {
+      "id": "a10",
+      "from": "pedidos",
+      "to": "postgres",
+      "kind": "data",
+      "rate": 90
+     },
+     {
+      "id": "a11",
+      "from": "pagos",
+      "to": "postgres",
+      "kind": "data",
+      "rate": 40
+     },
+     {
+      "id": "a12",
+      "from": "pedidos",
+      "to": "kafka",
+      "kind": "event",
+      "label": "order.created",
+      "rate": 60
+     },
+     {
+      "id": "a13",
+      "from": "kafka",
+      "to": "stock",
+      "kind": "event",
+      "rate": 60
+     },
+     {
+      "id": "a14",
+      "from": "kafka",
+      "to": "notificaciones",
+      "kind": "event",
+      "rate": 60
+     },
+     {
+      "id": "a15",
+      "from": "stock",
+      "to": "almacen",
+      "kind": "http",
+      "label": "Reserve",
+      "rate": 20
+     },
+     {
+      "id": "a16",
+      "from": "catalogo",
+      "to": "redis",
+      "kind": "data",
+      "rate": 450
+     },
+     {
+      "id": "a17",
+      "from": "auth",
+      "to": "redis",
+      "kind": "data",
+      "rate": 800
+     }
+    ],
+    "fx": {
+     "preset": "vivid",
+     "heat": {
+      "label": "p95 latency",
+      "unit": "ms",
+      "domain": [
+       0,
+       600
+      ],
+      "scheme": "traffic"
+     }
+    }
+   },
+   "short": "Overview"
+  },
+  {
+   "id": "pedido",
+   "title": "Life of an order",
+   "icon": "⇄",
+   "kind": "sequence",
+   "question": "What happens when I press “Buy”?",
+   "spec": {
+    "graphTab": false,
+    "initialView": "flow:pedido",
+    "nodes": [
+     {
+      "id": "web"
+     },
+     {
+      "id": "carrito"
+     },
+     {
+      "id": "pedidos"
+     },
+     {
+      "id": "pagos"
+     },
+     {
+      "id": "antifraude"
+     },
+     {
+      "id": "pasarela"
+     },
+     {
+      "id": "kafka"
+     },
+     {
+      "id": "stock"
+     },
+     {
+      "id": "notificaciones"
+     }
+    ],
+    "edges": [],
+    "flows": [
+     {
+      "id": "pedido",
+      "title": "Buy",
+      "participants": [
+       "web",
+       "carrito",
+       "pedidos",
+       "pagos",
+       "antifraude",
+       "pasarela",
+       "kafka",
+       "stock",
+       "notificaciones"
+      ],
+      "messages": [
+       {
+        "id": "m1",
+        "from": "web",
+        "to": "carrito",
+        "label": "Buy",
+        "kind": "sync"
+       },
+       {
+        "id": "m2",
+        "from": "carrito",
+        "to": "pedidos",
+        "label": "Create order",
+        "kind": "sync"
+       },
+       {
+        "kind": "phase",
+        "label": "Charge"
+       },
+       {
+        "id": "m3",
+        "from": "pedidos",
+        "to": "pagos",
+        "label": "Charge €49.90",
+        "kind": "sync"
+       },
+       {
+        "id": "m4",
+        "from": "pagos",
+        "to": "antifraude",
+        "label": "Is it legit?",
+        "kind": "sync"
+       },
+       {
+        "id": "m5",
+        "from": "antifraude",
+        "to": "pagos",
+        "label": "risk 0.12",
+        "kind": "return"
+       },
+       {
+        "id": "m6",
+        "from": "pagos",
+        "to": "pasarela",
+        "label": "Authorize",
+        "kind": "sync"
+       },
+       {
+        "id": "m7",
+        "from": "pasarela",
+        "to": "pagos",
+        "label": "OK",
+        "kind": "return"
+       },
+       {
+        "id": "m8",
+        "from": "pagos",
+        "to": "pedidos",
+        "label": "Charged",
+        "kind": "return"
+       },
+       {
+        "kind": "phase",
+        "label": "After the charge"
+       },
+       {
+        "id": "m9",
+        "from": "pedidos",
+        "to": "kafka",
+        "label": "order.created",
+        "kind": "async"
+       },
+       {
+        "id": "m10",
+        "from": "kafka",
+        "to": "stock",
+        "label": "Reserve",
+        "kind": "async"
+       },
+       {
+        "id": "m11",
+        "from": "kafka",
+        "to": "notificaciones",
+        "label": "Confirmation email",
+        "kind": "async"
+       },
+       {
+        "id": "m12",
+        "from": "pedidos",
+        "to": "web",
+        "label": "201 · order 48213",
+        "kind": "return"
+       }
+      ]
+     }
+    ],
+    "fx": {
+     "preset": "present"
+    }
+   },
+   "short": "Order"
+  },
+  {
+   "id": "datos",
+   "title": "Data flow",
+   "icon": "≋",
+   "question": "Where does each piece of data travel, and how long does it take?",
+   "spec": {
+    "direction": "right",
+    "lanes": [
+     {
+      "id": "origen",
+      "label": "Write"
+     },
+     {
+      "id": "bus",
+      "label": "Bus"
+     },
+     {
+      "id": "consumen",
+      "label": "Consume"
+     },
+     {
+      "id": "fuera",
+      "label": "Outside"
+     }
+    ],
+    "nodes": [
+     {
+      "id": "pedidos",
+      "lane": "origen"
+     },
+     {
+      "id": "pagos",
+      "lane": "origen"
+     },
+     {
+      "id": "postgres",
+      "lane": "origen",
+      "heat": 1
+     },
+     {
+      "id": "kafka",
+      "lane": "bus",
+      "heat": 4
+     },
+     {
+      "id": "stock",
+      "lane": "consumen",
+      "heat": 6
+     },
+     {
+      "id": "notificaciones",
+      "lane": "consumen",
+      "heat": 9
+     },
+     {
+      "id": "lake",
+      "lane": "consumen",
+      "heat": 30
+     },
+     {
+      "id": "almacen",
+      "lane": "fuera"
+     },
+     {
+      "id": "email",
+      "lane": "fuera"
+     }
+    ],
+    "edges": [
+     {
+      "id": "d1",
+      "from": "pedidos",
+      "to": "postgres",
+      "kind": "data",
+      "label": "INSERT order",
+      "rate": 60
+     },
+     {
+      "id": "d2",
+      "from": "pagos",
+      "to": "postgres",
+      "kind": "data",
+      "label": "INSERT charge",
+      "rate": 40
+     },
+     {
+      "id": "d3",
+      "from": "pedidos",
+      "to": "kafka",
+      "kind": "event",
+      "label": "order.created",
+      "rate": 60
+     },
+     {
+      "id": "d4",
+      "from": "pagos",
+      "to": "kafka",
+      "kind": "event",
+      "label": "payment.completed",
+      "rate": 40
+     },
+     {
+      "id": "d5",
+      "from": "kafka",
+      "to": "stock",
+      "kind": "event",
+      "rate": 60
+     },
+     {
+      "id": "d6",
+      "from": "kafka",
+      "to": "notificaciones",
+      "kind": "event",
+      "rate": 100
+     },
+     {
+      "id": "d7",
+      "from": "kafka",
+      "to": "lake",
+      "kind": "data",
+      "label": "everything",
+      "rate": 100
+     },
+     {
+      "id": "d8",
+      "from": "stock",
+      "to": "almacen",
+      "kind": "http",
+      "label": "reservation",
+      "rate": 20
+     },
+     {
+      "id": "d9",
+      "from": "notificaciones",
+      "to": "email",
+      "kind": "http",
+      "label": "email",
+      "rate": 60
+     }
+    ],
+    "timeline": {
+     "label": "A sales day",
+     "data": "time\tkafka.heat\tstock.heat\tnotificaciones.heat\tlake.heat\td3\td4\td5\td6\td7\tevent\n08:00\t2\t3\t5\t20\t20\t14\t20\t34\t34\t\n09:00\t3\t4\t6\t24\t40\t28\t40\t68\t68\t\n10:00\t4\t6\t9\t30\t60\t40\t60\t100\t100\tSales start\n11:00\t9\t14\t22\t45\t130\t90\t130\t220\t220\t\n12:00\t22\t35\t48\t70\t210\t150\t210\t360\t360\t\n13:00\t48\t88\t96\t110\t260\t190\t260\t450\t450\tPeak: 90 s of lag\n14:00\t30\t52\t60\t90\t220\t160\t220\t380\t380\tConsumers added\n15:00\t12\t18\t22\t60\t170\t120\t170\t290\t290\t\n16:00\t6\t9\t12\t40\t120\t85\t120\t205\t205\t\n17:00\t4\t6\t9\t32\t90\t62\t90\t152\t152\t\n18:00\t3\t5\t7\t28\t80\t55\t80\t135\t135\t\n19:00\t3\t4\t6\t25\t70\t48\t70\t118\t118\t\n20:00\t2\t3\t5\t22\t50\t35\t50\t85\t85\t",
+     "events": [
+      {
+       "time": "10:00",
+       "label": "Sales start",
+       "tone": "info",
+       "nodes": [
+        "pedidos"
+       ]
+      },
+      {
+       "time": "13:00",
+       "label": "Peak: 90 s of lag",
+       "tone": "crit",
+       "nodes": [
+        "stock",
+        "notificaciones"
+       ]
+      },
+      {
+       "time": "14:00",
+       "label": "Consumers added",
+       "tone": "ok",
+       "nodes": [
+        "kafka"
+       ]
+      }
+     ],
+     "window": 6,
+     "start": "start"
+    },
+    "fx": {
+     "particles": "data",
+     "entrance": "cascade",
+     "glow": true,
+     "gradient": true,
+     "heat": {
+      "label": "Lag",
+      "unit": "s",
+      "domain": [
+       0,
+       100
+      ],
+      "scheme": "heat"
+     }
+    }
+   },
+   "short": "Data"
+  },
+  {
+   "id": "impacto",
+   "title": "Dependencies and impact",
+   "icon": "✺",
+   "after": {
+    "blast": "antifraude"
+   },
+   "question": "What breaks if a node goes down?",
+   "spec": {
+    "nodes": [
+     {
+      "id": "web"
+     },
+     {
+      "id": "gateway"
+     },
+     {
+      "id": "auth"
+     },
+     {
+      "id": "catalogo"
+     },
+     {
+      "id": "carrito"
+     },
+     {
+      "id": "pedidos"
+     },
+     {
+      "id": "pagos"
+     },
+     {
+      "id": "antifraude"
+     },
+     {
+      "id": "stock"
+     },
+     {
+      "id": "notificaciones"
+     },
+     {
+      "id": "postgres"
+     },
+     {
+      "id": "redis"
+     },
+     {
+      "id": "kafka"
+     },
+     {
+      "id": "pasarela"
+     }
+    ],
+    "edges": [
+     {
+      "id": "i1",
+      "from": "web",
+      "to": "gateway",
+      "kind": "http"
+     },
+     {
+      "id": "i2",
+      "from": "gateway",
+      "to": "auth",
+      "kind": "rpc"
+     },
+     {
+      "id": "i3",
+      "from": "gateway",
+      "to": "catalogo",
+      "kind": "http"
+     },
+     {
+      "id": "i4",
+      "from": "gateway",
+      "to": "carrito",
+      "kind": "http"
+     },
+     {
+      "id": "i5",
+      "from": "carrito",
+      "to": "pedidos",
+      "kind": "call"
+     },
+     {
+      "id": "i6",
+      "from": "pedidos",
+      "to": "pagos",
+      "kind": "call"
+     },
+     {
+      "id": "i7",
+      "from": "pagos",
+      "to": "antifraude",
+      "kind": "rpc"
+     },
+     {
+      "id": "i8",
+      "from": "pagos",
+      "to": "pasarela",
+      "kind": "http"
+     },
+     {
+      "id": "i9",
+      "from": "pedidos",
+      "to": "postgres",
+      "kind": "data"
+     },
+     {
+      "id": "i10",
+      "from": "pagos",
+      "to": "postgres",
+      "kind": "data"
+     },
+     {
+      "id": "i11",
+      "from": "pedidos",
+      "to": "kafka",
+      "kind": "event"
+     },
+     {
+      "id": "i12",
+      "from": "kafka",
+      "to": "stock",
+      "kind": "event"
+     },
+     {
+      "id": "i13",
+      "from": "kafka",
+      "to": "notificaciones",
+      "kind": "event"
+     },
+     {
+      "id": "i14",
+      "from": "catalogo",
+      "to": "redis",
+      "kind": "data"
+     },
+     {
+      "id": "i15",
+      "from": "auth",
+      "to": "redis",
+      "kind": "data"
+     }
+    ],
+    "fx": "neon"
+   },
+   "short": "Impact"
+  },
+  {
+   "id": "sprint",
+   "title": "Sprint 42 changes",
+   "icon": "±",
+   "question": "What changed, and where should I look?",
+   "spec": {
+    "lanes": [
+     {
+      "id": "checkout",
+      "label": "Checkout"
+     },
+     {
+      "id": "cobro",
+      "label": "Charging"
+     },
+     {
+      "id": "infra",
+      "label": "Infrastructure"
+     }
+    ],
+    "nodes": [
+     {
+      "id": "pedidos",
+      "lane": "checkout",
+      "delta": "modified",
+      "files": [
+       {
+        "path": "services/orders/checkout.ts",
+        "additions": 42,
+        "deletions": 18
+       },
+       {
+        "path": "services/orders/payments-client.ts",
+        "additions": 12,
+        "deletions": 30
+       }
+      ]
+     },
+     {
+      "id": "pagos",
+      "lane": "cobro",
+      "delta": "modified",
+      "files": [
+       {
+        "path": "services/payments/charge.ts",
+        "additions": 88,
+        "deletions": 21
+       }
+      ]
+     },
+     {
+      "id": "reintentos",
+      "lane": "cobro",
+      "delta": "added",
+      "files": [
+       {
+        "path": "services/payments/retry/queue.ts",
+        "additions": 140,
+        "deletions": 0
+       },
+       {
+        "path": "services/payments/retry/backoff.ts",
+        "additions": 36,
+        "deletions": 0
+       }
+      ]
+     },
+     {
+      "id": "antifraude",
+      "lane": "cobro",
+      "delta": "modified",
+      "notes": [
+       {
+        "tone": "warn",
+        "text": "New rules without a canary deployment"
+       }
+      ],
+      "files": [
+       {
+        "path": "services/fraud/rules.yaml",
+        "additions": 14,
+        "deletions": 3
+       }
+      ]
+     },
+     {
+      "id": "pagos-legado",
+      "lane": "cobro",
+      "delta": "removed",
+      "files": [
+       {
+        "path": "legacy/monolith/payments/index.js",
+        "additions": 0,
+        "deletions": 1240
+       }
+      ]
+     },
+     {
+      "id": "pasarela",
+      "lane": "cobro"
+     },
+     {
+      "id": "kafka",
+      "lane": "infra"
+     },
+     {
+      "id": "postgres",
+      "lane": "infra",
+      "delta": "modified",
+      "files": [
+       {
+        "path": "infra/postgres/migrations/042_payments.sql",
+        "additions": 22,
+        "deletions": 0
+       }
+      ]
+     }
+    ],
+    "edges": [
+     {
+      "id": "s1",
+      "from": "pedidos",
+      "to": "pagos",
+      "kind": "call",
+      "delta": "added",
+      "label": "Charge"
+     },
+     {
+      "id": "s2",
+      "from": "pedidos",
+      "to": "pagos-legado",
+      "kind": "call",
+      "delta": "removed",
+      "label": "Charge (before)"
+     },
+     {
+      "id": "s3",
+      "from": "pagos",
+      "to": "antifraude",
+      "kind": "rpc"
+     },
+     {
+      "id": "s4",
+      "from": "pagos",
+      "to": "reintentos",
+      "kind": "queue",
+      "delta": "added",
+      "label": "gateway failed"
+     },
+     {
+      "id": "s5",
+      "from": "reintentos",
+      "to": "pasarela",
+      "kind": "http",
+      "delta": "added",
+      "label": "retry"
+     },
+     {
+      "id": "s6",
+      "from": "pagos",
+      "to": "pasarela",
+      "kind": "http"
+     },
+     {
+      "id": "s7",
+      "from": "pagos",
+      "to": "postgres",
+      "kind": "data",
+      "delta": "added"
+     },
+     {
+      "id": "s8",
+      "from": "pedidos",
+      "to": "kafka",
+      "kind": "event"
+     }
+    ],
+    "fx": "calm"
+   },
+   "short": "Sprint 42"
+  },
+  {
+   "id": "pagos-dentro",
+   "title": "Payments, inside",
+   "icon": "⊡",
+   "parent": "pagos",
+   "question": "How does Payments authorize a charge?",
+   "spec": {
+    "direction": "right",
+    "nodes": [
+     {
+      "id": "api-cobros",
+      "label": "Charges API",
+      "kind": "route",
+      "summary": "POST /charges: the only way into Payments."
+     },
+     {
+      "id": "tokenizador",
+      "label": "Tokenizer",
+      "kind": "lock",
+      "summary": "Swaps the card number for a token. The only thing in PCI scope."
+     },
+     {
+      "id": "antifraude"
+     },
+     {
+      "id": "enrutador",
+      "label": "Router",
+      "kind": "function",
+      "summary": "Picks the payment gateway by country and cost."
+     },
+     {
+      "id": "reintentos"
+     },
+     {
+      "id": "pasarela"
+     },
+     {
+      "id": "libro",
+      "label": "Charge ledger",
+      "kind": "datastore",
+      "summary": "Every charge attempt, immutable (in PostgreSQL)."
+     },
+     {
+      "id": "conciliacion",
+      "label": "Reconciliation",
+      "kind": "job",
+      "summary": "Every night, reconciles the ledger with the gateway reports."
+     }
+    ],
+    "edges": [
+     {
+      "id": "p1",
+      "from": "api-cobros",
+      "to": "tokenizador",
+      "kind": "call",
+      "label": "card"
+     },
+     {
+      "id": "p2",
+      "from": "tokenizador",
+      "to": "antifraude",
+      "kind": "rpc",
+      "label": "token + amount"
+     },
+     {
+      "id": "p3",
+      "from": "antifraude",
+      "to": "enrutador",
+      "kind": "call",
+      "label": "risk"
+     },
+     {
+      "id": "p4",
+      "from": "enrutador",
+      "to": "pasarela",
+      "kind": "http",
+      "label": "authorize",
+      "emphasis": "hero",
+      "animated": true
+     },
+     {
+      "id": "p5",
+      "from": "enrutador",
+      "to": "reintentos",
+      "kind": "queue",
+      "label": "if it fails"
+     },
+     {
+      "id": "p6",
+      "from": "reintentos",
+      "to": "pasarela",
+      "kind": "http",
+      "label": "retry"
+     },
+     {
+      "id": "p7",
+      "from": "enrutador",
+      "to": "libro",
+      "kind": "data",
+      "label": "attempt"
+     },
+     {
+      "id": "p8",
+      "from": "conciliacion",
+      "to": "libro",
+      "kind": "data",
+      "label": "reconciles"
+     }
+    ],
+    "fx": {
+     "skin": "blueprint",
+     "entrance": "cascade",
+     "particles": true,
+     "glow": true
+    }
+   },
+   "short": "Payments ⊡"
+  },
+  {
+   "id": "pedido-estados",
+   "title": "Order states",
+   "icon": "◎",
+   "parent": "pedidos",
+   "question": "Which states does an order go through?",
+   "mermaid": "stateDiagram-v2\n  [*] --> Created\n  Created --> Paid: charge authorized\n  Created --> Cancelled: charge rejected\n  Paid --> Preparing: stock reserved\n  Paid --> Refunded: return\n  Preparing --> Shipped: leaves the warehouse\n  Shipped --> Delivered\n  Delivered --> Refunded: return\n  Delivered --> [*]\n  Cancelled --> [*]\n  Refunded --> [*]",
+   "fx": "glass",
+   "short": "States"
+  }
+ ]
+}
