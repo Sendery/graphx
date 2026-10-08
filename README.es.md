@@ -85,8 +85,9 @@ node graphx-build.mjs examples/onboarding-proceso.json --out /tmp/onboarding.htm
 | 🎛 **Configurable** | cada efecto se enciende o se apaga con `fx`; `fx: false` es el diagrama de siempre, tal cual |
 | 📦 **Portable** | un solo `<script>`; no pide al navegador más que SVG; funciona sin red con el bundle completo |
 
-La [demo en vivo](docs/demo/es/index.html) lo reúne todo en una página con ocho pestañas: **Software**, **Casos de
-uso**, **Diagramas**, **Piezas**, **Formas**, **Árbol**, **En vivo** y una **Guía** de cada asset y cada efecto.
+La [demo en vivo](docs/demo/es/index.html) lo reúne todo en una página con nueve pestañas: **Software**, **Casos de
+uso**, **Diagramas**, **Piezas**, **Formas**, **Árbol**, **Atlas** (un sistema visto desde varias perspectivas, con
+las piezas compartidas), **En vivo** y una **Guía** de cada asset y cada efecto.
 
 <img src="docs/img/demo-portada.webp" alt="La portada de la demo">
 
@@ -258,10 +259,43 @@ cuenta uno a uno.
 
 </details>
 
+<details open>
+<summary><h3>📦 Instalar en Claude Code</h3></summary>
+
+```bash
+git clone https://github.com/Sendery/graphx.git && cd graphx
+node install.mjs
+```
+
+El instalador pregunta con casillas (↑ ↓ mover · espacio marcar · `a` todo · ⏎ instalar) qué pone en `~/.claude`
+(o en `$CLAUDE_CONFIG_DIR`):
+
+| | Qué instala | Dónde | Cómo se usa |
+|---|---|---|---|
+| **Skill** `graphx` | enseña a Claude a dibujar y a explicar con diagramas: qué tipo usar, recorridos guiados, carteles, datos en vivo | `~/.claude/skills/graphx` | `/graphx <lo que quieres dibujar>` · `/graphx help` |
+| **Mod para el terminal** `graphx-mod` | el plugin: el lienzo de caracteres en el panel, el visor del navegador, las herramientas `mcp__graphx-mod__*` y los bloques Mermaid dibujados en el transcript | `~/.claude/skills/graphx-mod` | `/graphx-mod` · `/graphx-mod help` · `/graphx-mod open` |
+| **Mod para la app de escritorio** | el mismo mod y la ruta absoluta de `node` (una app abierta desde el Dock no hereda el `PATH` de tu shell) | `~/.claude/skills/graphx-mod/node-path` | reinicia Claude Desktop |
+
+La skill y el mod van separados a propósito: `/graphx` es la skill (pides en lenguaje normal) y `/graphx-mod` es el mod
+(el lienzo, sus comandos y sus teclas). Cada uno tiene su `help`. La skill funciona sin el mod (dibuja bloques Mermaid
+normales) y el mod sin la skill (Claude lo aprende de las descripciones de sus herramientas), pero juntos funcionan
+mejor.
+
+Sin preguntas: `node install.mjs --skill --terminal --desktop` (o `--all`, y `--yes` para lo preseleccionado),
+`--uninstall` para quitarlo, `--dry-run` para ver qué haría y `--lang es|en`. Necesita `node` ≥ 18; hace `npm install`
+y genera `dist/` si faltan. Opcional: `rsvg-convert` (librsvg) para la imagen del motor en kitty/Ghostty/WezTerm y para
+las capturas.
+
+**Idioma.** Todos los botones, mensajes y ayudas del mod están en español y en inglés: sigue la opción `language` del
+mod (`/config`), si no el `language` de Claude Code, si no `LANG`, y si nada lo dice, inglés.
+`/graphx-mod caps lang=es` lo cambia para la sesión.
+
+</details>
+
 <details>
 <summary><h3>🤖 También en Claude Code</h3></summary>
 
-La carpeta [`mod/`](mod/README.md) es un plugin de Claude Code que dibuja cualquier diagrama de GraphX dentro de
+La carpeta [`mod/`](mod/README.md) es un plugin de Claude Code (`graphx-mod`, se instala con `node install.mjs`) que dibuja cualquier diagrama de GraphX dentro de
 la sesión: Claude dibuja con herramientas y tú lo navegas con el teclado y el ratón. En el terminal vuelve a
 colocar el grafo en celdas a cualquier tamaño (tarjetas, fichas, compacto, vista general o esquema), detecta la
 profundidad de color, los caracteres y el tema, anima los efectos y presenta el recorrido paso a paso con sus
@@ -342,7 +376,9 @@ const g = GraphX.mount(el, spec, { fx: 'neon', lang: 'es' });   // o GraphX.moun
 | `react/` | componentes de React sobre las mismas formas | |
 | `graphx-build.mjs` | valida y genera una página autocontenida | |
 | `examples/` · `examples/en/` | todos los ejemplos, en castellano y en inglés | |
-| `mod/` | el plugin de Claude Code: terminal, escritorio y navegador ([mod/README.md](mod/README.md)) | |
+| `mod/` | el mod de Claude Code `graphx-mod`: terminal, escritorio y navegador ([mod/README.md](mod/README.md)) | |
+| `skills/graphx/` | la skill de Claude Code `graphx` | |
+| `install.mjs` | el instalador interactivo de la skill y el mod | |
 
 </details>
 
@@ -377,4 +413,4 @@ falla si queda castellano en la página.
 
 </details>
 
-<sub>Construido en septiembre de 2026 junto a la skill `pr-review-artifact-v5`. ELK es EPL-2.0 (https://eclipse.dev/elk).</sub>
+<sub>Construido en septiembre de 2026. ELK es EPL-2.0 (https://eclipse.dev/elk).</sub>
