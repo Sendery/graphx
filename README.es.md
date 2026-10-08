@@ -95,6 +95,16 @@ el motor.
 
 ![El catálogo de formas en React](docs/gif/es/formas.gif)
 
+### También en Claude Code
+
+La carpeta [`mod/`](mod/README.md) es un plugin de Claude Code que dibuja cualquier diagrama de GraphX dentro de
+la sesión: Claude dibuja con herramientas y tú lo navegas con el teclado y el ratón. En el terminal vuelve a
+colocar el grafo en celdas a cualquier tamaño (tarjetas, fichas, compacto, vista general o esquema), detecta la
+profundidad de color, los caracteres y el tema, anima los efectos y presenta el recorrido paso a paso con sus
+explicaciones.
+
+![Una presentación guiada de un mapa de servicios en el terminal de Claude Code](mod/docs/gif/presentacion.gif)
+
 ## Empezar en un minuto
 
 ```bash
@@ -175,6 +185,7 @@ const { GraphX, GraphXShape } = GraphXReactFactory(React, () => window.GraphX);
 | `react/` | componentes de React sobre las mismas formas | |
 | `graphx-build.mjs` | valida y genera una página autocontenida | |
 | `examples/` · `examples/en/` | todos los ejemplos, en castellano y en inglés | |
+| `mod/` | el plugin de Claude Code: terminal, escritorio y navegador ([mod/README.md](mod/README.md)) | |
 
 ## Documentación
 
@@ -193,6 +204,7 @@ node tools/verify.mjs && node tools/verify-mermaid.mjs      # pruebas sin navega
 node tools/verify-shapes.mjs && node tools/verify-tree.mjs && node tools/verify-fx.mjs
 node examples/fx/build.mjs docs/demo/es/index.html --standalone --lang es   # regenera la demo
 node tools/capture-gifs.mjs                                 # vuelve a grabar los GIF (Playwright + ffmpeg)
+node mod/tools/capture-media.mjs                            # vuelve a grabar las capturas del mod de Claude Code (ffmpeg)
 ```
 
 La página en inglés sale de la misma plantilla: `examples/fx/showcase.en.txt` guarda las traducciones y el build

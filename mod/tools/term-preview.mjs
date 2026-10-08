@@ -14,6 +14,11 @@
  *     --plain                        sin colores (el texto tal cual)
  *     --depth N --view flow:<id>     la vista del motor
  *     --detail                       pedir el detalle de la pieza seleccionada al motor
+ *     --png f.png [--chrome "título"] el fotograma como imagen (con marco de ventana)
+ *     --gif f.gif --script "hold:1500;r;hold:2500;n;hold:2500" [--fps 8]
+ *                                    una película: cada paso pulsa teclas (separadas por espacios: «tab tab d»),
+ *                                    `hold:ms` graba ese tiempo, `click:x,y` o `hover:x,y`; empieza sin espera,
+ *                                    así que se ve la cascada de entrada (necesita ffmpeg)
  *
  * Necesita `node mod/build.mjs` (el motor del servidor) y npx (esbuild). */
 import fs from 'fs';
@@ -92,17 +97,22 @@ async function drain() {
 }
 const advance = ms => { const end = clock + ms; while (true) { const due = timers.filter(t => t.next <= end).sort((a, b) => a.next - b.next)[0]; if (!due) break; clock = due.next; due.next += due.ms; due.fn(); rerender(); } clock = end; rerender(); };
 
-/* la cascada de entrada dura un segundo: las teclas, después */
-advance(+opt('--wait', 1500));
-for (const k of (opt('--keys', '') || '').split(',').filter(Boolean)) {
+async function press(k) {
   const shift = k.startsWith('S-'); const key = shift ? k.slice(2) : k;
   keyFn && keyFn({ key: key === 'space' ? ' ' : key === 'comma' ? ',' : key, ...(shift ? { shift: true } : {}) });
   rerender(); await drain(); rerender();
-  advance(60);
 }
-if (opt('--click')) { const [x, y] = opt('--click').split(',').map(Number); ptrFn && ptrFn({ type: 'down', x, y, button: 'left' }); ptrFn && ptrFn({ type: 'up', x, y, button: 'left' }); rerender(); await drain(); rerender(); }
-if (opt('--hover')) { const [x, y] = opt('--hover').split(',').map(Number); ptrFn && ptrFn({ type: 'move', x, y }); rerender(); }
-advance(+opt('--at', 0));
+async function click(x, y) { ptrFn && ptrFn({ type: 'down', x, y, button: 'left' }); ptrFn && ptrFn({ type: 'up', x, y, button: 'left' }); rerender(); await drain(); rerender(); }
+function hover(x, y) { ptrFn && ptrFn({ type: 'move', x, y }); rerender(); }
+
+/* la cascada de entrada dura un segundo: las teclas, después */
+if (!opt('--gif')) {
+  advance(+opt('--wait', 1500));
+  for (const k of (opt('--keys', '') || '').split(',').filter(Boolean)) { await press(k); advance(60); }
+  if (opt('--click')) await click(...opt('--click').split(',').map(Number));
+  if (opt('--hover')) hover(...opt('--hover').split(',').map(Number));
+  advance(+opt('--at', 0));
+}
 
 /* a ANSI */
 const NAMES = { black: 30, red: 31, green: 32, yellow: 33, blue: 34, magenta: 35, cyan: 36, white: 37, gray: 90, redBright: 91, greenBright: 92, yellowBright: 93, blueBright: 94, magentaBright: 95, cyanBright: 96, whiteBright: 97 };
@@ -122,7 +132,7 @@ function ansi(node, inh = {}) {
 }
 /* a PNG: cada celda en su sitio (SVG con fuente monoespaciada) rasterizada con rsvg-convert */
 const ANSI_HEX = { black: '#000000', red: '#cd3131', green: '#0dbc79', yellow: '#e5e510', blue: '#2472c8', magenta: '#bc3fbc', cyan: '#11a8cd', white: '#e5e5e5', gray: '#666666', redBright: '#f14c4c', greenBright: '#23d18b', yellowBright: '#f5f543', blueBright: '#3b8eea', magentaBright: '#d670d6', cyanBright: '#29b8db', whiteBright: '#ffffff' };
-function toPng(node, outFile) {
+function toSvg(node) {
   const CW = 9, CH = 19, termBg = caps.theme === 'dark' ? '#0d1117' : '#ffffff', termFg = caps.theme === 'dark' ? '#d0d7de' : '#1f2328';
   const rowsOut = [];
   const walk = (n, st, row) => {
@@ -149,13 +159,39 @@ function toPng(node, outFile) {
       x += wide;
     }
   });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cols * CW}" height="${rows * CH}"><rect width="100%" height="100%" fill="${termBg}"/><g font-family="Menlo, Monaco, monospace" font-size="15">${body}</g></svg>`;
-  const tmp = outFile.replace(/\.png$/, '.svg');
-  fs.writeFileSync(tmp, svg);
-  execFileSync('rsvg-convert', ['-o', outFile, tmp]);
-  console.log('png →', outFile);
+  const W = cols * CW, H = rows * CH, title = opt('--chrome');
+  if (title == null) return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="100%" height="100%" fill="${termBg}"/><g font-family="Menlo, Monaco, monospace" font-size="15">${body}</g></svg>`;
+  /* con marco: una ventana de terminal, para las capturas de la documentación */
+  const P = 14, T = 30, bar = caps.theme === 'dark' ? '#161b22' : '#eaeef2', line = caps.theme === 'dark' ? '#30363d' : '#d0d7de';
+  const dots = ['#ff5f57', '#febc2e', '#28c840'].map((c, i) => `<circle cx="${P + 8 + i * 20}" cy="${T / 2}" r="6" fill="${c}"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W + 2 * P}" height="${H + T + P}"><rect x="0.5" y="0.5" width="${W + 2 * P - 1}" height="${H + T + P - 1}" rx="10" fill="${termBg}" stroke="${line}"/>`
+    + `<path d="M0.5 ${T} V10.5 a10 10 0 0 1 10 -10 H${W + 2 * P - 10.5} a10 10 0 0 1 10 10 V${T} Z" fill="${bar}"/><path d="M0.5 ${T} H${W + 2 * P - 0.5}" stroke="${line}"/>${dots}`
+    + `<text x="${(W + 2 * P) / 2}" y="${T / 2 + 5}" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="13" fill="${termFg}" opacity="0.7">${esc(title)}</text>`
+    + `<g transform="translate(${P} ${T + P / 2})" font-family="Menlo, Monaco, monospace" font-size="15">${body}</g></svg>`;
 }
-if (opt('--png')) { toPng(tree, opt('--png')); process.exit(0); }
+/* a PNG: cada celda en su sitio (SVG con fuente monoespaciada) rasterizada con rsvg-convert */
+const toPng = (node, outFile) => execFileSync('rsvg-convert', ['-o', outFile], { input: toSvg(node) });
+if (opt('--png')) { toPng(tree, opt('--png')); console.log('png →', opt('--png')); process.exit(0); }
+
+/* una película: fotogramas a ritmo fijo mientras corre el guion, y ffmpeg los junta en un GIF de paleta propia */
+if (opt('--gif')) {
+  const fps = +opt('--fps', 8), dt = Math.round(1000 / fps), dir = fs.mkdtempSync(path.join(HERE, '.cache', 'film-'));
+  let n = 0;
+  const shot = () => toPng(tree, path.join(dir, `f${String(n++).padStart(4, '0')}.png`));
+  for (const step of opt('--script', 'hold:3000').split(';').map(s => s.trim()).filter(Boolean)) {
+    const [cmd, arg] = step.split(':');
+    if (cmd === 'hold') for (let t = 0; t < +arg; t += dt) { shot(); advance(dt); }
+    else if (cmd === 'click') await click(...arg.split(',').map(Number));
+    else if (cmd === 'hover') hover(...arg.split(',').map(Number));
+    else for (const k of step.split(/\s+/)) { await press(k); advance(40); }
+  }
+  shot();
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', path.join(dir, 'f%04d.png'),
+    '-vf', 'split[a][b];[a]palettegen=stats_mode=diff:max_colors=200[p];[b][p]paletteuse=dither=none:diff_mode=rectangle', opt('--gif')]);
+  fs.rmSync(dir, { recursive: true, force: true });
+  console.log(`gif → ${opt('--gif')} (${n} fotogramas)`);
+  process.exit(0);
+}
 
 const frames = +opt('--frames', 1);
 for (let f = 0; f < frames; f++) {

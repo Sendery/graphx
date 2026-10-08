@@ -255,6 +255,20 @@ function autoLevel(s: Scene, w: number, h: number): Level {
   return { k: 'fit', dir: pref }
 }
 
+/* presentando: la colocación más legible en la que caben enteras las piezas del paso (tarjetas, fichas o compacto) */
+function stepLevel(s: Scene, ids: string[], w: number, h: number): Level | null {
+  const pref = s.dir === 'down' ? 'down' : 'right'
+  for (const k of ['cards', 'chips', 'mini'] as const) {
+    const lay = s.cells?.[pref]?.[k]
+    if (!lay) continue
+    const rs = ids.flatMap(i => lay.nodes[i] ? [lay.nodes[i]!] : [])
+    if (!rs.length) continue
+    const x0 = Math.min(...rs.map(r => r[0])), x1 = Math.max(...rs.map(r => r[0] + r[2])), y0 = Math.min(...rs.map(r => r[1])), y1 = Math.max(...rs.map(r => r[1] + r[3]))
+    if (x1 - x0 + 2 <= w && y1 - y0 + 1 <= h) return { k, dir: pref }
+  }
+  return null
+}
+
 /* el minimapa: el diagrama entero en medios bloques y el rectángulo de lo que se ve */
 function minimap(g: Grid, s: Scene, cam: Cam, x0: number, y0: number, w: number, h: number, L: Look, viewW: number, viewH: number) {
   const P = L.P, b = s.bbox ?? { x: 0, y: 0, w: 1, h: 1 }
@@ -454,9 +468,8 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
   let gs: Scene = s
   let level: Level | null = null
   if (mode === 'graph') {
-    /* presentando, lo legible: tarjetas si las hay */
-    const pref = s.dir === 'down' ? 'down' : 'right'
-    level = st.lv ?? (st.present && curStep?.n.length ? (s.cells?.[pref]?.cards ? { k: 'cards', dir: pref } : s.cells?.[pref]?.chips ? { k: 'chips', dir: pref } : autoLevel(s, mainW, bodyRows)) : autoLevel(s, mainW, bodyRows))
+    /* presentando, lo legible en que quepa el paso */
+    level = st.lv ?? (st.present && curStep?.n.length ? stepLevel(s, curStep.n, mainW, bodyRows) ?? autoLevel(s, mainW, bodyRows) : autoLevel(s, mainW, bodyRows))
     const lay = layoutOf(s, level)
     if (lay) {
       gs = inCells(s, lay)
@@ -480,7 +493,10 @@ const Canvas: ClientModule<JsonValue, Local> = (raw, surface) => {
     const b = gs.bbox ?? { x: 0, y: 0, w: 0, h: 0 }
     const overflow = b.w / cam.cw > mainW + 2 || b.h / cam.ch > bodyRows + 1
     if (st.mini && overflow && mainW >= 50 && bodyRows >= 10) {
-      const mw = clamp(Math.round(mainW * 0.18), 14, 30), mh = clamp(Math.round((mw * (b.h / (b.w || 1))) / 1.0), 3, Math.round(bodyRows * 0.35))
+      /* a escala (una celda del minimapa por celda del diagrama en cada eje) y sin pasar de un cuarto del alto: si
+         el diagrama es más alto que ancho, el minimapa se estrecha en vez de crecer */
+      const mh = clamp(Math.round(clamp(Math.round(mainW * 0.18), 14, 30) * (b.h / (b.w || 1))), 3, Math.max(3, Math.round(bodyRows * 0.25)))
+      const mw = clamp(Math.round(mh * ((b.w || 1) / (b.h || 1))), 8, 30)
       minimap(frameG, gs, cam, mainW - mw - 1, bodyY + bodyRows - mh - 1, mw, mh, L, mainW, bodyRows)
     }
     /* el tooltip de la pieza bajo el ratón */

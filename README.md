@@ -94,6 +94,15 @@ and folders…) plus 12 arrowheads, drawn by `GraphXShape` from the same SVG tre
 
 ![The shape catalog in React](docs/gif/en/formas.gif)
 
+### In Claude Code, too
+
+The [`mod/`](mod/README.md) folder is a Claude Code plugin that draws any GraphX diagram inside the session:
+Claude draws with tools, and you navigate with the keyboard and the mouse. In the terminal it redraws the graph
+in character cells at any size (cards, chips, compact, overview or an outline), detects color depth, glyph set
+and theme, plays the effects, and runs the guided tour step by step with its explanations.
+
+![A guided presentation of a service map inside Claude Code's terminal](mod/docs/gif/presentacion.gif)
+
 ## Quick start
 
 ```bash
@@ -174,6 +183,7 @@ const { GraphX, GraphXShape } = GraphXReactFactory(React, () => window.GraphX);
 | `react/` | React components over the same shapes | |
 | `graphx-build.mjs` | validates and emits a self-contained page | |
 | `examples/` · `examples/en/` | every example, in Spanish and in English | |
+| `mod/` | the Claude Code plugin: terminal, desktop and browser ([mod/README.md](mod/README.md)) | |
 
 ## Documentation
 
@@ -194,6 +204,7 @@ node tools/verify.mjs && node tools/verify-mermaid.mjs      # tests without a br
 node tools/verify-shapes.mjs && node tools/verify-tree.mjs && node tools/verify-fx.mjs
 node examples/fx/build.mjs docs/demo/index.html --standalone --lang en   # rebuild the live demo
 node tools/capture-gifs.mjs                                 # re-record the GIFs (Playwright + ffmpeg)
+node mod/tools/capture-media.mjs                            # re-record the Claude Code mod's captures (ffmpeg)
 ```
 
 The English page is generated from the same template: `examples/fx/showcase.en.txt` holds the translations and

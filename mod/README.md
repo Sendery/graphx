@@ -4,6 +4,11 @@ GraphX entero dentro de Claude Code: cualquier diagrama que GraphX sabe dibujar 
 jerárquico, el árbol de ficheros, 61 formas) con sus efectos y sus datos en vivo, en **cada superficie** y a
 **cualquier tamaño**. Claude lo dibuja con herramientas; la persona lo navega con el teclado y el ratón.
 
+![La presentación guiada de un mapa de servicios en el terminal: cada paso centra sus piezas y explica qué pasa](docs/gif/presentacion.gif)
+
+<sub>Todas las capturas son del lienzo de verdad (`hooks/canvas.tsx`) con escenas del motor, grabadas con
+`node mod/tools/capture-media.mjs`.</sub>
+
 ```
 Claude ──herramientas──▶ hooks (register.tsx, $.state) ──HTTP──▶ server/live.mjs ── engine.mjs: GraphX en jsdom
                                    │                                    │  ├─ la escena (geometría + datos de efectos)
@@ -55,9 +60,66 @@ Los bloques ` ```mermaid ` de las respuestas de Claude se dibujan con GraphX en 
 | Ratón | en pantalla completa: clic, doble clic, arrastrar, pasar por encima (tooltip y aristas que marchan), clic derecho para preguntar |
 | Movimiento | partículas por caudal, alertas que laten, ondas, cascada, ▶ flujo, línea de tiempo; menos fotogramas por SSH o en tmux; `x` los reduce o los para |
 
+![El mismo flowchart a 150 columnas: el grafo en fichas y el panel lateral con el detalle de la pieza](docs/img/ancho.png)
+
+![El mismo flowchart a 96, 60 y 38 columnas: compacto, esquema y micro](docs/img/tamanos.png)
+
+**Zoom semántico.** `x` aleja y `z` acerca sin perder la pieza en foco: de tarjetas con sus datos a fichas, a
+compacto y a la vista general, cada uno colocado otra vez por ELK para su tamaño de celda.
+
+![Un clúster de Kubernetes pasando de tarjetas a fichas, compacto y vista general, y de vuelta](docs/gif/zoom.gif)
+
+**Color y caracteres.** La misma escena se pinta con lo que tenga el terminal:
+
+![El flowchart en truecolor, 256 colores, 16 colores y sin color](docs/img/color.png)
+
+![Un pipeline de CI/CD con caracteres unicode y braille, básicos y ASCII](docs/img/caracteres.png)
+
+![Un proceso de onboarding con el tema claro](docs/img/claro.png)
+
 Lo detecta solo al arrancar (`TERM`, `COLORTERM`, `TERM_PROGRAM`, `NO_COLOR`, `FORCE_COLOR`, la configuración regional,
 tmux/screen/zellij, SSH, el tema de Claude Code…) y `/graphx caps` dice qué ha visto y por qué; `/graphx caps
 color=256 glyphs=ascii motion=off theme=light` (o las opciones del mod en `/config`) lo fuerzan.
+
+**Movimiento.** Los efectos del motor, en caracteres: partículas por caudal, latidos, el radio de impacto anillo a
+anillo, el trazado de dependencias, la línea de tiempo que recorre un día de datos y la secuencia que se reproduce
+mensaje a mensaje.
+
+<table>
+<tr>
+<td width="50%">
+
+**✺ Impacto y trazado** (`c`, `t`): qué deja de funcionar si cae Antifraude, salto a salto.
+
+![El radio de impacto de un servicio, anillo a anillo, y después su trazado](docs/gif/impacto.gif)
+
+</td>
+<td width="50%">
+
+**Línea de tiempo** (`y`): un día de tráfico con el calor, el caudal y el incidente de las 13:00.
+
+![La línea de tiempo reproduce un día de tráfico](docs/gif/tiempo.gif)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Secuencias** (`f`): los mensajes salen uno a uno, con sus bloques `alt` y `loop`.
+
+![Un sequenceDiagram de inicio de sesión reproduciéndose mensaje a mensaje](docs/gif/secuencia.gif)
+
+</td>
+<td width="50%">
+
+**Árboles de ficheros** (`paths`): se abren en su sitio, con el detalle de cada carpeta y `q` para preguntar a
+Claude por una fila.
+
+![El árbol de ficheros de este repositorio, navegado con el teclado](docs/gif/arbol.gif)
+
+</td>
+</tr>
+</table>
 
 **Teclado.** Un solo mapa, en minúsculas, igual con el foco en el lienzo (un clic) que en el panel (`ctrl+x tab`, o al
 abrirlo con `/graphx`, que ya le da el teclado; `Esc` lo devuelve al prompt). Con el panel enfocado aparece una barra
@@ -80,9 +142,20 @@ y la persona con `/graphx present`.
 límite del elemento) con los controles del recorrido, los niveles, la orientación y los flujos, un selector de piezas y
 su detalle en Markdown. En el escritorio, «Celdas» enseña el mismo lienzo que el terminal.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/escritorio-dark.png">
+  <img alt="El SVG del motor que ve el panel de Claude Desktop: carriles, tarjetas con datos, donut, KPI y gauge" src="docs/img/escritorio-light.png">
+</picture>
+
 **Navegador.** `/graphx open`: el motor de verdad, interactivo, con los carteles y lo que Claude va cambiando.
 
 ## Mermaid de ida y vuelta
+
+Los 19 tipos de Mermaid se dibujan en el terminal con su propia forma: barras de gantt con el día de hoy, ramas
+de git, clases, entidades, mapas mentales, donuts, sankey, journeys, tableros kanban, líneas de tiempo, C4 y
+arquitectura.
+
+![Doce tipos de Mermaid en el terminal: gantt, git, class, er, mindmap, pie, sankey, journey, kanban, timeline, C4 y architecture](docs/img/mermaid.png)
 
 - **Recoger**: `convert` (o `show` con `mermaid`) lee los 19 tipos y dice qué anotaciones de GraphX lleva cada pieza,
   arista y la raíz: las claves que Mermaid no conoce en `id@{ heat: 85, spark: "1 2 3", owner: pagos }` y el JSON de
@@ -111,7 +184,9 @@ npm run mod:test                                            # claude plugin vali
 node mod/tools/term-preview.mjs examples/fx/software.json --cols 140 --rows 40 --keys "+,tab,b" --png /tmp/f.png
 node mod/tools/term-preview.mjs examples/mermaid/gantt.mmd --cols 80 --rows 24 --color 16 --glyphs ascii
 node mod/tools/gen-fixtures.mjs                             # las escenas de verdad que usan las pruebas
+node mod/tools/capture-media.mjs [nombre…]                  # las capturas y los GIF de este README (rsvg-convert + ffmpeg)
 ```
 
 `term-preview` monta el lienzo con una superficie simulada y pinta sus fotogramas en ANSI (o en PNG, para revisarlos
-como imagen) a cualquier tamaño, color, juego de caracteres y tema, con teclas, clics y tiempo.
+como imagen, o en GIF con `--gif` y un guion de teclas y esperas) a cualquier tamaño, color, juego de caracteres y
+tema, con teclas, clics y tiempo.

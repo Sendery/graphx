@@ -355,7 +355,8 @@ export function drawGraph(s: Scene, cols: number, rows: number, v: Cam, L: Look)
       path.forEach(([x, y], k) => { if (g.in(x, y) && !g.solid[g.idx(x, y)] && g.ch[g.idx(x, y)] !== ' ') g.tint(x, y, P.c(P.mix(ca, cb, k / Math.max(1, path.length - 1)))) })
     }
   }
-  for (const h of heads) g.set(h.x, h.y, h.c, h.fg, L.canvasBg, h.a)
+  /* una punta no pisa lo protegido (el título de un grupo que la arista cruza para entrar) */
+  for (const h of heads) if (g.in(h.x, h.y) && !g.solid[g.idx(h.x, h.y)]) g.set(h.x, h.y, h.c, h.fg, L.canvasBg, h.a)
 
   /* partículas y marcha: encima de las líneas, debajo de las etiquetas y las piezas */
   if (L.motion) drawMotion(g, edges, paths, L, maxRate)
