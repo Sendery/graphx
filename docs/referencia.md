@@ -10,7 +10,7 @@ tooltips, panel de detalle, búsqueda, trazado de dependencias, secuencias anima
 guiado con modo presentación. Funciona igual como artifact de claude.ai, fichero local o bloque
 dentro de otra página.
 
-Versión **1.9.0** · nació para revisar PRs (skill `pr-review-artifact-v5`), pero el motor no sabe
+Versión **1.9.0** · nació para revisar PRs, pero el motor no sabe
 nada de PRs: todo lo que es de código es opcional. Desde la 1.6 también lee **Mermaid** (§7),
 desde la 1.7 dibuja sus formas y tiene componentes de **React** (§7.1), y desde la 1.8 tiene un
 módulo de **efectos** con datos en vivo: partículas por caudal, mapa de calor, gráficos como piezas,
@@ -37,7 +37,7 @@ examples/           pr-review-stack-202.json (73 piezas, 4 niveles)
                                               Mermaid, almacén, galería y la página de demostración; ver docs/ejemplos.md)
 tools/              verify.mjs (jsdom) · verify-mermaid.mjs · verify-shapes.mjs · verify-tree.mjs · verify-fx.mjs · snap-depth.mjs + snapshot-svg.mjs (rasterizar para mirar)
                     timeline.mjs (una tabla TSV/CSV → línea de tiempo) · capture-docs.mjs (capturas de docs/)
-                    build-dist.mjs (compacta) · sync.sh (copia el motor a la skill y a desarrollo)
+                    build-dist.mjs (compacta) · release.mjs (los distribuibles de una versión)
 ```
 
 ---
@@ -706,5 +706,4 @@ con canvas, así que la tipografía real queda algo más compacta.
 
 ## Procedencia
 
-Construido en septiembre de 2026 junto a la skill `pr-review-artifact-v5`, que lo lleva dentro en
-`assets/graphx/`. Licencia de ELK: EPL-2.0 (https://eclipse.dev/elk).
+Construido en septiembre de 2026. Licencia de ELK: EPL-2.0 (https://eclipse.dev/elk).
