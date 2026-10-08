@@ -13,7 +13,8 @@
  *
  * Se instala en $CLAUDE_CONFIG_DIR o en ~/.claude: Claude Code carga los plugins de skills/<nombre>/ en la siguiente
  * sesión (graphx-mod@skills-dir), en el terminal y en la app de escritorio, que usan la misma configuración. Hace falta
- * node ≥ 18; el mod se monta con mod/build.mjs (que necesita dist/ y node_modules/jsdom: los prepara si faltan). */
+ * node ≥ 18. Desde el repositorio, el mod se monta con mod/build.mjs (que necesita dist/ y node_modules/jsdom: los
+ * prepara si faltan); desde el paquete de distribución (tools/release.mjs) ya viene montado y solo se copia. */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -178,9 +179,16 @@ function prepareMod() {
   }
   return true;
 }
+/* el paquete de distribución trae el mod ya montado (con el bundle del motor y jsdom): se copia tal cual */
+const MOD_SRC = path.join(ROOT, 'mod', 'graphx-mod');
+const prebuilt = !fs.existsSync(path.join(ROOT, 'mod', 'build.mjs'))
+  && fs.existsSync(path.join(MOD_SRC, 'server', 'vendor', 'jsdom.cjs')) && fs.existsSync(path.join(MOD_SRC, 'viewer', 'vendor', 'graphx.bundle.min.js'));
 function installMod(desktop) {
-  if (!prepareMod()) return false;
-  if (!run(process.execPath, [path.join('mod', 'build.mjs'), '--to', MOD_DST], { quiet: true })) { fail(tr('mod/build.mjs ha fallado', 'mod/build.mjs failed')); return false; }
+  if (prebuilt) copyDir(MOD_SRC, MOD_DST);
+  else {
+    if (!prepareMod()) return false;
+    if (!run(process.execPath, [path.join('mod', 'build.mjs'), '--to', MOD_DST], { quiet: true })) { fail(tr('mod/build.mjs ha fallado', 'mod/build.mjs failed')); return false; }
+  }
   ok(tr(`mod graphx-mod en ${tilde(MOD_DST)}`, `graphx-mod mod in ${tilde(MOD_DST)}`));
   if (desktop) {
     /* la app de escritorio arranca con el PATH mínimo del sistema: el servidor del mod usará este node */

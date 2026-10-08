@@ -7,7 +7,8 @@
  *   navegador · ligero        graphx-<v>.lite.min.js        lo mismo sin ELK (lo carga de jsDelivr)
  *   por módulos               graphx-<v>-modules.zip        cada pieza minificada suelta, con sus estilos
  *   kit                       graphx-<v>-kit.zip            fuentes, dist/, react/, ELK y el ensamblador
- *   Claude Code               graphx-mod-<v del mod>.zip    el plugin montado (con su bundle y jsdom)
+ *   Claude Code               graphx-claude-<v del mod>.zip la skill graphx, el mod graphx-mod montado (con su bundle y
+ *                                                           jsdom) y el instalador: se descomprime y `node install.mjs`
  *
  * dist/ tiene que corresponder a las fuentes (`node tools/build-dist.mjs`); el mod se monta con mod/build.mjs.
  * Necesita `zip` en el PATH. */
@@ -65,10 +66,32 @@ copy(r('react'), path.join(kit, 'react'));
 for (const f of fs.readdirSync(r('dist'))) copy(r('dist', f), path.join(kit, 'dist', f));
 zip(`graphx-${V}-kit.zip`, kit);
 
-/* el mod de Claude Code, montado */
-execFileSync(process.execPath, [r('mod', 'build.mjs'), '--to', path.join(STAGE, 'graphx-mod')], { stdio: ['ignore', 'ignore', 'inherit'] });
-fs.rmSync(path.join(STAGE, 'graphx-mod', 'tests'), { recursive: true, force: true });
-zip(`graphx-mod-${MV}.zip`, path.join(STAGE, 'graphx-mod'));
+/* Claude Code: la skill, el mod montado y el instalador, listos para `node install.mjs` (sin npm ni compilar) */
+const cc = path.join(STAGE, `graphx-claude-${MV}`);
+execFileSync(process.execPath, [r('mod', 'build.mjs'), '--to', path.join(cc, 'mod', 'graphx-mod')], { stdio: ['ignore', 'ignore', 'inherit'] });
+fs.rmSync(path.join(cc, 'mod', 'graphx-mod', 'tests'), { recursive: true, force: true });
+copy(r('skills', 'graphx'), path.join(cc, 'skills', 'graphx'));
+copy(r('install.mjs'), path.join(cc, 'install.mjs'));
+fs.writeFileSync(path.join(cc, 'README.md'), `# GraphX ${MV} para Claude Code · for Claude Code
+
+\`\`\`bash
+node install.mjs          # casillas · checkboxes: skill, mod (terminal), mod (desktop app)
+node install.mjs --all    # todo sin preguntar · everything, no questions
+node install.mjs --help
+\`\`\`
+
+Necesita / needs \`node\` ≥ 18. Opcional / optional: \`rsvg-convert\` (librsvg) para la imagen del motor / for the
+engine image. Se instala en / installs into \`~/.claude/skills\` (o / or \`$CLAUDE_CONFIG_DIR\`); abre una sesión nueva
+de Claude Code / open a new Claude Code session:
+
+| | |
+|---|---|
+| \`/graphx help\` | la skill: diagramas en lenguaje normal · the skill: diagrams in plain language |
+| \`/graphx-mod help\` | el mod: el lienzo, el navegador, sus comandos y teclas · the mod: the canvas, the browser, its commands and keys |
+
+\`node install.mjs --uninstall --all\` lo quita / removes it. GraphX ${V}: https://github.com/Sendery/graphx
+`);
+zip(`graphx-claude-${MV}.zip`, cc);
 
 fs.rmSync(STAGE, { recursive: true, force: true });
 const files = fs.readdirSync(OUT).filter(f => !f.startsWith('.')).sort();

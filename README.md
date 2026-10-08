@@ -267,6 +267,9 @@ git clone https://github.com/Sendery/graphx.git && cd graphx
 node install.mjs
 ```
 
+Or, without cloning: download `graphx-claude-<version>.zip` from a release (built with `node tools/release.mjs`),
+unzip it and run `node install.mjs` inside — the mod comes prebuilt, no `npm install` needed.
+
 The installer asks with checkboxes (↑ ↓ move · space toggle · `a` all · ⏎ install) what to put into
 `~/.claude` (or `$CLAUDE_CONFIG_DIR`):
 
