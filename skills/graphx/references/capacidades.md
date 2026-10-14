@@ -56,6 +56,7 @@ la documentación larga, en `docs/referencia.md` del repositorio.
 | Caudal | `rate` en la arista; `fx.particles: data \| true \| all \| {speed, density, max}` | `data` |
 | Línea de tiempo | raíz `timeline: {label, data (TSV/CSV ancho: columna de tiempo + `<id>.<campo>` + `event`; o largo: `time,id,field,value`), events: [{time, label, tone, nodes}], window, step, start}` | `show.spec`/`patch.set`; `guide.timeline` salta a un instante; reproducir es la tecla `y` |
 | Equipos | raíz `owners: {id: {label, short, color, contact, url}}`; `owner` en pieza o carril (se hereda) | `guide.owners` filtra; colorear es la tecla `e` |
+| Bucles causales | `polarity: "+" \| "-"` y `delay: true \| "6 semanas"` en la arista; `loops: [{edges, label, goal}]` en la raíz | el motor encuentra los bucles R/B y avisa si pueden oscilar; `fx.loops: false` lo apaga |
 | Radio de impacto | — (sale del grafo y del `kind` de las aristas); `fx.blast.mode: auto\|callers\|downstream\|both` | `guide.blast` |
 | Presets | `fx: calm \| vivid \| neon \| blueprint \| glass \| present \| false` | `show.fx`, `/graphx-mod fx` |
 | Efectos sueltos | `fx: {particles, heat, spark, progress, alerts, waves, hoverFlow, grid, lod, play, spotlight, entrance: "cascade", glow, gradient, autoColor, skin, sketch}` | `fx` |

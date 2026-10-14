@@ -19,6 +19,7 @@ Los que llevan datos sintéticos se regeneran con su script.
 | [Revisión de una PR](#revisión-de-una-pr) | diff de 73 piezas en cuatro niveles | (a mano) |
 | [Atlas de una tienda](#atlas-de-una-tienda) | varias perspectivas con las piezas compartidas, fichas e interiores | `node examples/fx/build-atlas.mjs <salida.html>` |
 | [Ejes: blueprint y Wardley](#ejes-blueprint-y-wardley) | la posición significa algo: bandas con líneas con nombre, un mapa de evolución y una matriz de interesados | (a mano) |
+| [Bucles de la tienda](#bucles-de-la-tienda) | diagrama de bucles causales: signos, retrasos, bucles R/B con nombre y meta, riesgo de oscilación, recorrido | (a mano) |
 | Mermaid, uno por tipo | `examples/mermaid/*.mmd`: flowchart, secuencia, clases, estados, ER, gantt, git, C4… | (a mano) |
 
 ## Checkout de la tienda
@@ -124,3 +125,12 @@ matriz de interesados de un cambio de pasarela de pagos.
 ![Service blueprint del primer pedido](img/ej-blueprint.webp)
 
 ![Mapa de Wardley de la tienda](img/ej-wardley.webp)
+
+## Bucles de la tienda
+
+`examples/systems/tienda.json` (en inglés, `examples/en/systems/`) · por qué vender más no basta: la publicidad
+refuerza el crecimiento (R1), el almacén se satura y las reseñas tardan dos meses en notarlo (B2), y contratar
+llega seis semanas tarde (B1). Cada arista lleva su signo y su retraso; el motor encuentra los bucles, avisa de los
+que pueden oscilar y los pone en la leyenda y en el panel.
+
+![Bucles de la tienda](img/ej-bucles.webp)

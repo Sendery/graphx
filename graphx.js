@@ -1110,6 +1110,28 @@
       if (ms) line.setAttribute('marker-start', ms); else line.removeAttribute('marker-start');
     }
     const maxWeight = Math.max(0, ...(spec.edges || []).map(e => typeof e.weight === 'number' ? e.weight : 0));
+    /* el signo de una arista causal: «+» o «-» (también «−», «same», «opposite») */
+    const polOf = e => { const p = e && e.polarity; return p === '+' || p === 'same' ? '+' : p === '-' || p === '−' || p === 'opposite' ? '-' : null; };
+    /* Un punto de la arista a una fracción de su largo, con la dirección en ese punto: de una polilínea
+       (ELK) o de la curva de una arista que vuelve atrás (`d` con M…C…). */
+    function edgeGeom(path) {
+      if (path.pts && path.pts.length > 1) {
+        const P = path.pts, seg = P.slice(1).map((q, i) => Math.hypot(q.x - P[i].x, q.y - P[i].y)), L = seg.reduce((a, b) => a + b, 0) || 1;
+        return { at(t) {
+          let d = t * L, i = 0; while (i < seg.length - 1 && d > seg[i]) { d -= seg[i]; i++; }
+          const a = P[i], b = P[i + 1], l = seg[i] || 1, k = Math.min(1, d / l);
+          return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, ux: (b.x - a.x) / l, uy: (b.y - a.y) / l };
+        } };
+      }
+      const n = String(path.d || '').match(/-?\d+(?:\.\d+)?/g);
+      if (!n || n.length < 8) return null;
+      const [x0, y0, x1, y1, x2, y2, x3, y3] = n.slice(0, 8).map(Number);
+      return { at(t) {
+        const u = 1 - t, x = u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3, y = u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3;
+        const dx = 3 * u * u * (x1 - x0) + 6 * u * t * (x2 - x1) + 3 * t * t * (x3 - x2), dy = 3 * u * u * (y1 - y0) + 6 * u * t * (y2 - y1) + 3 * t * t * (y3 - y2), l = Math.hypot(dx, dy) || 1;
+        return { x, y, ux: dx / l, uy: dy / l };
+      } };
+    }
     function makeEdge(v, path) {
       const g = s('g', { class: `gx-edge d-${v.delta} k-${v.kind}${v.back ? ' back' : ''}${v.hero ? ' hero' : ''}${v.muted ? ' muted' : ''}${v.lifted ? ' lifted' : ''}${DASHED_KINDS[v.kind] ? ' dashed' : ''}`, 'data-id': v.id });
       const curve = v.list.every(e => e.curve);
@@ -1137,6 +1159,22 @@
         const P0 = path.pts;
         if (one.tailLabel) endLab(P0[0], P0[1], one.tailLabel);
         if (one.headLabel) endLab(P0[P0.length - 1], P0[P0.length - 2], one.headLabel);
+      }
+      /* Causal: `polarity` es el signo de la influencia (+ los dos se mueven igual, − al revés) y va junto a
+         la punta; `delay` es un retraso (true, o el texto de cuánto: «2 meses») y se marca con dos rayas en
+         medio de la línea, como en los diagramas de bucles causales. Son significado, no adorno: se pintan
+         sin el módulo de efectos. */
+      const pol = one ? polOf(one) : null, late = v.list.find(e => e.delay);
+      const G0 = (pol || late) && edgeGeom(path);
+      if (G0 && pol) {
+        const a = G0.at(1), t = s('text', { class: `gx-epol gx-halo ${pol === '+' ? 'pos' : 'neg'}`, x: a.x - a.ux * 17 - a.uy * 12, y: a.y - a.uy * 17 + a.ux * 12 + 5 }, g);
+        t.textContent = pol === '+' ? '+' : '−';
+      }
+      if (G0 && late) {
+        const m = G0.at(.5);
+        [-3.5, 3.5].forEach(k => s('path', { class: 'gx-edelay', d: `M${(m.x + m.ux * k - m.uy * 8).toFixed(1)},${(m.y + m.uy * k + m.ux * 8).toFixed(1)}L${(m.x + m.ux * k + m.uy * 8).toFixed(1)},${(m.y + m.uy * k - m.ux * 8).toFixed(1)}` }, g));
+        const txt = typeof late.delay === 'string' ? late.delay : late.delay && typeof late.delay === 'object' && late.delay.duration ? String(late.delay.duration) : '';
+        if (txt && one) { const t = s('text', { class: 'gx-edelayt gx-halo', x: m.x + m.uy * 14, y: m.y - m.ux * 14 + 4 }, g); t.textContent = txt; }
       }
       g._line = line; g._v = v; g._d = d; g._pts = path.pts || null;
       if (FX) FX.edge(g, v, path);

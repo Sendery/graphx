@@ -22,6 +22,7 @@ adorno: añádelo solo si hay datos reales o si lo piden.
 | qué está bloqueando qué | [Radar de trabajo](#radar-de-trabajo) |
 | quién llama a quién y en qué orden | [Secuencia](#secuencia) |
 | qué hay en un repo o qué cambió | [Árbol](#árbol-de-ficheros) |
+| por qué algo crece, se frena u oscila (círculos viciosos, efectos que tardan) | [Bucles causales](#bucles-causales) |
 | dónde está cada cosa respecto a algo (lo que ve el cliente, cuánto ha madurado, cuánto poder tiene) | [Ejes](#ejes-cuando-la-posición-significa-algo) |
 | documentar un sistema entero | [Perspectivas](#perspectivas-para-documentar-un-sistema) y, para juntarlas, [Atlas](#atlas-de-un-sistema) |
 
@@ -117,6 +118,20 @@ adorno: añádelo solo si hay datos reales o si lo piden.
 
 - **Forma**: `show.paths` (del diff: `git diff --numstat`) o `tree_text` (de `tree`); `tree_options.root`, `compact`.
 - **Enriquecer**: `status` y líneas por fichero; `focus: "changes"` para ver solo lo cambiado.
+
+## Bucles causales
+
+*Ejemplo: `examples/systems/tienda.json`.*
+
+Cuando la pregunta es de dinámica («¿por qué no crecemos aunque vendemos más?», «¿por qué esto va a golpes?»), no de
+estructura. Si la persona no habla en esos términos, un grafo normal suele bastar: proponlo en una línea, no lo
+impongas.
+
+- **Forma**: grafo `right` con `layout.cycles: "dfs"`; piezas que son cantidades que suben o bajan («Plazo de
+  entrega», no «Almacén»); cada arista con `polarity` y, si tarda, `delay` con el tiempo.
+- **Enriquecer** *(opcional)*: `loops` con `label` (qué hace el bucle, sin «R1» delante) y, en los que equilibran,
+  `goal`; `--check` dice qué bucles salen y cuáles pueden oscilar: cuéntaselo a la persona, es un hallazgo.
+- **Recorrer**: un paso por bucle, del motor (R) a los frenos (B), con el retraso como final.
 
 ## Ejes: cuando la posición significa algo
 

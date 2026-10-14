@@ -3,9 +3,11 @@
  * 1. ELK: tarjetas de un mismo ancho, carriles sueltos con su caja alrededor de sus piezas, troncos
  *    compartidos con una sola etiqueta y orígenes en la primera columna;
  * 2. ejes: bandas, números, mezcla, carriles como bandas y lo que no tiene posición;
- * 3. el builder avisa de bandas y números que no existen.                                          */
+ * 3. el builder avisa de bandas y números que no existen;
+ * 4. bucles de realimentación: signos, retrasos, R/B, oscilación, insignias y avisos.             */
 import fs from 'fs';
 import path from 'path';
+import vm from 'vm';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { JSDOM } from 'jsdom';
@@ -14,9 +16,9 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const R = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const fail = [];
 const ok = (c, m) => { if (!c) fail.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); };
-async function mountSpec(spec) {
+async function mountSpec(spec, fx) {
   const html = `<!doctype html><html><head><style>${R('graphx.css')}</style></head><body><div data-gx><script type="application/json" class="gx-spec">${JSON.stringify(spec).replace(/</g, '\\u003c')}</script></div>
-<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx-layouts.js')}</script><script>${R('graphx.js')}</script><script>GraphX.mountAll(document)</script></body></html>`;
+<script>${R('vendor/elk.bundled.js')}</script><script>${R('graphx-shapes.js')}</script><script>${R('graphx-layouts.js')}</script><script>${R('graphx.js')}</script>${fx ? `<script>${R('graphx-fx.js')}</script>` : ''}<script>GraphX.mountAll(document)</script></body></html>`;
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, beforeParse(w) { w.matchMedia = q => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }); w.HTMLCanvasElement.prototype.getContext = () => null; } });
   const w = dom.window; await new Promise(r => w.addEventListener('load', r));
   const host = w.document.querySelector('[data-gx]'); await host._gx.ready; await new Promise(r => setTimeout(r, 900));
@@ -106,6 +108,44 @@ fs.unlinkSync(tmp);
 ok(/at\.y «nada» no es una banda/.test(out), 'avisa de una banda que no existe');
 ok(/at\.x debe ser un número entre 0 y 1/.test(out), 'avisa de un número fuera del rango');
 ok(/nodo b: sin at\.y/.test(out), 'avisa de una pieza sin posición');
+
+/* 4 · bucles */
+console.log('— bucles —');
+{
+  vm.runInThisContext(R('graphx-fx.js'));
+  const FXM = globalThis.GraphX.fx;
+  const spec = JSON.parse(R('examples/systems/tienda.json')), out = FXM.findLoops(spec), by = new Map(out.loops.map(l => [l.name, l]));
+  ok(out.loops.map(l => l.name).join(',') === 'B1,R1,B2', `tres bucles, del más corto al más largo (${out.loops.map(l => l.name).join(', ')})`);
+  ok(by.get('R1').type === 'R' && by.get('B1').type === 'B' && by.get('B2').type === 'B', 'un número par de «−» refuerza; uno impar equilibra');
+  ok(by.get('B1').osc && by.get('B2').osc && !by.get('R1').osc, 'equilibra con retraso: puede oscilar');
+  ok(by.get('B1').goal && by.get('R1').label && !out.unmatched.length, 'los bucles nombrados en `loops` reciben su nombre y su meta');
+  const ids = 'abcdefg'.split(''), full = { edges: ids.flatMap(a => ids.filter(b => b !== a).map(b => ({ id: a + b, from: a, to: b, polarity: '+' }))) };
+  const big = FXM.findLoops(full);
+  ok(big.truncated && big.loops.length === 60, 'un grafo denso se corta en 60 bucles y lo dice');
+  ok(!FXM.findLoops({ edges: [{ id: 'x', from: 'a', to: 'b' }, { id: 'y', from: 'b', to: 'a' }] }).loops.length, 'sin polarity no hay bucle causal');
+}
+{
+  const { host } = await mountSpec(JSON.parse(R('examples/systems/tienda.json')), true);
+  ok(host.querySelectorAll('.gx-loop').length === 3 && host.querySelectorAll('.gx-lg-loops li').length === 3, 'una insignia y una línea de leyenda por bucle');
+  ok(host.querySelectorAll('.gx-epol').length === 12 && host.querySelectorAll('.gx-epol.neg').length === 2, 'el signo junto a cada punta, dos «−»');
+  ok(host.querySelectorAll('.gx-edelay').length === 4 && [...host.querySelectorAll('.gx-edelayt')].some(t => t.textContent === '6 semanas'), 'dos rayas y el tiempo en las aristas con retraso');
+}
+{
+  const spec = { title: 't', collapsed: ['g'], nodes: [{ id: 'g', label: 'G', summary: 's' }, { id: 'a', parent: 'g', label: 'A', summary: 's' }, { id: 'b', parent: 'g', label: 'B', summary: 's' }],
+    edges: [{ id: 'x', from: 'a', to: 'b', polarity: '+' }, { id: 'y', from: 'b', to: 'a', polarity: '-' }] };
+  const { host } = await mountSpec(spec, true);
+  ok(!host.querySelectorAll('.gx-loop').length && host.querySelectorAll('.gx-lg-loops li').length === 1, 'un bucle plegado dentro de una pieza no tiene insignia, pero sigue en la leyenda');
+}
+{
+  const tmp2 = path.join(ROOT, 'examples', '.verify-loops.json');
+  fs.writeFileSync(tmp2, JSON.stringify({ title: 't', nodes: [{ id: 'a', label: 'A', summary: 's' }, { id: 'b', label: 'B', summary: 's' }],
+    edges: [{ id: 'x', from: 'a', to: 'b', polarity: '+' }, { id: 'y', from: 'b', to: 'a', polarity: 'raro' }], loops: [{ edges: ['x', 'y'], label: 'no cierra' }] }));
+  let o2 = '';
+  try { o2 = execFileSync(process.execPath, [path.join(ROOT, 'graphx-build.mjs'), tmp2, '--check'], { encoding: 'utf8', stdio: 'pipe' }); } catch (e) { o2 = (e.stdout || '') + (e.stderr || ''); }
+  fs.unlinkSync(tmp2);
+  ok(/polarity «raro» desconocida/.test(o2), 'el builder avisa de una polaridad desconocida');
+  ok(/loops «no cierra»: sus aristas no forman un bucle/.test(o2), 'y de un bucle nombrado que no cierra');
+}
 
 console.log(fail.length ? `\n❌ ${fail.length} fallos` : '\n✅ Sin fallos');
 process.exit(fail.length ? 1 : 0);

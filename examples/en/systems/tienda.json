@@ -1,0 +1,238 @@
+{
+  "title": "The shop feedback loops",
+  "lang": "en",
+  "summary": "Why more orders are not enough: advertising reinforces growth, but the warehouse saturates and hiring arrives late. Each arrow says whether it pushes the same way (+) or the opposite way (−); the two strokes, that it takes time to show.",
+  "direction": "right",
+  "layout": {
+    "cycles": "dfs"
+  },
+  "nodes": [
+    {
+      "id": "clientes",
+      "label": "Active customers",
+      "kind": "user",
+      "summary": "Anyone who bought in the last 90 days."
+    },
+    {
+      "id": "pedidos",
+      "label": "Orders per day",
+      "kind": "cart",
+      "summary": "What comes in every day through the web and the app."
+    },
+    {
+      "id": "ingresos",
+      "label": "Revenue",
+      "kind": "chart",
+      "summary": "What the orders bring in."
+    },
+    {
+      "id": "publicidad",
+      "label": "Ad budget",
+      "kind": "bell",
+      "summary": "A fixed share of revenue."
+    },
+    {
+      "id": "carga",
+      "label": "Warehouse load",
+      "kind": "queue",
+      "summary": "Orders waiting to be packed."
+    },
+    {
+      "id": "plazo",
+      "label": "Delivery time",
+      "kind": "gauge",
+      "summary": "Days from order to doorstep."
+    },
+    {
+      "id": "satisfaccion",
+      "label": "Satisfaction",
+      "kind": "user",
+      "summary": "The score they give after receiving the parcel."
+    },
+    {
+      "id": "resenas",
+      "label": "Good reviews",
+      "kind": "mail",
+      "summary": "What people who have not bought yet read."
+    },
+    {
+      "id": "contratacion",
+      "label": "Hiring",
+      "kind": "search",
+      "summary": "Opens when delivery takes more than two days."
+    },
+    {
+      "id": "personal",
+      "label": "Warehouse staff",
+      "kind": "user",
+      "summary": "People packing orders on each shift."
+    }
+  ],
+  "edges": [
+    {
+      "id": "s1",
+      "from": "clientes",
+      "to": "pedidos",
+      "polarity": "+"
+    },
+    {
+      "id": "s2",
+      "from": "pedidos",
+      "to": "ingresos",
+      "polarity": "+"
+    },
+    {
+      "id": "s3",
+      "from": "ingresos",
+      "to": "publicidad",
+      "polarity": "+"
+    },
+    {
+      "id": "s4",
+      "from": "publicidad",
+      "to": "clientes",
+      "polarity": "+"
+    },
+    {
+      "id": "s5",
+      "from": "pedidos",
+      "to": "carga",
+      "polarity": "+"
+    },
+    {
+      "id": "s6",
+      "from": "carga",
+      "to": "plazo",
+      "polarity": "+"
+    },
+    {
+      "id": "s7",
+      "from": "plazo",
+      "to": "satisfaccion",
+      "polarity": "-"
+    },
+    {
+      "id": "s8",
+      "from": "satisfaccion",
+      "to": "resenas",
+      "polarity": "+"
+    },
+    {
+      "id": "s9",
+      "from": "resenas",
+      "to": "clientes",
+      "polarity": "+",
+      "delay": "2 months"
+    },
+    {
+      "id": "s10",
+      "from": "plazo",
+      "to": "contratacion",
+      "polarity": "+"
+    },
+    {
+      "id": "s11",
+      "from": "contratacion",
+      "to": "personal",
+      "polarity": "+",
+      "delay": "6 weeks"
+    },
+    {
+      "id": "s12",
+      "from": "personal",
+      "to": "plazo",
+      "polarity": "-"
+    }
+  ],
+  "loops": [
+    {
+      "edges": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "label": "advertising brings customers"
+    },
+    {
+      "edges": [
+        "s10",
+        "s11",
+        "s12"
+      ],
+      "label": "hire to keep the promise",
+      "goal": "deliver within 48 h"
+    },
+    {
+      "edges": [
+        "s1",
+        "s5",
+        "s6",
+        "s7",
+        "s8",
+        "s9"
+      ],
+      "label": "success saturates the warehouse"
+    }
+  ],
+  "tour": {
+    "title": "Why selling more is not enough",
+    "steps": [
+      {
+        "title": "The engine: R1",
+        "body_html": "More customers, more orders, more revenue and more ads, which bring more customers. On its own it would grow without limit.",
+        "focus": {
+          "nodes": [
+            "clientes",
+            "pedidos",
+            "ingresos",
+            "publicidad"
+          ],
+          "edges": [
+            "s1",
+            "s2",
+            "s3",
+            "s4"
+          ]
+        }
+      },
+      {
+        "title": "The brake: B2",
+        "body_html": "The same orders fill the warehouse, delivery time goes up and satisfaction goes down (−). Reviews take two months to show it.",
+        "focus": {
+          "nodes": [
+            "pedidos",
+            "carga",
+            "plazo",
+            "satisfaccion",
+            "resenas",
+            "clientes"
+          ],
+          "edges": [
+            "s5",
+            "s6",
+            "s7",
+            "s8",
+            "s9"
+          ]
+        }
+      },
+      {
+        "title": "The late response: B1",
+        "body_html": "Hiring brings delivery time down, but takes six weeks: it balances with a delay and tends to overshoot, with a full warehouse and then too many people.",
+        "focus": {
+          "nodes": [
+            "plazo",
+            "contratacion",
+            "personal"
+          ],
+          "edges": [
+            "s10",
+            "s11",
+            "s12"
+          ]
+        }
+      }
+    ]
+  }
+}

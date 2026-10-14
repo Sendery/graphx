@@ -657,6 +657,13 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 /* aristas: cardinalidades y caudales */
 .gx-eend { font: 600 10.5px var(--gx-mono); fill: var(--gx-muted); text-anchor: middle; pointer-events: none; }
 .gx-dim .gx-edge.lit .gx-eend { fill: var(--gx-accent); }
+/* aristas causales: el signo junto a la punta y las dos rayas de un retraso */
+.gx-epol { font: 800 15px var(--gx-mono); text-anchor: middle; pointer-events: none; }
+.gx-epol.pos { fill: var(--gx-add); }
+.gx-epol.neg { fill: var(--gx-del); }
+.gx-edelay { fill: none; stroke: var(--gx-ink); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
+.gx-edelayt { font: italic 500 10px system-ui, sans-serif; fill: var(--gx-muted); text-anchor: middle; pointer-events: none; }
+.gx-dim .gx-edge:not(.lit) .gx-epol, .gx-dim .gx-edge:not(.lit) .gx-edelay, .gx-dim .gx-edge:not(.lit) .gx-edelayt { opacity: .25; }
 .gx-edge.weighted .gx-eline { stroke-linecap: butt; opacity: .42; }
 .gx-edge.weighted:hover .gx-eline, .gx-dim .gx-edge.weighted.lit .gx-eline { opacity: .72; }
 .gx-mkx { stroke-linejoin: round; stroke-linecap: round; }

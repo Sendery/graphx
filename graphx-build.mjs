@@ -159,6 +159,8 @@ for (const e of spec.edges || []) {
   if (e.weight != null && (typeof e.weight !== 'number' || e.weight < 0)) errors.push(`arista ${e.id}: weight debe ser un número positivo`);
   if (e.kind && !EKINDS.has(e.kind)) warns.push(`arista ${e.id}: kind «${e.kind}» desconocido`);
   if (e.delta && !DELTAS.has(e.delta)) errors.push(`arista ${e.id}: delta «${e.delta}» inválido`);
+  if (e.polarity != null && !['+', '-', '−', 'same', 'opposite'].includes(e.polarity)) warns.push(`arista ${e.id}: polarity «${e.polarity}» desconocida (válidas: +, -)`);
+  if (e.delay != null && !(typeof e.delay === 'boolean' || typeof e.delay === 'string' || (typeof e.delay === 'object' && !Array.isArray(e.delay)))) warns.push(`arista ${e.id}: delay debe ser true, un texto («2 meses») o { duration }`);
 }
 /* --- efectos (graphx-fx.js): `fx` y los datos que dibujan (caudal, calor, series, progreso, alertas) --- */
 {
@@ -336,6 +338,15 @@ if (gitDir) {
   console.log(`git: ${filled} ficheros con stats`);
 }
 
+/* bucles de realimentación (aristas con `polarity`): se cuentan siempre; los que pueden oscilar y los
+   nombrados en `loops` que no cierran son avisos */
+const LOOPS = sandbox.GraphX.fx && sandbox.GraphX.fx.findLoops ? sandbox.GraphX.fx.findLoops(spec) : null;
+if (LOOPS) {
+  if (Array.isArray(spec.loops)) spec.loops.forEach((l, i) => { if (!l || !Array.isArray(l.edges)) errors.push(`loops[${i}]: necesita edges: [ids de aristas]`); });
+  LOOPS.unmatched.forEach(l => { if (l && Array.isArray(l.edges)) warns.push(`loops «${l.label || l.edges.join(', ')}»: sus aristas no forman un bucle con polarity (${l.edges.join(' → ')})`); });
+  LOOPS.loops.filter(l => l.osc).forEach(l => warns.push(`${l.name}${l.label ? ` «${l.label}»` : ''}: equilibra con retraso, puede oscilar`));
+  if (LOOPS.loops.length) console.log(`bucles: ${LOOPS.loops.map(l => `${l.name}${l.label ? ` «${l.label}»` : ''} (${l.nodes.join(' → ')})`).join(' · ')}${LOOPS.truncated ? ' · hay más (se cuentan los primeros)' : ''}`);
+}
 warns.forEach(w => console.log('  ⚠ ' + w));
 if (opt('--json-out')) { fs.writeFileSync(opt('--json-out'), JSON.stringify(spec, null, 2)); console.log('json enriquecido →', opt('--json-out')); }
 errors.forEach(e => console.log('  ✗ ' + e));

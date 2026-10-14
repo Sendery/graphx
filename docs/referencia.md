@@ -646,6 +646,21 @@ el panel, cuántas piezas, cuántos saltos y qué equipos toca. En una llamada (
 fallo sube hacia quien llama; en un `event`, `queue` o `async` baja hacia quien consume. `fx.blast.mode`:
 `auto` (eso), `callers`, `downstream` o `both`. Seleccionar otra pieza lo quita; `g.clearBlast()` también.
 
+### 8.2.1 · Bucles de realimentación
+
+Para un diagrama de bucles causales (pensamiento sistémico): `polarity: "+"` en una arista dice que las dos
+piezas se mueven en el mismo sentido y `"-"`, en el contrario; `delay: true` (o el texto de cuánto: `"6 semanas"`,
+o `{ duration }`) marca que tarda en notarse. El signo va junto a la punta y el retraso con dos rayas en medio de
+la línea; los dos se ven también sin el módulo de efectos y en el panel del terminal del mod.
+
+Con el módulo, el motor busca los bucles que forman esas aristas (en el modelo entero, así que plegar no inventa ni
+esconde ninguno): un número par de «−» **refuerza** (R, en naranja) y uno impar **equilibra** (B, en azul); uno que
+equilibra con algún retraso puede **oscilar** («!»). Cada bucle lleva una insignia en el hueco más cercano a su
+centro (pasar por encima lo ilumina; un clic lo deja fijo), una línea en la leyenda y, en el panel de cada pieza,
+los bucles en los que está. `loops: [{ edges: [ids], label, goal }]` en la raíz les pone nombre y meta.
+`graphx-build.mjs --check` los enumera y avisa de los que pueden oscilar y de los nombrados que no cierran.
+`fx.loops: false` lo apaga. Ejemplo: `examples/systems/tienda.json` (en inglés, `examples/en/systems/`).
+
 ### 8.3 · Equipos
 
 `owners: { "pagos": { "label": "Equipo Pagos", "short": "PG", "color": "#8250df", "contact": "#pagos", "url": "https://…" } }`

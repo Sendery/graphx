@@ -25,11 +25,11 @@
 
   /* ---------- configuración ---------- */
   const KEYS = ['particles', 'waves', 'play', 'heat', 'spark', 'progress', 'alerts', 'spotlight', 'entrance', 'grid', 'lod', 'glow', 'gradient', 'autoColor', 'skin', 'sketch', 'hoverFlow',
-    'owners', 'blast', 'blocks', 'timeline', 'attach'];
+    'owners', 'blast', 'blocks', 'timeline', 'attach', 'loops'];
   const OFF = KEYS.reduce((o, k) => (o[k] = false, o), {});
   /* lo que se enciende sin pedirlo: mejoras discretas y lo que piden los datos */
   const DEFAULTS = Object.assign({}, OFF, { particles: 'data', waves: true, heat: true, spark: true, progress: true, alerts: true, grid: true, lod: true, hoverFlow: true,
-    owners: true, blast: true, blocks: true, timeline: true, attach: true });
+    owners: true, blast: true, blocks: true, timeline: true, attach: true, loops: true });
   const VIVID = { particles: true, play: true, spotlight: true, entrance: 'cascade', glow: true, gradient: true, autoColor: 'auto' };
   const PRESETS = {
     calm: {}, off: OFF, none: OFF,
@@ -79,9 +79,11 @@
 
   const STR = {
     es: { owners: 'Equipos', ownersT: 'Filtrar y marcar por equipo', noOwner: 'Sin equipo', colorOwn: 'Colorear por equipo', clear: 'Limpiar', owner: 'Equipo',
+      loops: 'Bucles', loopR: 'refuerza', loopB: 'equilibra', loopGoal: 'meta', loopOsc: 'equilibra con retraso: puede oscilar', loopsT: 'Bucles de realimentación: R refuerza, B equilibra', loopsMore: 'hay más bucles de los que se enseñan',
       blast: 'Impacto', blastT: 'Radio de impacto: qué deja de funcionar si esto falla', blastH: 'Radio de impacto', hop: 'salto', hops: 'saltos', affected: 'piezas afectadas',
       teams: 'equipos', unblast: 'Quitar el impacto', origin: 'origen', tlPlay: 'Reproducir la línea de tiempo', tlPause: 'Pausa', total: 'Actividad total', now: 'ahora', play: 'Flujo', playT: 'Recorrer el flujo: una onda sale de los orígenes y sigue las conexiones', stop: 'Detener', heat: 'Calor', progress: 'Progreso', trend: 'Serie', min: 'mín', max: 'máx', last: 'último', flow: 'flujo · partículas según el caudal', alert: { crit: 'Crítico', warn: 'Atención', info: 'Aviso', ok: 'Correcto' } },
     en: { owners: 'Teams', ownersT: 'Filter and mark by team', noOwner: 'No team', colorOwn: 'Color by team', clear: 'Clear', owner: 'Team',
+      loops: 'Loops', loopR: 'reinforcing', loopB: 'balancing', loopGoal: 'goal', loopOsc: 'balancing with a delay: may oscillate', loopsT: 'Feedback loops: R reinforces, B balances', loopsMore: 'there are more loops than shown',
       blast: 'Impact', blastT: 'Blast radius: what stops working if this fails', blastH: 'Blast radius', hop: 'hop', hops: 'hops', affected: 'parts affected',
       teams: 'teams', unblast: 'Clear the impact', origin: 'origin', tlPlay: 'Play the timeline', tlPause: 'Pause', total: 'Total activity', now: 'now', play: 'Flow', playT: 'Play the flow: a wave leaves the sources and follows the connections', stop: 'Stop', heat: 'Heat', progress: 'Progress', trend: 'Series', min: 'min', max: 'max', last: 'last', flow: 'flow · particles by throughput', alert: { crit: 'Critical', warn: 'Warning', info: 'Notice', ok: 'OK' } }
   };
@@ -298,6 +300,27 @@
 .gx-blasting .gx-node.gx-bl-d0 { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--gx-del) 55%, transparent)); }
 .gx-blasting .gx-edge.gx-bl > .gx-eline { stroke: color-mix(in srgb, var(--gx-del) 80%, var(--gx-neu)); stroke-width: 2.2; opacity: .95; }
 .gx-blastl { pointer-events: none; }
+/* bucles de realimentación: R en naranja (refuerza), B en azul (equilibra); «!» si puede oscilar */
+.gx-loop { --gx-lp: #d9661b; cursor: pointer; }
+.gx-loop.t-b { --gx-lp: #2f6fd6; }
+.gx-loop-bg { fill: var(--gx-card); stroke: var(--gx-lp); stroke-width: 1.6; filter: drop-shadow(0 1px 2px rgba(0,0,0,.12)); }
+.gx-loop:hover .gx-loop-bg, .gx-loop.on .gx-loop-bg, .gx-loop:focus-visible .gx-loop-bg { fill: color-mix(in srgb, var(--gx-lp) 14%, var(--gx-card)); stroke-width: 2.4; }
+.gx-loop:focus { outline: none; }
+.gx-loop-ring, .gx-loop-tip { fill: none; stroke: var(--gx-lp); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
+.gx-loop-t { font: 800 10.5px var(--gx-mono); fill: var(--gx-lp); text-anchor: middle; }
+.gx-loop-osc { fill: var(--gx-mod); stroke: var(--gx-card); stroke-width: 1.5; }
+.gx-loop-osct { font: 800 9px system-ui, sans-serif; fill: #fff; text-anchor: middle; }
+.gx-lg-loops li { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.gx-lg-loops li.more { cursor: default; font-style: italic; color: var(--gx-muted); }
+.gx-lg-loops span { display: flex; flex-direction: column; }
+.gx-lg-loops em { font-style: normal; font-size: 10.5px; color: var(--gx-muted); }
+.gx-lg-loops em.osc { color: var(--gx-mod); }
+.gx-lg-loop { --gx-lp: #d9661b; font: 800 10px var(--gx-mono); font-style: normal; color: var(--gx-lp); border: 1.5px solid var(--gx-lp); border-radius: 999px; padding: 1px 6px; }
+.gx-lg-loop.t-b { --gx-lp: #2f6fd6; }
+.gx-bk-chip.gx-loopc i { all: unset; font: 800 10px var(--gx-mono); color: #d9661b; margin-right: 5px; }
+.gx-bk-chip.gx-loopc.t-b i { color: #2f6fd6; }
+.gx-bk-loops { margin-top: 12px; }
+.gx-bk-loops h5 { margin: 0 0 6px; }
 .gx-ring { --gx-ring: var(--gx-mod); fill: color-mix(in srgb, var(--gx-ring) 5%, transparent); stroke: var(--gx-ring); stroke-width: 1.6; stroke-dasharray: 7 6;
   transform-box: fill-box; transform-origin: center; animation: gx-ring .75s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--k, 0) * 170ms); }
 .gx-ring.h1, .gx-ringt.h1 { --gx-ring: var(--gx-del); } .gx-ring.h2, .gx-ringt.h2 { --gx-ring: #ea7a1e; } .gx-ring.h3, .gx-ringt.h3 { --gx-ring: var(--gx-mod); }
@@ -631,6 +654,48 @@ button.gx-bk-chip:hover { border-color: var(--gx-accent); color: var(--gx-accent
   }
 
   /* ---------- una instancia ---------- */
+  /* ---------- bucles de realimentación ---------- */
+  /* Los ciclos simples que forman las aristas con `polarity`: un bucle con un número par de «−» refuerza (R)
+     y uno impar equilibra (B); uno que equilibra con algún `delay` puede oscilar. Se buscan en el modelo
+     entero (lo plegado no inventa ni esconde bucles), de hasta `max` aristas y como mucho `cap` bucles.
+     `spec.loops: [{ edges: [ids], label, goal }]` les pone nombre y meta; uno que no cierra se devuelve en
+     `unmatched`. Función pura: la usan el motor, el builder y el mod. */
+  const polOf = e => { const p = e && e.polarity; return p === '+' || p === 'same' ? '+' : p === '-' || p === '−' || p === 'opposite' ? '-' : null; };
+  function findLoops(spec, o) {
+    o = o || {};
+    const MAX = o.max || 8, CAP = o.cap || 60;
+    const E = (spec && spec.edges || []).filter(e => e && e.id != null && polOf(e) && e.from != null && e.to != null);
+    const ids = [...new Set(E.flatMap(e => [e.from, e.to]))], ix = new Map(ids.map((id, i) => [id, i]));
+    const out = new Map(ids.map(id => [id, []])); E.forEach(e => out.get(e.from).push(e));
+    const found = []; let truncated = false;
+    for (let i = 0; i < ids.length && !truncated; i++) {
+      /* cada ciclo se cuenta una vez: desde su pieza de índice más bajo */
+      const start = ids[i], path = [], on = new Set([start]);
+      const dfs = x => {
+        for (const e of out.get(x)) {
+          if (truncated) return;
+          const j = ix.get(e.to); if (j < i) continue;
+          if (e.to === start) { found.push(path.concat(e)); if (found.length >= CAP) truncated = true; continue; }
+          if (on.has(e.to) || path.length + 1 >= MAX) continue;
+          on.add(e.to); path.push(e); dfs(e.to); path.pop(); on.delete(e.to);
+        }
+      };
+      dfs(start);
+    }
+    const named = Array.isArray(spec && spec.loops) ? spec.loops : [];
+    const key = list => list.map(String).sort().join('\u0000'), used = new Set();
+    const loops = found.sort((a, b) => a.length - b.length).map(c => {
+      const neg = c.filter(e => polOf(e) === '-').length, type = neg % 2 ? 'B' : 'R';
+      const k = key(c.map(e => e.id)), ni = named.findIndex(l => l && Array.isArray(l.edges) && key(l.edges) === k);
+      if (ni >= 0) used.add(ni);
+      const nm = ni >= 0 ? named[ni] : {};
+      return { type, edges: c.map(e => e.id), nodes: c.map(e => e.from), delayed: c.some(e => e.delay), label: nm.label || null, goal: nm.goal || null };
+    });
+    const count = { R: 0, B: 0 };
+    loops.forEach(l => { l.name = l.type + (++count[l.type]); l.osc = l.type === 'B' && l.delayed; });
+    return { loops, truncated, unmatched: named.filter((l, i) => !used.has(i)) };
+  }
+
   function create(A) {
     const cfg = resolve(A.spec.fx, A.opts.fx);
     if (!cfg) return null;
@@ -892,6 +957,7 @@ button.gx-bk-chip:hover { border-color: var(--gx-accent); color: var(--gx-accent
       applyOwners();
       if (blast) { if (M.has(blast.id) && A.repOf(blast.id) != null) applyBlast(false); else clearBlast(true); }
       if (TL && TL.i < 0) tlSeek(TL.start === 'start' ? 0 : TL.n - 1, { dur: 0, force: true });
+      drawLoops();
     }
 
     /* ---------- zoom semántico ---------- */
@@ -1323,6 +1389,82 @@ button.gx-bk-chip:hover { border-color: var(--gx-accent); color: var(--gx-accent
         + '</div>';
     }
 
+    /* ---------- bucles de realimentación (findLoops): una insignia en medio de cada uno ---------- */
+    const LP = cfg.loops ? findLoops(spec) : null, LOOPS = LP && LP.loops.length ? LP.loops : null;
+    const loopBy = new Map((LOOPS || []).map(l => [l.name, l]));
+    const gLoops = LOOPS ? s('g', { class: 'gx-loopl' }, world) : null;
+    let loopPin = null;
+    /* lo que se ilumina: las piezas visibles del bucle y las aristas visibles que llevan alguna de las suyas */
+    function loopSet(l) {
+      const nodes = new Set(l.nodes.map(A.repOf).filter(x => x != null)), own = new Set(l.edges), edges = new Set();
+      (S.vedges || []).forEach(v => { if (v.list.some(e => own.has(e.id))) edges.add(v.id); });
+      return { nodes, edges, id: null, loop: l.name };
+    }
+    function showLoop(name) {
+      const l = loopBy.get(name); if (!l) return;
+      S.trace = loopSet(l); A.applyHighlight();
+    }
+    function hideLoop() {
+      if (loopPin && S.trace && S.trace.loop === loopPin) return;
+      if (S.trace && S.trace.loop) { S.trace = loopPin ? loopSet(loopBy.get(loopPin)) : null; A.applyHighlight(); }
+    }
+    function pinLoop(name) {
+      const on = !(loopPin === name && S.trace && S.trace.loop === name);
+      loopPin = on ? name : null;
+      if (on) showLoop(name); else { S.trace = null; A.applyHighlight(); }
+      if (gLoops) gLoops.querySelectorAll('.gx-loop').forEach(b => b.classList.toggle('on', b.dataset.loop === loopPin));
+    }
+    const loopTitle = l => `${l.name} · ${l.type === 'R' ? L.loopR : L.loopB}${l.label ? ' — ' + l.label : ''}`;
+    function drawLoops() {
+      if (!gLoops) return;
+      gLoops.innerHTML = '';
+      if (loopPin && !(S.trace && S.trace.loop === loopPin)) loopPin = null;
+      const placed = [], boxes = [...S.rects].filter(([id]) => S.visible.has(id) && !A.isGroup(id)).map(([, r]) => r);
+      for (const l of LOOPS) {
+        /* plegado en una sola pieza, el bucle no se ve: no hay insignia */
+        const reps = [...new Set(l.nodes.map(A.repOf).filter(x => x != null && S.rects.has(x)))];
+        if (reps.length < 2) continue;
+        let x0 = 0, y0 = 0;
+        reps.forEach(id => { const r = S.rects.get(id); x0 += r.x + r.w / 2; y0 += r.y + r.h / 2; });
+        x0 /= reps.length; y0 /= reps.length;
+        /* en el centro del bucle o, si ahí hay una tarjeta u otra insignia, en el hueco libre más cercano */
+        const free = (x, y) => !boxes.some(r => x > r.x - 22 && x < r.x + r.w + 22 && y > r.y - 22 && y < r.y + r.h + 22) && !placed.some(p => Math.hypot(p.x - x, p.y - y) < 40);
+        let x = x0, y = y0;
+        search: for (let rad = 0; rad <= 420; rad += 24) for (let k = 0; k < (rad ? 16 : 1); k++) {
+          const a = k * Math.PI / 8; if (free(x0 + rad * Math.cos(a), y0 + rad * Math.sin(a))) { x = x0 + rad * Math.cos(a); y = y0 + rad * Math.sin(a); break search; }
+        }
+        placed.push({ x, y });
+        const g = s('g', { class: `gx-loop t-${l.type.toLowerCase()}${l.osc ? ' osc' : ''}${loopPin === l.name ? ' on' : ''}`, transform: `translate(${x.toFixed(1)},${y.toFixed(1)})`, tabindex: 0, role: 'button', 'aria-label': loopTitle(l) }, gLoops);
+        g.dataset.loop = l.name;
+        s('circle', { class: 'gx-loop-bg', r: 17 }, g);
+        /* la flecha que da la vuelta: en el sentido del reloj si refuerza, al revés si equilibra */
+        s('path', { class: 'gx-loop-ring', d: l.type === 'R' ? 'M0,-12A12,12 0 1 1 -11.4,-3.7' : 'M0,-12A12,12 0 1 0 11.4,-3.7' }, g);
+        s('path', { class: 'gx-loop-tip', d: l.type === 'R' ? 'M-14.8,-7.4L-11.4,-3.7L-7.2,-6.3' : 'M14.8,-7.4L11.4,-3.7L7.2,-6.3' }, g);
+        const t = s('text', { class: 'gx-loop-t', y: 4 }, g); t.textContent = l.name;
+        if (l.osc) { s('circle', { class: 'gx-loop-osc', cx: 13, cy: -13, r: 6 }, g); const w = s('text', { class: 'gx-loop-osct', x: 13, y: -10 }, g); w.textContent = '!'; }
+        s('title', null, g).textContent = loopTitle(l) + (l.goal ? ` · ${L.loopGoal}: ${l.goal}` : '') + (l.osc ? ` · ${L.loopOsc}` : '');
+        g.addEventListener('pointerenter', () => showLoop(l.name));
+        g.addEventListener('pointerleave', hideLoop);
+        g.addEventListener('pointerdown', ev => ev.stopPropagation());
+        g.addEventListener('click', ev => { ev.stopPropagation(); pinLoop(l.name); });
+        g.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pinLoop(l.name); } });
+      }
+    }
+    if (LOOPS) {
+      const lg = h('div', 'gx-lg-loops', `<h4 title="${esc(L.loopsT)}">${esc(L.loops)}</h4><ul>${LOOPS.map(l => `<li data-loop="${esc(l.name)}"><i class="gx-lg-loop t-${l.type.toLowerCase()}">${esc(l.name)}</i><span>${esc(l.label || (l.type === 'R' ? L.loopR : L.loopB))}${l.goal ? `<em>${esc(L.loopGoal)}: ${esc(l.goal)}</em>` : ''}${l.osc ? `<em class="osc">⚠ ${esc(L.loopOsc)}</em>` : ''}</span></li>`).join('')}${LP.truncated ? `<li class="more">${esc(L.loopsMore)}</li>` : ''}</ul>`, A.legend);
+      lg.querySelectorAll('li[data-loop]').forEach(li => {
+        li.addEventListener('pointerenter', () => showLoop(li.dataset.loop));
+        li.addEventListener('pointerleave', hideLoop);
+        li.addEventListener('click', () => pinLoop(li.dataset.loop));
+      });
+    }
+    function loopsHTML(n) {
+      if (!LOOPS) return '';
+      const inside = new Set([n.id, ...A.descendantsOf(n.id)]), mine = LOOPS.filter(l => l.nodes.some(x => inside.has(x)));
+      if (!mine.length) return '';
+      return `<div class="gx-bk-loops"><h5>${esc(L.loops)}</h5><div class="gx-bk-chips">${mine.map(l => `<button type="button" class="gx-bk-chip gx-loopc t-${l.type.toLowerCase()}" data-act="loop:${esc(l.name)}" title="${esc(loopTitle(l))}"><i>${esc(l.name)}</i>${esc(l.label || (l.type === 'R' ? L.loopR : L.loopB))}${l.osc ? ' ⚠' : ''}</button>`).join('')}</div></div>`;
+    }
+
     /* ---------- panel: equipo, impacto y bloques ricos ---------- */
     function panelActs(n) { return BL && n && !n.isLane ? `<button type="button" class="gx-btn gx-blast-b${blast && blast.id === n.id ? ' on' : ''}" data-act="blast" title="${esc(L.blastT)}">✺ ${esc(L.blast)}</button>` : ''; }
     function panelTop(n) {
@@ -1331,10 +1473,11 @@ button.gx-bk-chip:hover { border-color: var(--gx-accent); color: var(--gx-accent
       const o = OWN && ownerOf(n.id);
       if (o) out += `<div class="gx-bk-own"><i style="--gx-oc:${o.cvar}">${esc(o.short)}</i><span><small>${esc(L.owner)}</small><b>${esc(o.label)}</b>${o.contact ? `<em>${esc(o.contact)}</em>` : ''}</span>${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">↗</a>` : ''}</div>`;
       out += blastHTML(n);
+      out += loopsHTML(n);
       if (cfg.blocks && Array.isArray(n.blocks) && n.blocks.length) out += renderBlocks(n.blocks, { lang });
       return out;
     }
-    function panelAct(a, id) { if (a === 'blast') toggleBlast(id); else if (a === 'unblast') clearBlast(); }
+    function panelAct(a, id) { if (a === 'blast') toggleBlast(id); else if (a === 'unblast') clearBlast(); else if (typeof a === 'string' && a.startsWith('loop:')) pinLoop(a.slice(5)); }
     function panelMount() { }
 
     /* ---------- extras de las formas: sparkline y progreso en una franja bajo el contorno ---------- */
@@ -1553,5 +1696,5 @@ button.gx-bk-chip:hover { border-color: var(--gx-accent); color: var(--gx-accent
       wave: (ids, dir, o) => wave([].concat(ids).map(A.repOf), dir || 'out', o) };
   }
 
-  return { create, resolve, scale, SCHEMES, PRESETS, DEFAULTS, css: CSS, version: '1.9.0', renderBlocks, parseTable, injectCSS: () => injectCSS() };
+  return { create, resolve, scale, SCHEMES, PRESETS, DEFAULTS, css: CSS, version: '1.9.0', renderBlocks, parseTable, findLoops, injectCSS: () => injectCSS() };
 });

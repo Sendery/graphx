@@ -1,0 +1,238 @@
+{
+  "title": "Los bucles de la tienda",
+  "lang": "es",
+  "summary": "Por qué crecer en pedidos no basta: la publicidad refuerza el crecimiento, pero el almacén se satura y contratar llega tarde. Cada flecha dice si empuja en el mismo sentido (+) o en el contrario (−); las dos rayas, que tarda en notarse.",
+  "direction": "right",
+  "layout": {
+    "cycles": "dfs"
+  },
+  "nodes": [
+    {
+      "id": "clientes",
+      "label": "Clientes activos",
+      "kind": "user",
+      "summary": "Quien ha comprado en los últimos 90 días."
+    },
+    {
+      "id": "pedidos",
+      "label": "Pedidos al día",
+      "kind": "cart",
+      "summary": "Lo que entra cada día por la web y la app."
+    },
+    {
+      "id": "ingresos",
+      "label": "Ingresos",
+      "kind": "chart",
+      "summary": "Lo que dejan los pedidos."
+    },
+    {
+      "id": "publicidad",
+      "label": "Presupuesto de anuncios",
+      "kind": "bell",
+      "summary": "Un porcentaje fijo de los ingresos."
+    },
+    {
+      "id": "carga",
+      "label": "Carga del almacén",
+      "kind": "queue",
+      "summary": "Pedidos pendientes de preparar."
+    },
+    {
+      "id": "plazo",
+      "label": "Plazo de entrega",
+      "kind": "gauge",
+      "summary": "Días desde el pedido hasta la puerta."
+    },
+    {
+      "id": "satisfaccion",
+      "label": "Satisfacción",
+      "kind": "user",
+      "summary": "La nota que ponen tras recibir el paquete."
+    },
+    {
+      "id": "resenas",
+      "label": "Reseñas buenas",
+      "kind": "mail",
+      "summary": "Lo que lee quien aún no ha comprado."
+    },
+    {
+      "id": "contratacion",
+      "label": "Contratación",
+      "kind": "search",
+      "summary": "Se abre cuando el plazo pasa de dos días."
+    },
+    {
+      "id": "personal",
+      "label": "Personal del almacén",
+      "kind": "user",
+      "summary": "Gente preparando pedidos en cada turno."
+    }
+  ],
+  "edges": [
+    {
+      "id": "s1",
+      "from": "clientes",
+      "to": "pedidos",
+      "polarity": "+"
+    },
+    {
+      "id": "s2",
+      "from": "pedidos",
+      "to": "ingresos",
+      "polarity": "+"
+    },
+    {
+      "id": "s3",
+      "from": "ingresos",
+      "to": "publicidad",
+      "polarity": "+"
+    },
+    {
+      "id": "s4",
+      "from": "publicidad",
+      "to": "clientes",
+      "polarity": "+"
+    },
+    {
+      "id": "s5",
+      "from": "pedidos",
+      "to": "carga",
+      "polarity": "+"
+    },
+    {
+      "id": "s6",
+      "from": "carga",
+      "to": "plazo",
+      "polarity": "+"
+    },
+    {
+      "id": "s7",
+      "from": "plazo",
+      "to": "satisfaccion",
+      "polarity": "-"
+    },
+    {
+      "id": "s8",
+      "from": "satisfaccion",
+      "to": "resenas",
+      "polarity": "+"
+    },
+    {
+      "id": "s9",
+      "from": "resenas",
+      "to": "clientes",
+      "polarity": "+",
+      "delay": "2 meses"
+    },
+    {
+      "id": "s10",
+      "from": "plazo",
+      "to": "contratacion",
+      "polarity": "+"
+    },
+    {
+      "id": "s11",
+      "from": "contratacion",
+      "to": "personal",
+      "polarity": "+",
+      "delay": "6 semanas"
+    },
+    {
+      "id": "s12",
+      "from": "personal",
+      "to": "plazo",
+      "polarity": "-"
+    }
+  ],
+  "loops": [
+    {
+      "edges": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
+      "label": "la publicidad trae clientes"
+    },
+    {
+      "edges": [
+        "s10",
+        "s11",
+        "s12"
+      ],
+      "label": "contratar para cumplir el plazo",
+      "goal": "entregar en 48 h"
+    },
+    {
+      "edges": [
+        "s1",
+        "s5",
+        "s6",
+        "s7",
+        "s8",
+        "s9"
+      ],
+      "label": "el éxito satura el almacén"
+    }
+  ],
+  "tour": {
+    "title": "Por qué no basta con vender más",
+    "steps": [
+      {
+        "title": "El motor: R1",
+        "body_html": "Más clientes, más pedidos, más ingresos y más anuncios, que traen más clientes. Solo, crecería sin freno.",
+        "focus": {
+          "nodes": [
+            "clientes",
+            "pedidos",
+            "ingresos",
+            "publicidad"
+          ],
+          "edges": [
+            "s1",
+            "s2",
+            "s3",
+            "s4"
+          ]
+        }
+      },
+      {
+        "title": "El freno: B2",
+        "body_html": "Los mismos pedidos llenan el almacén, el plazo sube y la satisfacción baja (−). Las reseñas tardan dos meses en notarlo.",
+        "focus": {
+          "nodes": [
+            "pedidos",
+            "carga",
+            "plazo",
+            "satisfaccion",
+            "resenas",
+            "clientes"
+          ],
+          "edges": [
+            "s5",
+            "s6",
+            "s7",
+            "s8",
+            "s9"
+          ]
+        }
+      },
+      {
+        "title": "La respuesta que llega tarde: B1",
+        "body_html": "Contratar baja el plazo, pero tarda seis semanas: equilibra con retraso y tiende a pasarse de largo, con almacén lleno y luego gente de sobra.",
+        "focus": {
+          "nodes": [
+            "plazo",
+            "contratacion",
+            "personal"
+          ],
+          "edges": [
+            "s10",
+            "s11",
+            "s12"
+          ]
+        }
+      }
+    ]
+  }
+}

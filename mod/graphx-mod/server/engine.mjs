@@ -314,6 +314,13 @@ export function createEngine(root, { log = () => { } } = {}) {
       if (first.headLabel) o.hl = clip(first.headLabel, 8);
       if (first.tailLabel) o.tll = clip(first.tailLabel, 8);
       if (lab) { o.l = clip(lab.textContent, 48); if (m) { o.lx = Math.round(+m[1] + (rect ? +rect.getAttribute('width') / 2 : 0)); o.ly = Math.round(+m[2] + (rect ? +rect.getAttribute('height') / 2 : 0)); } }
+      /* una arista causal lleva delante de su etiqueta el signo (+ o −) y «‖» con lo que tarda si tiene retraso */
+      if (list.length <= 1 && (first.polarity || first.delay)) {
+        const p = first.polarity, sg = p === '+' || p === 'same' ? '+' : p === '-' || p === '−' || p === 'opposite' ? '−' : '';
+        const dl = first.delay ? '‖' + (typeof first.delay === 'string' ? ' ' + first.delay : first.delay && first.delay.duration ? ' ' + first.delay.duration : '') : '';
+        const tag = [sg, dl].filter(Boolean).join(' ');
+        if (tag) o.l = clip(o.l ? `${tag} ${o.l}` : tag, 48);
+      }
       if (first.summary) o.sm = clip(plainMd(first.summary), 160);
       if (el.classList.contains('lit')) o.lt = 1;
       if (dimAll && !el.classList.contains('lit')) o.dm = 1;
