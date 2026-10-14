@@ -32,6 +32,7 @@ const P = {
   pipeline: page('examples/fx/pipeline-datos.json', 'pipeline'), k8s: page('examples/fx/kubernetes.json', 'k8s'), cicd: page('examples/fx/ci-cd.mmd', 'cicd'),
   almacen: page('examples/fx/almacen.json', 'almacen'), onboarding: page('examples/onboarding-proceso.json', 'onboarding'), radar: page('examples/warehouses-pr-radar.json', 'radar'),
   stack: page('examples/pr-review-stack-202.json', 'stack'),
+  blueprint: page('examples/axes/blueprint.json', 'blueprint'), wardley: page('examples/axes/wardley.json', 'wardley'),
   shapes: page('examples/mermaid/shapes.mmd', 'shapes'), sequence: page('examples/mermaid/sequence.mmd', 'sequence'), gantt: page('examples/mermaid/gantt.mmd', 'gantt'),
   sankey: page('examples/mermaid/sankey.mmd', 'sankey'), treemap: page('examples/mermaid/treemap.mmd', 'treemap'), git: page('examples/mermaid/git.mmd', 'git'),
   classd: page('examples/mermaid/class.mmd', 'classd'), er: page('examples/mermaid/er.mmd', 'er')
@@ -95,7 +96,9 @@ const S = [
   { name: 'ej-almacen', url: P.almacen, sel: '.gx-stage' },
   { name: 'ej-onboarding', url: P.onboarding, sel: '.gx-stage' },
   { name: 'ej-radar', url: P.radar, sel: '.gx-stage' },
-  { name: 'ej-pr-review', url: P.stack, sel: '.gx-stage' }
+  { name: 'ej-pr-review', url: P.stack, sel: '.gx-stage' },
+  { name: 'ej-blueprint', url: P.blueprint, sel: '.gx-stage' },
+  { name: 'ej-wardley', url: P.wardley, sel: '.gx-stage' }
 ];
 
 /* ---------- captura ---------- */

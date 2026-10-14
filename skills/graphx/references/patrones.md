@@ -22,6 +22,7 @@ adorno: añádelo solo si hay datos reales o si lo piden.
 | qué está bloqueando qué | [Radar de trabajo](#radar-de-trabajo) |
 | quién llama a quién y en qué orden | [Secuencia](#secuencia) |
 | qué hay en un repo o qué cambió | [Árbol](#árbol-de-ficheros) |
+| dónde está cada cosa respecto a algo (lo que ve el cliente, cuánto ha madurado, cuánto poder tiene) | [Ejes](#ejes-cuando-la-posición-significa-algo) |
 | documentar un sistema entero | [Perspectivas](#perspectivas-para-documentar-un-sistema) y, para juntarlas, [Atlas](#atlas-de-un-sistema) |
 
 ## Mapa de servicios
@@ -116,6 +117,19 @@ adorno: añádelo solo si hay datos reales o si lo piden.
 
 - **Forma**: `show.paths` (del diff: `git diff --numstat`) o `tree_text` (de `tree`); `tree_options.root`, `compact`.
 - **Enriquecer**: `status` y líneas por fichero; `focus: "changes"` para ver solo lo cambiado.
+
+## Ejes: cuando la posición significa algo
+
+*Ejemplos: `examples/axes/blueprint.json`, `examples/axes/wardley.json`, `examples/axes/interesados.json`.*
+
+Solo si la persona habla en esos términos (un *service blueprint*, un mapa de Wardley, una matriz de poder e
+interés) o si la pregunta es «dónde cae cada cosa» y no «qué llama a qué». Para todo lo demás, el grafo de siempre.
+
+- **Forma**: `axes` con un `preset` (`blueprint`, `wardley`, `stakeholders`) o con ejes propios, y `at: { x, y }` en
+  cada pieza. Un eje puede reutilizar los carriles (`bands: "lanes"`).
+- **Enriquecer** *(opcional)*: las aristas solo donde algo pasa de una banda a otra (en un blueprint, lo que cruza la
+  línea de visibilidad); `summary` con el porqué de la posición («commodity: se contrata»).
+- **Recorrer**: banda a banda, o de lo visible a lo invisible.
 
 ## Perspectivas para documentar un sistema
 

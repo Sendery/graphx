@@ -18,6 +18,7 @@ Los que llevan datos sintéticos se regeneran con su script.
 | [Radar de PRs](#radar-de-prs) | estados propios, enlaces y recorrido generados desde datos | `node examples/warehouses-pr-radar/gen-graph.mjs` |
 | [Revisión de una PR](#revisión-de-una-pr) | diff de 73 piezas en cuatro niveles | (a mano) |
 | [Atlas de una tienda](#atlas-de-una-tienda) | varias perspectivas con las piezas compartidas, fichas e interiores | `node examples/fx/build-atlas.mjs <salida.html>` |
+| [Ejes: blueprint y Wardley](#ejes-blueprint-y-wardley) | la posición significa algo: bandas con líneas con nombre, un mapa de evolución y una matriz de interesados | (a mano) |
 | Mermaid, uno por tipo | `examples/mermaid/*.mmd`: flowchart, secuencia, clases, estados, ER, gantt, git, C4… | (a mano) |
 
 ## Checkout de la tienda
@@ -113,3 +114,13 @@ cambios del sprint y, por dentro, Pagos y los estados de un pedido). Se monta co
 
 ![El atlas](img/demo-atlas.webp)
 
+## Ejes: blueprint y Wardley
+
+`examples/axes/` (en inglés, `examples/en/axes/`) · tres diagramas en los que la posición significa algo, con
+`axes` y `at` en cada pieza. El service blueprint del primer pedido de la tienda (etapas × lo que ve quien compra y lo
+que no, con las líneas de interacción y de visibilidad), su mapa de Wardley (qué se construye y qué se compra) y la
+matriz de interesados de un cambio de pasarela de pagos.
+
+![Service blueprint del primer pedido](img/ej-blueprint.webp)
+
+![Mapa de Wardley de la tienda](img/ej-wardley.webp)

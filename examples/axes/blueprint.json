@@ -1,0 +1,195 @@
+{
+  "title": "Primer pedido, service blueprint",
+  "lang": "es",
+  "summary": "Lo que hace quien compra por primera vez, lo que ve de la tienda y lo que pasa por detrás hasta que el paquete sale.",
+  "axes": {
+    "preset": "blueprint",
+    "x": {
+      "label": "Etapa",
+      "bands": [
+        {
+          "id": "find",
+          "label": "Encuentra"
+        },
+        {
+          "id": "buy",
+          "label": "Compra"
+        },
+        {
+          "id": "pay",
+          "label": "Paga"
+        },
+        {
+          "id": "wait",
+          "label": "Espera"
+        }
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "c-search",
+      "label": "Busca unas zapatillas",
+      "kind": "search",
+      "at": {
+        "x": "find",
+        "y": "customer"
+      },
+      "summary": "Llega desde un anuncio o desde el buscador."
+    },
+    {
+      "id": "c-cart",
+      "label": "Añade a la cesta",
+      "kind": "cart",
+      "at": {
+        "x": "buy",
+        "y": "customer"
+      },
+      "summary": "Elige talla y color."
+    },
+    {
+      "id": "c-pay",
+      "label": "Paga con tarjeta",
+      "kind": "card",
+      "at": {
+        "x": "pay",
+        "y": "customer"
+      },
+      "summary": "Primera compra: tiene que dar la dirección."
+    },
+    {
+      "id": "c-track",
+      "label": "Sigue el envío",
+      "kind": "mobile",
+      "at": {
+        "x": "wait",
+        "y": "customer"
+      },
+      "summary": "Abre el correo de confirmación y el enlace de seguimiento."
+    },
+    {
+      "id": "f-catalog",
+      "label": "Ficha de producto",
+      "kind": "ui",
+      "at": {
+        "x": "find",
+        "y": "frontstage"
+      },
+      "summary": "Fotos, tallas y si queda stock."
+    },
+    {
+      "id": "f-checkout",
+      "label": "Checkout",
+      "kind": "ui",
+      "at": {
+        "x": "pay",
+        "y": "frontstage"
+      },
+      "summary": "Dirección, envío y pago en una sola página."
+    },
+    {
+      "id": "f-email",
+      "label": "Correo de confirmación",
+      "kind": "mail",
+      "at": {
+        "x": "wait",
+        "y": "frontstage"
+      },
+      "summary": "Sale en menos de un minuto."
+    },
+    {
+      "id": "b-stock",
+      "label": "Reserva el stock",
+      "kind": "service",
+      "at": {
+        "x": "buy",
+        "y": "backstage"
+      },
+      "summary": "La unidad queda apartada 15 minutos."
+    },
+    {
+      "id": "b-fraud",
+      "label": "Puntúa el riesgo",
+      "kind": "shield",
+      "at": {
+        "x": "pay",
+        "y": "backstage"
+      },
+      "summary": "Una primera compra con tarjeta nueva tiene más riesgo."
+    },
+    {
+      "id": "b-pick",
+      "label": "Prepara el paquete",
+      "kind": "job",
+      "at": {
+        "x": "wait",
+        "y": "backstage"
+      },
+      "summary": "El almacén lo prepara en el turno siguiente."
+    },
+    {
+      "id": "s-psp",
+      "label": "Pasarela de pago",
+      "kind": "external",
+      "at": {
+        "x": "pay",
+        "y": "support"
+      },
+      "summary": "Autoriza el cargo."
+    },
+    {
+      "id": "s-carrier",
+      "label": "Transportista",
+      "kind": "external",
+      "at": {
+        "x": "wait",
+        "y": "support"
+      },
+      "summary": "Recoge a las 14:00."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "c-search",
+      "to": "f-catalog"
+    },
+    {
+      "id": "e2",
+      "from": "c-cart",
+      "to": "b-stock"
+    },
+    {
+      "id": "e3",
+      "from": "c-pay",
+      "to": "f-checkout"
+    },
+    {
+      "id": "e4",
+      "from": "f-checkout",
+      "to": "b-fraud"
+    },
+    {
+      "id": "e5",
+      "from": "b-fraud",
+      "to": "s-psp",
+      "label": "autoriza"
+    },
+    {
+      "id": "e6",
+      "from": "f-email",
+      "to": "c-track"
+    },
+    {
+      "id": "e7",
+      "from": "b-pick",
+      "to": "s-carrier"
+    },
+    {
+      "id": "e8",
+      "from": "b-pick",
+      "to": "f-email",
+      "label": "n.º de envío"
+    }
+  ]
+}

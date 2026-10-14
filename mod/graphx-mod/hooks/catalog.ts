@@ -35,6 +35,7 @@ export const DIAGRAMS: Capability[] = [
   { id: 'kanban', family: 'mermaid', what: 'tablero de columnas y tickets', how: 'mermaid: kanban', support: S('columnas como carriles, tickets con #id y @persona') },
   { id: 'treemap', family: 'mermaid', what: 'jerarquía por tamaño', how: 'mermaid: treemap-beta', support: S('teselas rellenas de color con su valor') },
   { id: 'pie', family: 'mermaid', what: 'reparto (se convierte en un donut)', how: 'mermaid: pie', support: S('donut con medios bloques ▀▄ (barra apilada en 16 colores o ASCII)') },
+  { id: 'axes', family: 'diagrama', what: 'posición con significado: service blueprint, mapa de Wardley, poder × interés', how: 'axes { preset, x, y } + at { x, y } en cada pieza', support: S('bandas, líneas con nombre y ejes en caracteres; cada pieza en su sitio') },
   { id: 'tree', family: 'árbol', what: 'árbol de ficheros de un repo, con su diff', how: 'paths: ["src/a.ts", {path, additions, deletions, status}] · tree_text', support: S('como `tree`, con insignias de extensión, +/− y carpetas plegables') },
 ]
 
@@ -118,9 +119,11 @@ export const REFERENCE = `# GraphX · referencia rápida
   "owners": { "pagos": { "label", "short", "color", "contact" } },
   "statuses": { "ok": { "label", "color", "pulse" } },
   "timeline": { "label", "data": "time\\tapi.heat\\te1\\n09:00\\t120\\t300…", "events": [{ "time", "label", "tone", "nodes" }] },
-  "layout": { "mode": "gantt|git|sankey|treemap|timeline|journey|grid|tree" } }
+  "layout": { "mode": "gantt|git|sankey|treemap|timeline|journey|grid|tree|axes", "cards": "fit", "trunks": false },
+  "axes": { "preset": "blueprint|wardley|stakeholders", "x": { "bands": [{ "id", "label" }], "lines": [{ "after", "label" }] }, "y": { "range": [0, 1], "ranges": [{ "from", "to", "label" }], "ends": ["bajo", "alto"] } } }
 
 - Jerarquía con "parent": el contenedor se pliega; escribe las aristas en el nivel más profundo.
+- "axes" solo cuando la posición significa algo (service blueprint, mapa de Wardley, poder × interés): cada pieza con "at": { "x": id de banda o número, "y": … }; "bands": "lanes" usa los carriles. Sin "at", la pieza va aparte («sin posición»).
 - "lane": carril raíz (una frontera: equipo, sistema, runtime). "summary" siempre: es lo que se lee al pasar y en el panel.
 - kind de pieza (icono): service app module function method class file route job queue datastore cache external ui config test package user mobile cloud lock key shield card cart search mail bell cpu bug branch chart gauge other.
 - kind de arista: call http rpc event queue data dependency render async other (event/queue/async discontinuas; el impacto baja por ellas y sube por las llamadas).

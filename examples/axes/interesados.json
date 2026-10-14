@@ -1,0 +1,71 @@
+{
+  "title": "Cambiar de pasarela de pagos: interesados",
+  "lang": "es",
+  "summary": "Quién puede frenar o empujar el cambio y cuánto le importa. Arriba a la derecha, a quien hay que tener de su lado desde el primer día.",
+  "axes": {
+    "preset": "stakeholders"
+  },
+  "nodes": [
+    {
+      "id": "cfo",
+      "label": "Dirección financiera",
+      "kind": "user",
+      "at": {
+        "x": 0.85,
+        "y": 0.9
+      },
+      "summary": "Firma el contrato y vigila las comisiones."
+    },
+    {
+      "id": "pay-team",
+      "label": "Equipo de pagos",
+      "kind": "user",
+      "at": {
+        "x": 0.95,
+        "y": 0.7
+      },
+      "summary": "Hace la migración."
+    },
+    {
+      "id": "legal",
+      "label": "Legal",
+      "kind": "user",
+      "at": {
+        "x": 0.35,
+        "y": 0.8
+      },
+      "summary": "Revisa el tratamiento de datos de tarjeta."
+    },
+    {
+      "id": "support",
+      "label": "Atención al cliente",
+      "kind": "user",
+      "at": {
+        "x": 0.75,
+        "y": 0.3
+      },
+      "summary": "Recibe las quejas si fallan cobros."
+    },
+    {
+      "id": "marketing",
+      "label": "Marketing",
+      "kind": "user",
+      "at": {
+        "x": 0.3,
+        "y": 0.35
+      },
+      "summary": "Le importa poco mientras el checkout no cambie."
+    },
+    {
+      "id": "warehouse",
+      "label": "Almacén",
+      "kind": "user",
+      "at": {
+        "x": 0.15,
+        "y": 0.15
+      },
+      "summary": "Basta con avisarle."
+    }
+  ],
+  "edges": []
+}

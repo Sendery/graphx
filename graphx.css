@@ -711,6 +711,16 @@ html.gx-noscroll, html.gx-noscroll body { overflow: hidden; }
 .gx-lg-tlstem { fill: none; stroke: var(--gx-line); stroke-width: 1.4; stroke-dasharray: 3 3; }
 .gx-lg-tldot { fill: var(--gx-accent); stroke: var(--gx-canvas); stroke-width: 2.5; }
 .gx-lg-lv { fill: none; stroke: color-mix(in srgb, var(--gx-line) 70%, transparent); stroke-dasharray: 2 5; }
+.gx-ax-band { fill: color-mix(in srgb, var(--gx-line) 22%, transparent); }
+.gx-ax-bandt { font-size: 11px; font-weight: 600; fill: var(--gx-muted); letter-spacing: .02em; }
+.gx-ax-bandt.lost { font-style: italic; font-weight: 500; fill: var(--gx-faint); }
+.gx-ax-title { font-size: 10.5px; font-weight: 700; fill: var(--gx-ink); text-transform: uppercase; letter-spacing: .08em; }
+.gx-ax-line { fill: none; stroke: var(--gx-accent); stroke-width: 1.4; stroke-dasharray: 6 4; opacity: .75; }
+.gx-ax-linet { font-size: 10.5px; font-style: italic; fill: var(--gx-accent); }
+.gx-ax-axis, .gx-ax-head { fill: none; stroke: var(--gx-muted); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.gx-ax-div { fill: none; stroke: var(--gx-faint); stroke-dasharray: 3 5; }
+.gx-ax-range { font-size: 10.5px; font-weight: 600; fill: var(--gx-muted); }
+.gx-ax-end { font-size: 10px; font-style: italic; fill: var(--gx-muted); }
 .gx-lg-jcurve { fill: none; stroke: var(--gx-muted); stroke-width: 2.2; stroke-linecap: round; opacity: .65; }
 .gx-lg-jstem { fill: none; stroke: var(--gx-line); stroke-dasharray: 2 4; }
 .gx-lg-facebg { fill: var(--gx-accent); stroke: var(--gx-canvas); stroke-width: 2; }

@@ -341,7 +341,9 @@ export function createEngine(root, { log = () => { } } = {}) {
       else if (tag === 'text') { const tx = el.textContent.trim(); if (tx) deco.push({ t: 't', x: Math.round(+(el.getAttribute('x') || 0) + ox), y: Math.round(+(el.getAttribute('y') || 0) + oy), s: clip(tx, 40), a: el.getAttribute('text-anchor') || undefined, c: cls }); }
     }
     const bbox = S.bbox ? { x: Math.round(S.bbox.x), y: Math.round(S.bbox.y), w: Math.round(S.bbox.w), h: Math.round(S.bbox.h) } : { x: 0, y: 0, w: 0, h: 0 };
-    return { nodes, edges, lanes, deco, bbox, mode: spec.layout && spec.layout.mode || 'graph' };
+    /* un JSON con `axes` y sin `layout.mode` se coloca sobre sus ejes (como en el motor): su posición
+       significa algo, así que el terminal no la recoloca en celdas */
+    return { nodes, edges, lanes, deco, bbox, mode: (spec.layout && spec.layout.mode) || (spec.axes ? 'axes' : 'graph') };
   }
 
   /* una secuencia como filas lógicas: el terminal la coloca por su cuenta (columnas por participante) */

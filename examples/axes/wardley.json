@@ -1,0 +1,152 @@
+{
+  "title": "Tienda online, mapa de Wardley",
+  "lang": "es",
+  "summary": "Lo que necesita quien compra, las piezas que lo hacen posible y cuánto ha madurado cada una: lo propio se construye, lo que ya es commodity se compra.",
+  "axes": {
+    "preset": "wardley"
+  },
+  "nodes": [
+    {
+      "id": "buyer",
+      "label": "Quien compra",
+      "kind": "user",
+      "at": {
+        "x": 0.55,
+        "y": 0.97
+      },
+      "summary": "El punto de partida del mapa."
+    },
+    {
+      "id": "find",
+      "label": "Encontrar el producto",
+      "kind": "ui",
+      "at": {
+        "x": 0.5,
+        "y": 0.82
+      },
+      "summary": "Una necesidad visible: quien compra la nota."
+    },
+    {
+      "id": "ship",
+      "label": "Recibirlo mañana",
+      "kind": "ui",
+      "at": {
+        "x": 0.42,
+        "y": 0.78
+      },
+      "summary": "La promesa de entrega."
+    },
+    {
+      "id": "reco",
+      "label": "Recomendaciones",
+      "kind": "service",
+      "at": {
+        "x": 0.22,
+        "y": 0.62
+      },
+      "summary": "Lo que diferencia a la tienda: se construye."
+    },
+    {
+      "id": "catalog",
+      "label": "Catálogo",
+      "kind": "datastore",
+      "at": {
+        "x": 0.55,
+        "y": 0.6
+      },
+      "summary": "Producto: hay herramientas hechas."
+    },
+    {
+      "id": "routing",
+      "label": "Reparto por zonas",
+      "kind": "route",
+      "at": {
+        "x": 0.3,
+        "y": 0.45
+      },
+      "summary": "A medida: lo que permite entregar mañana."
+    },
+    {
+      "id": "payments",
+      "label": "Pagos",
+      "kind": "external",
+      "at": {
+        "x": 0.8,
+        "y": 0.5
+      },
+      "summary": "Commodity: se contrata."
+    },
+    {
+      "id": "search",
+      "label": "Buscador",
+      "kind": "search",
+      "at": {
+        "x": 0.62,
+        "y": 0.38
+      },
+      "summary": "Producto: se configura, no se escribe."
+    },
+    {
+      "id": "cloud",
+      "label": "Nube",
+      "kind": "cloud",
+      "at": {
+        "x": 0.92,
+        "y": 0.1
+      },
+      "summary": "Commodity: se paga por uso."
+    }
+  ],
+  "edges": [
+    {
+      "id": "w1",
+      "from": "buyer",
+      "to": "find"
+    },
+    {
+      "id": "w2",
+      "from": "buyer",
+      "to": "ship"
+    },
+    {
+      "id": "w3",
+      "from": "find",
+      "to": "reco"
+    },
+    {
+      "id": "w4",
+      "from": "find",
+      "to": "catalog"
+    },
+    {
+      "id": "w5",
+      "from": "find",
+      "to": "search"
+    },
+    {
+      "id": "w6",
+      "from": "ship",
+      "to": "routing"
+    },
+    {
+      "id": "w7",
+      "from": "ship",
+      "to": "payments"
+    },
+    {
+      "id": "w8",
+      "from": "reco",
+      "to": "cloud"
+    },
+    {
+      "id": "w9",
+      "from": "search",
+      "to": "cloud"
+    },
+    {
+      "id": "w10",
+      "from": "routing",
+      "to": "cloud"
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+{
+  "title": "First order, service blueprint",
+  "lang": "en",
+  "summary": "What a first-time buyer does, what they see of the shop and what happens behind the scenes until the parcel ships.",
+  "axes": {
+    "preset": "blueprint",
+    "x": {
+      "label": "Stage",
+      "bands": [
+        {
+          "id": "find",
+          "label": "Finds"
+        },
+        {
+          "id": "buy",
+          "label": "Buys"
+        },
+        {
+          "id": "pay",
+          "label": "Pays"
+        },
+        {
+          "id": "wait",
+          "label": "Waits"
+        }
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "c-search",
+      "label": "Searches for trainers",
+      "kind": "search",
+      "at": {
+        "x": "find",
+        "y": "customer"
+      },
+      "summary": "Arrives from an ad or a search engine."
+    },
+    {
+      "id": "c-cart",
+      "label": "Adds to cart",
+      "kind": "cart",
+      "at": {
+        "x": "buy",
+        "y": "customer"
+      },
+      "summary": "Picks size and colour."
+    },
+    {
+      "id": "c-pay",
+      "label": "Pays by card",
+      "kind": "card",
+      "at": {
+        "x": "pay",
+        "y": "customer"
+      },
+      "summary": "First purchase: they have to enter the address."
+    },
+    {
+      "id": "c-track",
+      "label": "Tracks the parcel",
+      "kind": "mobile",
+      "at": {
+        "x": "wait",
+        "y": "customer"
+      },
+      "summary": "Opens the confirmation email and the tracking link."
+    },
+    {
+      "id": "f-catalog",
+      "label": "Product page",
+      "kind": "ui",
+      "at": {
+        "x": "find",
+        "y": "frontstage"
+      },
+      "summary": "Photos, sizes and whether it is in stock."
+    },
+    {
+      "id": "f-checkout",
+      "label": "Checkout",
+      "kind": "ui",
+      "at": {
+        "x": "pay",
+        "y": "frontstage"
+      },
+      "summary": "Address, shipping and payment on one page."
+    },
+    {
+      "id": "f-email",
+      "label": "Confirmation email",
+      "kind": "mail",
+      "at": {
+        "x": "wait",
+        "y": "frontstage"
+      },
+      "summary": "Goes out in under a minute."
+    },
+    {
+      "id": "b-stock",
+      "label": "Reserves stock",
+      "kind": "service",
+      "at": {
+        "x": "buy",
+        "y": "backstage"
+      },
+      "summary": "The unit is held for 15 minutes."
+    },
+    {
+      "id": "b-fraud",
+      "label": "Scores the risk",
+      "kind": "shield",
+      "at": {
+        "x": "pay",
+        "y": "backstage"
+      },
+      "summary": "A first purchase with a new card carries more risk."
+    },
+    {
+      "id": "b-pick",
+      "label": "Packs the parcel",
+      "kind": "job",
+      "at": {
+        "x": "wait",
+        "y": "backstage"
+      },
+      "summary": "The warehouse packs it on the next shift."
+    },
+    {
+      "id": "s-psp",
+      "label": "Payment gateway",
+      "kind": "external",
+      "at": {
+        "x": "pay",
+        "y": "support"
+      },
+      "summary": "Authorises the charge."
+    },
+    {
+      "id": "s-carrier",
+      "label": "Carrier",
+      "kind": "external",
+      "at": {
+        "x": "wait",
+        "y": "support"
+      },
+      "summary": "Picks up at 2 pm."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "c-search",
+      "to": "f-catalog"
+    },
+    {
+      "id": "e2",
+      "from": "c-cart",
+      "to": "b-stock"
+    },
+    {
+      "id": "e3",
+      "from": "c-pay",
+      "to": "f-checkout"
+    },
+    {
+      "id": "e4",
+      "from": "f-checkout",
+      "to": "b-fraud"
+    },
+    {
+      "id": "e5",
+      "from": "b-fraud",
+      "to": "s-psp",
+      "label": "authorise"
+    },
+    {
+      "id": "e6",
+      "from": "f-email",
+      "to": "c-track"
+    },
+    {
+      "id": "e7",
+      "from": "b-pick",
+      "to": "s-carrier"
+    },
+    {
+      "id": "e8",
+      "from": "b-pick",
+      "to": "f-email",
+      "label": "tracking no."
+    }
+  ]
+}

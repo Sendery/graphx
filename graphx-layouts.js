@@ -390,6 +390,197 @@
     return { rects, paths, bbox: bboxOf(rects), deco: [] };
   }
 
+  /* ---------- ejes: cuando la posición significa algo (blueprint, mapa de Wardley, matriz de interesados) ---------- */
+  /* `axes: { preset, x, y }`. Un eje es de bandas (`bands: [{ id, label }]`, con `lines: [{ after, label }]`
+     entre ellas; `bands: "lanes"` usa los carriles del diagrama) o numérico (`range: [mín, máx]`, por
+     defecto [0, 1], con `ranges: [{ from, to, label }]` rotulados y `ends: [bajo, alto]`). Cada pieza dice
+     dónde cae con `at: { x, y }`: el id de una banda o un número (en un eje de carriles, su carril). Lo que
+     no tiene sitio en un eje va a una banda «sin posición» al final, nunca encima de otra pieza. */
+  const AXIS_PRESETS = {
+    wardley: {
+      x: { label: { es: 'Evolución', en: 'Evolution' }, ranges: [
+        { from: 0, to: .17, label: { es: 'Génesis', en: 'Genesis' } }, { from: .17, to: .4, label: { es: 'A medida', en: 'Custom built' } },
+        { from: .4, to: .7, label: { es: 'Producto', en: 'Product' } }, { from: .7, to: 1, label: { es: 'Commodity', en: 'Commodity' } }] },
+      y: { label: { es: 'Visibilidad para el usuario', en: 'Visibility to the user' }, ends: [{ es: 'invisible', en: 'invisible' }, { es: 'visible', en: 'visible' }] }
+    },
+    blueprint: {
+      y: { bands: [
+        { id: 'customer', label: { es: 'Acciones del cliente', en: 'Customer actions' } }, { id: 'frontstage', label: { es: 'Lo que ve', en: 'Frontstage' } },
+        { id: 'backstage', label: { es: 'Lo que no ve', en: 'Backstage' } }, { id: 'support', label: { es: 'Procesos de soporte', en: 'Support processes' } }],
+        lines: [{ after: 'customer', label: { es: 'línea de interacción', en: 'line of interaction' } },
+          { after: 'frontstage', label: { es: 'línea de visibilidad', en: 'line of visibility' } },
+          { after: 'backstage', label: { es: 'línea de interacción interna', en: 'line of internal interaction' } }] }
+    },
+    stakeholders: {
+      x: { label: { es: 'Interés', en: 'Interest' }, ranges: [{ from: 0, to: .5, label: { es: 'bajo', en: 'low' } }, { from: .5, to: 1, label: { es: 'alto', en: 'high' } }] },
+      y: { label: { es: 'Poder', en: 'Power' }, ranges: [{ from: 0, to: .5, label: { es: 'bajo', en: 'low' } }, { from: .5, to: 1, label: { es: 'alto', en: 'high' } }] }
+    }
+  };
+  /* el eje que resulta de juntar el preset con lo que escribe el JSON (lo escrito manda, campo a campo) */
+  function resolveAxes(spec) {
+    const a = spec && spec.axes;
+    if (!a || typeof a !== 'object') return null;
+    const pre = (a.preset && AXIS_PRESETS[a.preset]) || {};
+    const one = d => {
+      if (!a[d] && !pre[d]) return null;
+      const v = Object.assign({}, pre[d] || {}, a[d] || {});
+      if (v.bands === 'lanes') v.bands = (spec.lanes || []).map(l => ({ id: l.id, label: l.label || l.id })), v.lanes = true;
+      if (!Array.isArray(v.bands)) v.range = Array.isArray(v.range) && v.range.length === 2 ? v.range : [0, 1];
+      return v;
+    };
+    return { x: one('x'), y: one('y') };
+  }
+  function axes(ctx) {
+    const { M, roots, vis, vedges, textW, lang } = ctx, { kids, open } = helpers(ctx);
+    const AX = resolveAxes(ctx.spec) || { x: null, y: null };
+    const tr = v => (v && typeof v === 'object' ? v[lang] || v.es || v.en || '' : v == null ? '' : String(v));
+    const GAP = 16, PAD = 18, NOPOS = lang === 'en' ? 'not placed' : 'sin posición';
+    /* lo que se coloca: lo visible más profundo (un carril o un contenedor abierto reparten a sus piezas) */
+    const items = [];
+    const walk = id => { if (M.get(id).isLane || open(id)) kids(id).forEach(walk); else items.push(id); };
+    roots.filter(r => vis.has(r)).forEach(walk);
+    /* dónde cae una pieza: su `at`, el de su primer descendiente que lo tenga y, en un eje de carriles, su carril */
+    const atOf = (id, d) => {
+      const q = [id];
+      while (q.length) { const n = M.get(q.shift()); if (n.at && n.at[d] != null) return n.at[d]; q.push(...n.children); }
+      return AX[d] && AX[d].lanes ? M.get(id).laneId : null;
+    };
+    const size = new Map(items.map(id => [id, ctx.size(id)]));
+    const cw = Math.max(60, ...items.map(id => size.get(id).w)), ch = Math.max(40, ...items.map(id => size.get(id).h));
+    const dim = d => {
+      const ax = AX[d];
+      if (!ax) return { kind: 'none', n: 1, slot: () => 0 };
+      if (Array.isArray(ax.bands)) {
+        const ix = new Map(ax.bands.map((b, i) => [b.id, i]));
+        const lost = items.some(id => !ix.has(atOf(id, d)));
+        return { kind: 'bands', ax, n: ax.bands.length + (lost ? 1 : 0), lost, slot: id => (ix.has(atOf(id, d)) ? ix.get(atOf(id, d)) : ax.bands.length) };
+      }
+      const [lo, hi] = ax.range;
+      return { kind: 'num', ax, lo, hi, t: id => { const v = atOf(id, d); return typeof v === 'number' && isFinite(v) ? clamp((v - lo) / ((hi - lo) || 1), 0, 1) : null; } };
+    };
+    const X = dim('x'), Y = dim('y');
+    const bandName = (D, i) => (i < D.ax.bands.length ? tr(D.ax.bands[i].label || D.ax.bands[i].id) : NOPOS);
+    /* márgenes para los rótulos: las bandas de y a la izquierda, las de x arriba */
+    const LEFT = Y.kind === 'bands' ? Math.max(110, ...Array.from({ length: Y.n }, (_, i) => textW(bandName(Y, i), 11, 600) + 34)) : Y.kind === 'num' ? 78 : PAD;
+    const TOP = X.kind === 'bands' ? 58 : Y.kind === 'num' ? 40 : PAD + 10;
+    const rects = new Map(), deco = [], unplaced = [];
+    if (X.kind !== 'num' && Y.kind !== 'num') {
+      /* dos ejes de bandas: una rejilla de celdas; en cada celda, las piezas en un cuadrado */
+      const cells = new Map();
+      items.forEach(id => { const k = X.slot(id) + ',' + Y.slot(id); if (!cells.has(k)) cells.set(k, []); cells.get(k).push(id); });
+      const cols = l => Math.ceil(Math.sqrt(l.length));
+      const colW = Array.from({ length: X.n }, (_, i) => Math.max(cw + 2 * PAD, ...[...cells].filter(([k]) => +k.split(',')[0] === i).map(([, l]) => cols(l) * (cw + GAP) - GAP + 2 * PAD)));
+      const rowH = Array.from({ length: Y.n }, (_, j) => Math.max(ch + 2 * PAD, ...[...cells].filter(([k]) => +k.split(',')[1] === j).map(([, l]) => Math.ceil(l.length / cols(l)) * (ch + GAP) - GAP + 2 * PAD)));
+      X.at = []; colW.reduce((a, w, i) => (X.at[i] = a, a + w), LEFT); X.len = colW;
+      Y.at = []; rowH.reduce((a, h, j) => (Y.at[j] = a, a + h), TOP); Y.len = rowH;
+      cells.forEach((l, k) => {
+        const [i, j] = k.split(',').map(Number), c = cols(l);
+        l.forEach((id, t) => { const z = size.get(id); rects.set(id, { x: X.at[i] + PAD + (t % c) * (cw + GAP) + (cw - z.w) / 2, y: Y.at[j] + PAD + Math.floor(t / c) * (ch + GAP) + (ch - z.h) / 2, w: z.w, h: z.h }); });
+      });
+    } else if (X.kind === 'num' && Y.kind === 'num') {
+      /* dos ejes numéricos: cada pieza en su punto. Las que se pisan se separan lo mínimo, por el lado
+         en el que menos se solapan, para que la posición siga diciendo lo que dice. */
+      const W = Math.max(960, Math.sqrt(items.length) * (cw + GAP) * 2.2), H = Math.max(600, Math.sqrt(items.length) * (ch + GAP) * 2.6);
+      X.at = LEFT; X.len = W; Y.at = TOP; Y.len = H;
+      items.forEach(id => {
+        const z = size.get(id), tx = X.t(id), ty = Y.t(id);
+        if (tx == null || ty == null) { unplaced.push(id); return; }
+        rects.set(id, { x: LEFT + tx * W - z.w / 2, y: TOP + (1 - ty) * H - z.h / 2, w: z.w, h: z.h });
+      });
+      const placed = [...rects.values()];
+      for (let it = 0; it < 80; it++) {
+        let moved = false;
+        for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) {
+          const a = placed[i], b = placed[j];
+          const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + 10, oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + 10;
+          if (ox <= 0 || oy <= 0) continue;
+          moved = true;
+          if (ox < oy) { const s = (a.x + a.w / 2 < b.x + b.w / 2 ? -1 : 1) * ox / 2; a.x += s; b.x -= s; }
+          else { const s = (a.y + a.h / 2 < b.y + b.h / 2 ? -1 : 1) * oy / 2; a.y += s; b.y -= s; }
+        }
+        if (!moved) break;
+      }
+      let ux = LEFT; unplaced.forEach(id => { const z = size.get(id); rects.set(id, { x: ux, y: TOP + H + 92, w: z.w, h: z.h }); ux += z.w + GAP; });
+    } else {
+      /* bandas en un eje y números en el otro: cada banda ordena sus piezas por el número y abre otra
+         fila (o columna) solo cuando dos se pisarían */
+      const A = X.kind === 'num' ? Y : X, B = A === X ? Y : X, horiz = B === X;
+      const span = horiz ? Math.max(960, items.length * (cw + GAP) / 2) : Math.max(620, items.length * (ch + GAP) / 2);
+      const ext = id => (horiz ? size.get(id).w : size.get(id).h), thick = horiz ? ch : cw;
+      /* lo que no tiene número va en una columna (o fila) propia antes del eje, rotulada «sin posición» */
+      const lostB = items.some(id => B.t(id) == null), pre = lostB ? (horiz ? cw : ch) + 56 : 0;
+      const O = (horiz ? LEFT : TOP) + pre;
+      const lists = Array.from({ length: A.n }, () => []);
+      items.forEach(id => lists[A.slot(id)].push(id));
+      A.at = []; A.len = []; let acc = horiz ? TOP : LEFT;
+      lists.forEach((l, i) => {
+        const rows = [];
+        l.map(id => ({ id, t: B.t(id) })).sort((p, q) => (p.t == null ? -1 : p.t) - (q.t == null ? -1 : q.t)).forEach(({ id, t }) => {
+          const e = ext(id), pos = t == null ? -pre : (horiz ? t : 1 - t) * span - e / 2;
+          let r = rows.findIndex(end => end + GAP <= pos); if (r < 0) { rows.push(-Infinity); r = rows.length - 1; }
+          rows[r] = pos + e;
+          const z = size.get(id), a = acc + PAD + r * (thick + GAP);
+          rects.set(id, horiz ? { x: O + pos, y: a + (ch - z.h) / 2, w: z.w, h: z.h } : { x: a + (cw - z.w) / 2, y: O + pos, w: z.w, h: z.h });
+        });
+        A.at[i] = acc; A.len[i] = Math.max(1, rows.length) * (thick + GAP) - GAP + 2 * PAD; acc += A.len[i];
+      });
+      B.at = O; B.len = span;
+      if (lostB) deco.push(E('text', { class: 'gx-ax-bandt lost', ...(horiz ? { x: LEFT + cw / 2, y: TOP - 8, 'text-anchor': 'middle' } : { x: LEFT, y: TOP + 14 }) }, null, NOPOS));
+    }
+    /* un contenedor abierto enmarca lo suyo, por encima de las bandas */
+    const frame = id => {
+      const rs = kids(id).map(c => (open(c) ? frame(c) : rects.get(c))).filter(Boolean); if (!rs.length) return null;
+      const b = bboxOf(new Map(rs.map((r, i) => [i, r]))), r = { x: b.x + 10, y: b.y - 8, w: b.w - 20, h: b.h - 8 };
+      if (!M.get(id).isLane) rects.set(id, r);
+      return r;
+    };
+    roots.filter(r => vis.has(r)).forEach(r => { if (M.get(r).isLane) kids(r).filter(open).forEach(frame); else if (open(r)) frame(r); });
+    /* fondo: bandas alternas, líneas con nombre entre bandas, tramos rotulados y el título de cada eje */
+    const all = bboxOf(rects);
+    const end = D => (D.kind === 'num' ? D.at + D.len : D.kind === 'bands' ? D.at[D.n - 1] + D.len[D.n - 1] : -Infinity);
+    const X1 = Math.max(all.x + all.w - 24, end(X)), Y1 = Math.max(all.y + all.h - 24, end(Y));
+    const bandsDeco = (D, isX) => {
+      for (let i = 0; i < D.n; i++) {
+        const a = D.at[i], l = D.len[i];
+        if (i % 2) deco.push(E('rect', { class: 'gx-ax-band', ...(isX ? { x: r1(a), y: TOP - 40, width: r1(l), height: r1(Y1 - TOP + 40) } : { x: 4, y: r1(a), width: r1(X1 - 4), height: r1(l) }) }));
+        deco.push(E('text', { class: 'gx-ax-bandt' + (D.lost && i === D.n - 1 ? ' lost' : ''), ...(isX ? { x: r1(a + l / 2), y: TOP - 16, 'text-anchor': 'middle' } : { x: 16, y: r1(a + 22) }) }, null, bandName(D, i)));
+      }
+      (D.ax.lines || []).forEach(ln => {
+        const i = D.ax.bands.findIndex(b => b.id === ln.after); if (i < 0 || i >= D.n - 1) return;
+        const p = r1(D.at[i] + D.len[i]);
+        deco.push(E('path', { class: 'gx-ax-line', d: isX ? `M${p},${TOP - 40}V${r1(Y1)}` : `M4,${p}H${r1(X1)}` }));
+        /* el nombre de la línea va en el margen, donde no hay piezas que tapar */
+        if (ln.label) deco.push(E('text', { class: 'gx-ax-linet', ...(isX ? { x: p + 5, y: TOP - 40 + 12 } : { x: 16, y: p - 6 }) }, null, tr(ln.label)));
+      });
+      if (D.ax.label) deco.push(E('text', { class: 'gx-ax-title', ...(isX ? { x: r1(D.at[0]), y: TOP - 40 } : { x: 16, y: TOP - 12 }) }, null, tr(D.ax.label)));
+    };
+    const numDeco = (D, isX) => {
+      const at = t => (isX ? D.at + t * D.len : D.at + (1 - t) * D.len), base = isX ? Y1 + 30 : LEFT - 44;
+      const t = v => (v - D.lo) / ((D.hi - D.lo) || 1);
+      deco.push(E('path', { class: 'gx-ax-axis', d: isX ? `M${r1(D.at - 24)},${r1(base)}H${r1(D.at + D.len + 22)}` : `M${base},${r1(D.at + D.len + 24)}V${D.at - 22}` }));
+      deco.push(E('path', { class: 'gx-ax-head', d: isX ? `M${r1(D.at + D.len + 14)},${r1(base - 5)}L${r1(D.at + D.len + 23)},${r1(base)}L${r1(D.at + D.len + 14)},${r1(base + 5)}` : `M${base - 5},${D.at - 14}L${base},${D.at - 23}L${base + 5},${D.at - 14}` }));
+      (D.ax.ranges || []).forEach((g, i) => {
+        const p0 = at(t(g.from)), p1 = at(t(g.to)), m = (p0 + p1) / 2;
+        if (i % 2) deco.push(E('rect', { class: 'gx-ax-band', ...(isX ? { x: r1(p0), y: TOP - 12, width: r1(p1 - p0), height: r1(base - TOP + 12) } : { x: base, y: r1(p1), width: r1(X1 - base), height: r1(p0 - p1) }) }));
+        if (i) deco.push(E('path', { class: 'gx-ax-div', d: isX ? `M${r1(p0)},${TOP - 12}V${r1(base)}` : `M${base},${r1(p0)}H${r1(X1)}` }));
+        deco.push(E('text', { class: 'gx-ax-range', ...(isX ? { x: r1(m), y: r1(base + 18), 'text-anchor': 'middle' } : { x: base - 10, y: r1(m), 'text-anchor': 'middle', transform: `rotate(-90 ${base - 10} ${r1(m)})` }) }, null, tr(g.label)));
+      });
+      (D.ax.ends || []).forEach((e, i) => { const p = at(i); deco.push(E('text', { class: 'gx-ax-end', ...(isX ? { x: r1(p), y: r1(base + 34), 'text-anchor': i ? 'end' : 'start' } : { x: base + 7, y: r1(p + (i ? 12 : -5)) }) }, null, tr(e))); });
+      if (D.ax.label) deco.push(E('text', { class: 'gx-ax-title', ...(isX ? { x: r1(D.at + D.len), y: r1(base - 9), 'text-anchor': 'end' } : { x: base + 9, y: D.at - 9 }) }, null, tr(D.ax.label)));
+    };
+    [[X, true], [Y, false]].forEach(([D, isX]) => { if (D.kind === 'bands') bandsDeco(D, isX); else if (D.kind === 'num') numDeco(D, isX); });
+    if (unplaced.length) deco.push(E('text', { class: 'gx-ax-bandt lost', x: LEFT, y: r1(Y.at + Y.len + 76) }, null, NOPOS));
+    /* las aristas van de centro a centro y el motor las recorta al contorno de cada pieza */
+    const paths = new Map();
+    for (const v of vedges) {
+      const a = rects.get(v.from), b = rects.get(v.to); if (!a || !b) continue;
+      const pa = center(a), pb = center(b);
+      paths.set(v.id, { pts: [pa, pb], label: midLabel(v, pa, pb, textW) });
+    }
+    const room = [{ x: 0, y: TOP - 48, w: X1 + 36, h: Y1 - TOP + (X.kind === 'num' || unplaced.length ? 120 : 64) }];
+    return { rects, paths, bbox: bboxOf(rects, room), deco };
+  }
+
   /* ---------- árbol de ficheros: sangrado como `tree` (hacia abajo) o en columnas (a la derecha) ---------- */
   /* Una carpeta abierta no es un contenedor: es una tarjeta más, y sus hijos cuelgan de ella. Las líneas
      no van en `paths` sino en `wires`: el motor las redibuja en cada fotograma con `wire()` a partir de
@@ -521,8 +712,8 @@
     return `M${f(mx)},${f(ys)} V${f(yk - dir * r)}`;
   }
 
-  const modes = { gantt, git, sankey, treemap, timeline, journey, grid, tree };
+  const modes = { gantt, git, sankey, treemap, timeline, journey, grid, tree, axes };
   /* `flat`: modos en los que una pieza abierta no envuelve a sus hijos (sigue siendo una tarjeta) */
   const FLAT = { tree: 1 };
-  return Object.assign({ names: Object.keys(modes), squarify, wire, has: m => Object.prototype.hasOwnProperty.call(modes, m), flat: m => Object.prototype.hasOwnProperty.call(FLAT, m) }, modes);
+  return Object.assign({ names: Object.keys(modes), squarify, wire, AXIS_PRESETS, resolveAxes, has: m => Object.prototype.hasOwnProperty.call(modes, m), flat: m => Object.prototype.hasOwnProperty.call(FLAT, m) }, modes);
 });

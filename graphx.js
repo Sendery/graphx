@@ -656,10 +656,13 @@
     }
     /* layouts propios por tipo de diagrama (graphx-layouts.js), elegidos con `layout.mode` */
     const LAYOUTS = global.GraphX && global.GraphX.layouts ? global.GraphX.layouts : null;
-    const MODE = spec.layout && spec.layout.mode && LAYOUTS && LAYOUTS.has && LAYOUTS.has(spec.layout.mode) ? spec.layout.mode : null;
+    /* un JSON con `axes` y sin `layout.mode` se coloca sobre sus ejes */
+    const wantMode = (spec.layout && spec.layout.mode) || (spec.axes ? 'axes' : null);
+    const MODE = wantMode && LAYOUTS && LAYOUTS.has && LAYOUTS.has(wantMode) ? wantMode : null;
     const FLAT = !!(MODE && LAYOUTS.flat && LAYOUTS.flat(MODE));
     /* en el árbol, el botón de orientación cambia entre sangrado (↓, como `tree`) y columnas (→) */
-    if (MODE) { host.classList.add('gx-mode-' + MODE); if (!FLAT) bDir.style.display = 'none'; }
+    /* un layout propio no tiene marcos de carril: los carriles, si los hay, los coloca él */
+    if (MODE) { host.classList.add('gx-mode-' + MODE); if (!FLAT) bDir.style.display = 'none'; S.frames = false; bFrames.style.display = 'none'; host.classList.remove('gx-framed'); }
     if (FLAT) { host.classList.add('gx-flat'); if (spec.direction !== 'right') S.dir = 'down'; }
     async function layout(vis, vedges, hidden) {
       /* foto del estado: la segunda pasada de ELK ocurre tras un await, y para entonces otra

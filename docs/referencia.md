@@ -504,6 +504,17 @@ igual. El conversor de Mermaid lo pone solo:
 | `timeline` | periodos sobre un eje con sus eventos debajo; `section: true` marca las secciones | timeline |
 | `journey` | las tareas en fila y, debajo, la curva de emoción con una cara según su `score` | journey |
 | `grid` | la rejilla de block-beta: `grid: { r, c, span }` en cada pieza, `gridCols` en un contenedor y `layout.columns` en la raíz; aristas rectas o en L/U si chocan | block-beta |
+| `axes` | la posición significa algo: bandas con nombre o números en cada eje (service blueprint, mapa de Wardley, matriz de interesados). Se elige solo si el JSON tiene `axes` (ver abajo) | — |
+
+**Ejes.** `axes: { preset, x, y }`. Un eje es de **bandas** (`bands: [{ id, label }]`, con `lines: [{ after, label }]`
+para las líneas con nombre entre bandas; `bands: "lanes"` usa los carriles del diagrama) o **numérico**
+(`range: [mín, máx]`, por defecto `[0, 1]`, con `ranges: [{ from, to, label }]` rotulados y `ends: [bajo, alto]`).
+Cada pieza dice dónde cae con `at: { x, y }`: el id de una banda o un número. Los presets traen los ejes hechos y se
+pueden retocar campo a campo: `blueprint` (y: acciones del cliente, lo que ve, lo que no ve y soporte, con las tres
+líneas), `wardley` (x: génesis → commodity; y: visibilidad) y `stakeholders` (interés × poder). Lo que no tiene
+posición en un eje se pinta aparte, rotulado «sin posición», y el builder lo avisa. Dos números que caen en el mismo
+punto se separan lo mínimo. El panel del terminal del mod conserva la posición y los ejes.
+Ejemplos: `examples/axes/` (`blueprint`, `wardley`, `interesados`; en inglés, `examples/en/axes/`).
 
 `node tools/verify-shapes.mjs` comprueba las formas, los layouts, su uso en el motor y que React dibuja lo mismo.
 
@@ -689,6 +700,7 @@ Chrome headless se cuelga con estas páginas. Para comprobarlas:
 npm i                                       # instala jsdom (solo para verificar)
 node tools/verify.mjs examples/pr-review-stack-202.html      # 67 comprobaciones
 node tools/verify-fx.mjs                                     # los efectos (§8)
+node tools/verify-layout.mjs                                 # el layout del grafo y los ejes
 node tools/snap-depth.mjs <página.html> 1 /tmp/d.svg [down]  # vuelca el SVG de un nivel
 node tools/snapshot-svg.mjs /tmp/d.svg /tmp/d.png light|dark # lo rasteriza con rsvg-convert
 ```

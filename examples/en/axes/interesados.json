@@ -1,0 +1,71 @@
+{
+  "title": "Switching payment gateway: stakeholders",
+  "lang": "en",
+  "summary": "Who can block or push the change and how much they care. Top right: who must be on board from day one.",
+  "axes": {
+    "preset": "stakeholders"
+  },
+  "nodes": [
+    {
+      "id": "cfo",
+      "label": "Finance lead",
+      "kind": "user",
+      "at": {
+        "x": 0.85,
+        "y": 0.9
+      },
+      "summary": "Signs the contract and watches the fees."
+    },
+    {
+      "id": "pay-team",
+      "label": "Payments team",
+      "kind": "user",
+      "at": {
+        "x": 0.95,
+        "y": 0.7
+      },
+      "summary": "Does the migration."
+    },
+    {
+      "id": "legal",
+      "label": "Legal",
+      "kind": "user",
+      "at": {
+        "x": 0.35,
+        "y": 0.8
+      },
+      "summary": "Reviews how card data is handled."
+    },
+    {
+      "id": "support",
+      "label": "Customer support",
+      "kind": "user",
+      "at": {
+        "x": 0.75,
+        "y": 0.3
+      },
+      "summary": "Gets the complaints when charges fail."
+    },
+    {
+      "id": "marketing",
+      "label": "Marketing",
+      "kind": "user",
+      "at": {
+        "x": 0.3,
+        "y": 0.35
+      },
+      "summary": "Cares little as long as checkout does not change."
+    },
+    {
+      "id": "warehouse",
+      "label": "Warehouse",
+      "kind": "user",
+      "at": {
+        "x": 0.15,
+        "y": 0.15
+      },
+      "summary": "Keeping them informed is enough."
+    }
+  ],
+  "edges": []
+}

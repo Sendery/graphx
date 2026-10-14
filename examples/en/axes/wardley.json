@@ -1,0 +1,152 @@
+{
+  "title": "Online shop, Wardley map",
+  "lang": "en",
+  "summary": "What the buyer needs, the pieces that make it possible and how evolved each one is: build what is your own, buy what is already a commodity.",
+  "axes": {
+    "preset": "wardley"
+  },
+  "nodes": [
+    {
+      "id": "buyer",
+      "label": "Buyer",
+      "kind": "user",
+      "at": {
+        "x": 0.55,
+        "y": 0.97
+      },
+      "summary": "Where the map starts."
+    },
+    {
+      "id": "find",
+      "label": "Find the product",
+      "kind": "ui",
+      "at": {
+        "x": 0.5,
+        "y": 0.82
+      },
+      "summary": "A visible need: the buyer notices it."
+    },
+    {
+      "id": "ship",
+      "label": "Get it tomorrow",
+      "kind": "ui",
+      "at": {
+        "x": 0.42,
+        "y": 0.78
+      },
+      "summary": "The delivery promise."
+    },
+    {
+      "id": "reco",
+      "label": "Recommendations",
+      "kind": "service",
+      "at": {
+        "x": 0.22,
+        "y": 0.62
+      },
+      "summary": "What sets the shop apart: build it."
+    },
+    {
+      "id": "catalog",
+      "label": "Catalogue",
+      "kind": "datastore",
+      "at": {
+        "x": 0.55,
+        "y": 0.6
+      },
+      "summary": "Product: off-the-shelf tools exist."
+    },
+    {
+      "id": "routing",
+      "label": "Zone routing",
+      "kind": "route",
+      "at": {
+        "x": 0.3,
+        "y": 0.45
+      },
+      "summary": "Custom built: what makes next-day delivery possible."
+    },
+    {
+      "id": "payments",
+      "label": "Payments",
+      "kind": "external",
+      "at": {
+        "x": 0.8,
+        "y": 0.5
+      },
+      "summary": "Commodity: buy it."
+    },
+    {
+      "id": "search",
+      "label": "Search engine",
+      "kind": "search",
+      "at": {
+        "x": 0.62,
+        "y": 0.38
+      },
+      "summary": "Product: configure it, do not write it."
+    },
+    {
+      "id": "cloud",
+      "label": "Cloud",
+      "kind": "cloud",
+      "at": {
+        "x": 0.92,
+        "y": 0.1
+      },
+      "summary": "Commodity: pay per use."
+    }
+  ],
+  "edges": [
+    {
+      "id": "w1",
+      "from": "buyer",
+      "to": "find"
+    },
+    {
+      "id": "w2",
+      "from": "buyer",
+      "to": "ship"
+    },
+    {
+      "id": "w3",
+      "from": "find",
+      "to": "reco"
+    },
+    {
+      "id": "w4",
+      "from": "find",
+      "to": "catalog"
+    },
+    {
+      "id": "w5",
+      "from": "find",
+      "to": "search"
+    },
+    {
+      "id": "w6",
+      "from": "ship",
+      "to": "routing"
+    },
+    {
+      "id": "w7",
+      "from": "ship",
+      "to": "payments"
+    },
+    {
+      "id": "w8",
+      "from": "reco",
+      "to": "cloud"
+    },
+    {
+      "id": "w9",
+      "from": "search",
+      "to": "cloud"
+    },
+    {
+      "id": "w10",
+      "from": "routing",
+      "to": "cloud"
+    }
+  ]
+}
