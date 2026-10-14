@@ -13,7 +13,7 @@ la documentación larga, en `docs/referencia.md` del repositorio.
 | Dirección | `direction: right \| down` | también `show.direction`, `guide.direction` |
 | Secuencias | `flows: [{id, title, participants, messages}]`; mensajes `sync async return self`, `phase`, filas `block/else/end`, `note` (`over`, `side`), `activate`, `create`, `destroy` | `guide.flow` abre una; `initialView: "flow:<id>"` arranca en ella; `graphTab: false` solo secuencia |
 | Mermaid | 18 tipos: flowchart, sequence, class, state, er, mindmap, gantt, journey, timeline, gitGraph, C4, architecture, block, requirement, sankey, kanban, treemap, pie | cada uno con su forma y su layout; datos: [reglas](mermaid.md) |
-| Layouts propios | `layout.mode: gantt git sankey treemap timeline journey grid tree`; `layout.lanes: strict \| flow`, `frames`, `cycles`, `backEdges` | `grid` + `gridCols` para tableros de indicadores |
+| Layouts propios | `layout.mode: gantt git sankey treemap timeline journey grid tree`; `layout.lanes: strict \| flow`, `frames`, `cycles`, `backEdges`, `cards: fit` (cada tarjeta a su texto), `trunks: false` (sin troncos compartidos) | `grid` + `gridCols` para tableros de indicadores |
 | Árbol de ficheros | `show.paths` (`"src/a.ts"` o `{path, additions, deletions, status, size, lines}`), `show.tree_text` (salida de `tree`) | `tree_options: {root, compact, focus: "changes", direction}` |
 
 ## Piezas
