@@ -1,0 +1,1142 @@
+.gx-agent-flow {
+  height: 100%;
+  color-scheme: light;
+}
+
+.gx-agent-flow.dark {
+  color-scheme: dark;
+  --gx-page: #111724;
+  --gx-ink: #edf1f7;
+  --gx-card: #1d252f;
+  --gx-border: #334155;
+  --gx-muted: #a2b1c6;
+  --gx-ring: #86c4eb;
+}
+
+.gx-agent-flow *,
+.gx-agent-flow *::before,
+.gx-agent-flow *::after {
+  box-sizing: border-box;
+}
+
+.gx-agent-flow button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+
+.gx-agent-flow .agent-flow {
+  --background: var(--gx-page, #f8fafc);
+  --foreground: var(--gx-ink, #182230);
+  --card: var(--gx-card, #fff);
+  --border: var(--gx-border, #cbd5e1);
+  --muted-foreground: var(--gx-muted, #516176);
+  --ring: var(--gx-ring, #3b82f6);
+}
+
+.agent-flow {
+  --flow-default: #397ea6;
+  --flow-bg: color-mix(in oklab, var(--background) 91%, #426b83);
+  --flow-panel: color-mix(in oklab, var(--card) 94%, #527894);
+  --flow-line: color-mix(in oklab, var(--foreground) 15%, var(--border));
+  --flow-dim: var(--muted-foreground);
+  --flow-good: #209e7b;
+  --flow-warn: #d89437;
+  --flow-bad: #dc6276;
+  --flow-tool: #3c91ae;
+  --flow-branch: #946ce0;
+  --flow-write: #3da181;
+  --flow-search: #b08ae5;
+  --flow-accent: var(--flow-default);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--flow-bg);
+  color: var(--foreground);
+  font-size: 12px;
+  container-type: inline-size;
+}
+
+.dark .agent-flow {
+  --flow-default: #86c4eb;
+  --flow-bg: color-mix(in oklab, var(--background) 43%, #080e24);
+  --flow-panel: color-mix(in oklab, var(--card) 86%, #152137);
+  --flow-line: color-mix(in oklab, var(--foreground) 14%, #263c52);
+  --flow-good: #66e1bc;
+  --flow-warn: #f0b75e;
+  --flow-tool: #7bd4f0;
+  --flow-branch: #bb9aef;
+  --flow-write: #7fe1b6;
+  --flow-search: #ce9df7;
+}
+
+.agent-flow button,
+.agent-flow select,
+.agent-flow input {
+  font: inherit;
+}
+
+.agent-flow button:focus-visible,
+.agent-flow select:focus-visible,
+.agent-flow input:focus-visible,
+.flow-viewport:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.agent-flow button:disabled {
+  opacity: 0.38;
+}
+
+.flow-canvas,
+.flow-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+
+.flow-viewport {
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  background:
+    radial-gradient(ellipse at 48% 42%, color-mix(in oklab, var(--flow-default) 12%, transparent), transparent 68%),
+    radial-gradient(circle, color-mix(in oklab, var(--flow-default) 38%, transparent) 0.75px, transparent 1.4px) 0 0 / 113px 97px,
+    radial-gradient(circle, color-mix(in oklab, var(--flow-dim) 28%, transparent) 0.55px, transparent 1.2px) 11px 11px / 23px 23px,
+    var(--flow-bg);
+}
+
+.flow-viewport[data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.flow-atmosphere {
+  position: absolute;
+  inset: -10% -8%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.flow-atmosphere i {
+  position: absolute;
+  width: min(690px, 63%);
+  height: min(512px, 68%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in oklab, var(--flow-default) 12%, transparent), transparent 68%);
+  opacity: 0.65;
+}
+
+.flow-atmosphere i:first-child { top: 6%; left: 16%; }
+
+.flow-atmosphere i:last-child {
+  right: 4%;
+  bottom: 4%;
+  background: radial-gradient(ellipse, color-mix(in oklab, var(--flow-branch) 12%, transparent), transparent 69%);
+}
+
+.flow-canvas[data-ambient="true"] .flow-atmosphere i { animation: flow-atmosphere 26s ease-in-out infinite alternate; }
+.flow-canvas[data-ambient="true"] .flow-atmosphere i:last-child { animation-direction: alternate-reverse; }
+
+@keyframes flow-atmosphere {
+  from { transform: translate3d(-4%, -3%, 0) scale(0.84); opacity: 0.55; }
+  to { transform: translate3d(13%, 10%, 0) scale(1.17); opacity: 0.95; }
+}
+
+.flow-world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+.flow-cluster {
+  position: absolute;
+  isolation: isolate;
+  border: 1px solid color-mix(in oklab, var(--flow-accent) 32%, transparent);
+  border-radius: 23px;
+  background:
+    radial-gradient(ellipse at 24% 0%, color-mix(in oklab, var(--flow-accent) 11%, transparent), transparent 61%),
+    color-mix(in oklab, var(--flow-panel) 35%, transparent);
+}
+
+.flow-cluster[data-active="true"] {
+  border-color: color-mix(in oklab, var(--flow-accent) 48%, transparent);
+}
+
+.flow-cluster[data-selected="true"] {
+  border-color: color-mix(in oklab, var(--flow-accent) 75%, var(--flow-line));
+  box-shadow: 0 0 28px color-mix(in oklab, var(--flow-accent) 13%, transparent);
+}
+
+.flow-cluster[data-pinned="true"] {
+  border-style: dashed;
+  border-color: var(--flow-accent);
+}
+
+.flow-cluster[data-linked="true"] {
+  border-color: var(--flow-accent);
+  box-shadow: 0 0 22px color-mix(in oklab, var(--flow-accent) 25%, transparent);
+}
+
+.flow-cluster[data-marker] {
+  border-style: dashed;
+}
+
+.flow-coordinator {
+  --flow-coordinator-port: max(6px, calc(2 * var(--flow-live-stroke)));
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in oklab, var(--flow-branch) 35%, var(--flow-line));
+  border-radius: 15px;
+  background: radial-gradient(ellipse at 50% 105%, color-mix(in oklab, var(--flow-branch) 21%, transparent), transparent 64%),
+    color-mix(in oklab, var(--flow-panel) 63%, transparent);
+  box-shadow: inset 0 0 0 max(1px, calc(0.5 * var(--flow-live-stroke)))
+    color-mix(in oklab, var(--flow-branch) 34%, transparent);
+}
+
+.flow-coordinator::after {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: var(--flow-coordinator-port);
+  height: var(--flow-coordinator-port);
+  transform: translate(-50%, 50%);
+  border-radius: 50%;
+  background: var(--flow-branch);
+  content: "";
+  pointer-events: none;
+}
+
+.flow-world[data-direction="right"] .flow-coordinator::after {
+  inset: 50% 0 auto auto;
+  transform: translate(50%, -50%);
+}
+
+.flow-coordinator > button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 140px;
+  padding: 6px 13px;
+  border: 1px solid color-mix(in oklab, var(--flow-branch) 62%, var(--flow-line));
+  border-radius: 10px;
+  background: var(--flow-panel);
+  color: var(--flow-branch);
+  text-align: start;
+}
+
+.flow-coordinator > button strong,
+.flow-coordinator > button small {
+  display: block;
+}
+
+.flow-coordinator > button strong {
+  color: var(--foreground);
+  font-size: 15px;
+}
+
+.flow-coordinator > button small {
+  font: 10px/1.3 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-world[data-detail="compact"] .flow-coordinator > button strong {
+  font-size: clamp(15px, calc(6.5 * var(--flow-live-stroke)), 44px);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.flow-world[data-detail="compact"] .flow-coordinator > button small {
+  display: none;
+}
+
+.flow-coordinator > button:hover,
+.flow-coordinator > button[aria-pressed="true"],
+.flow-coordinator[data-linked="true"] > button {
+  border-color: var(--flow-branch);
+}
+
+.flow-cluster[data-operating="true"] {
+  --flow-live-outline: color-mix(in oklab, var(--flow-accent) 78%, var(--foreground));
+  border-color: var(--flow-live-outline);
+  box-shadow: inset 0 0 0 var(--flow-live-stroke) var(--flow-live-outline);
+}
+
+.flow-cluster[data-pulse="true"]::before {
+  content: "";
+  position: absolute;
+  inset: calc(-2.2 * var(--flow-live-stroke));
+  border-radius: inherit;
+  box-shadow: 0 0 0 calc(1.4 * var(--flow-live-stroke))
+      color-mix(in oklab, var(--flow-accent) 60%, var(--foreground)),
+    0 0 calc(8 * var(--flow-live-stroke)) calc(1.2 * var(--flow-live-stroke))
+      color-mix(in oklab, var(--flow-accent) 72%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: flow-live-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes flow-live-pulse {
+  0%, 100% { opacity: 0.06; }
+  36% { opacity: 1; }
+}
+
+.flow-relation-line,
+.flow-relation-label {
+  --flow-link: var(--flow-tool);
+}
+
+.flow-relation-line[data-kind="file"],
+.flow-relation-label[data-kind="file"] {
+  --flow-link: var(--flow-warn);
+}
+
+.flow-relation-line[data-coordinator="true"],
+.flow-relation-label[data-coordinator="true"] {
+  --flow-link: var(--flow-branch);
+}
+
+.flow-relation-line {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--flow-link);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+
+.flow-relation-line[data-kind="file"] path {
+  stroke-dasharray: 3 6;
+}
+
+.flow-relation-line[data-selected="true"] {
+  opacity: 1;
+  stroke-width: 2.5;
+}
+
+.flow-relation-line[data-coordinator="true"] {
+  stroke-width: max(2.5px, calc(0.75 * var(--flow-live-stroke)));
+}
+
+.flow-relation-line[data-coordinator="true"][data-selected="false"] {
+  opacity: 0.74;
+}
+
+.flow-relation-label {
+  z-index: 1;
+  position: absolute;
+  display: flex;
+  max-width: 154px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in oklab, var(--flow-link) 55%, var(--flow-line));
+  border-radius: 6px;
+  background: var(--flow-panel);
+  color: var(--flow-link);
+  white-space: nowrap;
+}
+
+.flow-relation-label svg {
+  flex: none;
+}
+
+.flow-relation-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flow-relation-label:hover,
+.flow-relation-label[aria-pressed="true"] {
+  border-color: var(--flow-link);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--flow-link) 30%, transparent);
+}
+
+.flow-world[data-detail="compact"] .flow-relation-label span,
+.flow-relation-label[data-row-port="true"] span {
+  display: none;
+}
+
+.flow-world[data-layout="lanes"] .flow-cluster {
+  border-radius: 15px;
+}
+
+.flow-world[data-layout="lanes"] .flow-cluster-tag {
+  padding-bottom: 7px;
+  border-bottom: 1px solid color-mix(in oklab, var(--flow-accent) 21%, transparent);
+}
+
+.flow-cluster-tag {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 640;
+  pointer-events: none;
+}
+
+.flow-cluster-tag > span {
+  flex: none;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--flow-accent);
+}
+
+.flow-cluster-tag strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: inherit;
+}
+
+.flow-cluster-tag small {
+  margin-inline-start: auto;
+  color: var(--flow-dim);
+  font: 11px/1.4 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-cluster-tag :is(small, .flow-cluster-live) {
+  flex: none;
+  white-space: nowrap;
+}
+
+.flow-world[data-detail="compact"] .flow-cluster-tag {
+  inset-inline: 12px;
+}
+
+.flow-world[data-detail="compact"] .flow-cluster-tag small {
+  display: none;
+}
+
+.flow-cluster-live {
+  color: var(--flow-live-outline);
+  border: 1px solid color-mix(in oklab, var(--flow-accent) 55%, transparent);
+  border-radius: 8px;
+  padding: 1px 6px;
+  font: 10px/1.25 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-connections {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.flow-edge,
+.flow-transit,
+.flow-edge-arrow {
+  fill: none;
+  stroke: var(--flow-accent);
+}
+
+.flow-edge-arrow {
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+.flow-edge-arrow[data-returned="true"] {
+  opacity: 0.55;
+}
+
+.flow-edge {
+  stroke-width: 2;
+  opacity: 0.53;
+}
+
+.flow-edge[data-returned="true"] {
+  stroke-dasharray: 3 5;
+  opacity: 0.4;
+}
+
+.flow-transit {
+  opacity: 0;
+  stroke-width: 4;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px var(--flow-accent));
+  stroke-dasharray: 0.12 0.88;
+  animation: flow-travel 1.2s ease-in-out both;
+}
+
+.flow-transit[data-returned="true"] {
+  animation-direction: reverse;
+}
+
+@keyframes flow-travel {
+  0% { stroke-dashoffset: 0.13; opacity: 0; }
+  15%, 85% { opacity: 1; }
+  100% { stroke-dashoffset: -0.98; opacity: 0; }
+}
+
+.flow-actor {
+  position: absolute;
+  width: var(--flow-node-width);
+  height: var(--flow-node-height);
+  --flow-status: var(--flow-dim);
+}
+
+.flow-actor[data-tone="active"] { --flow-status: var(--flow-accent); }
+.flow-actor[data-tone="waiting"] { --flow-status: var(--flow-warn); }
+.flow-actor[data-tone="complete"] { --flow-status: var(--flow-good); }
+.flow-actor[data-tone="error"] { --flow-status: var(--flow-bad); }
+
+.agent-flow [data-signal="message"] { --flow-signal: var(--flow-accent); }
+.agent-flow [data-signal="tool"] { --flow-signal: var(--flow-tool); }
+.agent-flow [data-signal="branch"] { --flow-signal: var(--flow-branch); }
+.agent-flow [data-signal="return"] { --flow-signal: var(--flow-good); }
+.agent-flow [data-signal="attention"] { --flow-signal: var(--flow-warn); }
+.agent-flow [data-signal="state"] { --flow-signal: var(--flow-dim); }
+
+.flow-node {
+  position: absolute;
+  top: calc(var(--flow-node-center-y) - 34px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 94px;
+  padding: 0 0 3px;
+  color: inherit;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+}
+
+.flow-beacon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--flow-accent) 22%, transparent);
+  background: radial-gradient(circle, color-mix(in oklab, var(--flow-accent) 29%, transparent), transparent 73%);
+}
+
+.flow-beacon-signals {
+  position: absolute;
+  z-index: 1;
+  width: 92px;
+  height: 92px;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+}
+
+.flow-beacon-calibration {
+  stroke: color-mix(in oklab, var(--flow-accent) 35%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 1 4;
+}
+
+.flow-beacon-track {
+  stroke: color-mix(in oklab, var(--flow-accent) 24%, transparent);
+  stroke-width: 1;
+}
+
+.flow-beacon-tick {
+  stroke: var(--flow-signal);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+.flow-beacon-context {
+  stroke: color-mix(in oklab, var(--flow-accent) 66%, var(--flow-good));
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 360ms ease-out;
+}
+
+.flow-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 49px;
+  height: 49px;
+  border-radius: 16px 16px 16px 7px;
+  transform: rotate(-12deg);
+  border: 1.5px solid var(--flow-accent);
+  background: linear-gradient(140deg, color-mix(in oklab, var(--flow-accent) 35%, var(--flow-panel)), var(--flow-panel));
+  color: color-mix(in oklab, var(--flow-accent) 73%, var(--foreground));
+  box-shadow: 0 0 16px color-mix(in oklab, var(--flow-accent) 22%, transparent), inset 0 0 12px #fff1;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.flow-glyph > * {
+  transform: rotate(12deg);
+}
+
+.flow-actor[data-kind="subagent"] .flow-glyph {
+  width: 43px;
+  height: 43px;
+  border-radius: 15px;
+  border-style: dashed;
+}
+
+.flow-node:hover .flow-glyph,
+.flow-node[aria-pressed="true"] .flow-glyph {
+  transform: rotate(-5deg) scale(1.12);
+  box-shadow: 0 0 24px color-mix(in oklab, var(--flow-accent) 48%, transparent);
+}
+
+.flow-node-status {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 1px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--flow-panel);
+  border-radius: 50%;
+  background: var(--flow-status);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--flow-status) 60%, transparent);
+}
+
+.flow-actor[data-notice] {
+  --flow-notice: var(--flow-tool);
+}
+
+.flow-actor:is([data-notice="permission"], [data-notice="attention"], [data-notice="idle"]) {
+  --flow-notice: var(--flow-warn);
+}
+
+.flow-actor[data-notice="subagent"] {
+  --flow-notice: var(--flow-branch);
+}
+
+.flow-actor[data-notice="error"] {
+  --flow-notice: var(--flow-bad);
+}
+
+.flow-actor[data-notice="turn-end"] {
+  --flow-notice: var(--flow-good);
+}
+
+.flow-notice-mark {
+  position: absolute;
+  z-index: 2;
+  inset: auto -3px 0 auto;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--flow-panel);
+  border-radius: 50%;
+  background: var(--flow-notice);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--flow-notice) 60%, transparent);
+}
+
+.flow-actor:is([data-notice="question"], [data-notice="error"]) .flow-notice-mark {
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.flow-notice-wave {
+  position: absolute;
+  z-index: 1;
+  inset: -3px;
+  opacity: 0;
+  border: 2px solid var(--flow-notice);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: flow-notice-pulse 1.15s ease-out both;
+}
+
+.flow-actor[data-notice="permission"] .flow-notice-wave {
+  animation-iteration-count: 2;
+}
+
+.flow-actor[data-notice="error"] .flow-notice-wave {
+  border-style: double;
+  border-width: 4px;
+  border-radius: 17px;
+  animation-duration: 620ms;
+  animation-iteration-count: 2;
+}
+
+@keyframes flow-notice-pulse {
+  from { opacity: 0.95; transform: scale(0.88); }
+  to { opacity: 0; transform: scale(1.85); }
+}
+
+.flow-beacon-wave {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--flow-accent);
+  border-radius: 50%;
+  animation: flow-wave 1.35s ease-out both;
+  pointer-events: none;
+}
+
+.flow-node-orbit {
+  position: absolute;
+  inset: -7px;
+  border: 1px solid transparent;
+  border-top-color: var(--flow-accent);
+  border-radius: 50%;
+  opacity: 0.82;
+  pointer-events: none;
+  animation: flow-orbit 5s linear var(--flow-phase) infinite;
+}
+
+.flow-node-orbit[data-idle="true"] {
+  opacity: 0.57;
+  animation-duration: 13s;
+}
+
+.flow-node-satellite {
+  position: absolute;
+  inset: -10px;
+  pointer-events: none;
+  animation: flow-orbit 16s linear var(--flow-phase) infinite reverse;
+}
+
+.flow-node-satellite::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 3px;
+  height: 3px;
+  content: "";
+  border-radius: 50%;
+  background: var(--flow-status);
+  box-shadow: 0 0 7px var(--flow-accent);
+}
+
+.flow-beacon-aura {
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 40%, color-mix(in oklab, var(--flow-accent) 34%, transparent) 54%, transparent 72%);
+  animation: flow-idle-breathe 5.4s ease-in-out var(--flow-phase) infinite;
+  pointer-events: none;
+}
+
+@keyframes flow-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flow-idle-breathe {
+  0%, 100% { opacity: 0.28; transform: scale(0.88); }
+  50% { opacity: 0.86; transform: scale(1.14); }
+}
+
+@keyframes flow-wave {
+  from { transform: scale(0.87); opacity: 0.8; }
+  to { transform: scale(1.7); opacity: 0; }
+}
+
+.flow-node-caption {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 670;
+}
+
+.flow-node-state,
+.flow-node-usage {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: color-mix(in oklab, var(--flow-status) 84%, var(--foreground));
+}
+
+.flow-node-context {
+  color: color-mix(in oklab, var(--flow-accent) 70%, var(--foreground));
+  font: 9px/1.2 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-node-cost {
+  position: absolute;
+  z-index: 2;
+  top: -11px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in oklab, var(--flow-good) 58%, var(--flow-line));
+  border-radius: 12px;
+  background: var(--flow-panel);
+  color: var(--flow-good);
+  font: 9px/1.35 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-node-usage {
+  font: 9px/1.3 "JetBrains Mono", ui-monospace, monospace;
+  color: var(--flow-dim);
+}
+
+.flow-actor[data-compact="true"] .flow-node {
+  width: 100%;
+}
+
+.flow-actor[data-compact="true"] .flow-node-state {
+  font-size: 15px;
+}
+
+.flow-actor[data-compact="true"] .flow-node-caption {
+  font-size: 19px;
+}
+
+.flow-actor[data-compact="true"] .flow-node-usage,
+.flow-actor[data-compact="true"] .flow-node-context {
+  display: none;
+}
+
+.flow-node-events {
+  position: absolute;
+  top: 9px;
+  left: 107px;
+  right: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.flow-speech,
+.flow-activity-label {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 9px;
+  text-align: left;
+  border-radius: 3px 12px 12px;
+  border: 1px solid color-mix(in oklab, var(--flow-accent) 43%, var(--flow-line));
+  background: color-mix(in oklab, var(--flow-accent) 12%, var(--flow-panel));
+}
+
+.flow-process-label small {
+  color: var(--flow-dim);
+  font: 10px/1.25 "JetBrains Mono", ui-monospace, monospace;
+  display: block;
+  margin-top: 4px;
+}
+
+.flow-speech::before {
+  position: absolute;
+  left: -6px;
+  top: 30px;
+  width: 9px;
+  height: 9px;
+  content: "";
+  transform: rotate(45deg);
+  border-left: inherit;
+  border-bottom: inherit;
+  background: inherit;
+}
+
+.flow-world[data-direction="right"] .flow-node-events {
+  top: 0;
+  bottom: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.flow-world[data-direction="right"] .flow-node-events button {
+  pointer-events: auto;
+}
+
+.flow-world[data-direction="right"] .flow-node-events > :is(.flow-speech, .flow-activity-label) {
+  position: absolute;
+  bottom: calc(100% - var(--flow-node-center-y) + 16px);
+}
+
+.flow-world[data-direction="right"] .flow-speech::before {
+  top: auto;
+  bottom: 4px;
+}
+
+.flow-world[data-direction="right"] .flow-tool-links {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(var(--flow-node-center-y) + 20px);
+}
+
+.flow-speech:hover,
+.flow-speech[data-current="true"] {
+  border-color: var(--flow-accent);
+}
+
+.flow-speech > span,
+.flow-activity-label > span {
+  color: color-mix(in oklab, var(--flow-accent) 74%, var(--foreground));
+  font: 10px/1.3 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-speech strong,
+.flow-activity-label strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 520;
+  overflow-wrap: anywhere;
+}
+
+.flow-activity-label {
+  background: color-mix(in oklab, var(--flow-panel) 62%, transparent);
+  border-style: dashed;
+}
+
+.flow-tool-links {
+  display: grid;
+  gap: 5px;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid color-mix(in oklab, var(--flow-accent) 56%, transparent);
+  margin-inline-start: 7px;
+}
+
+.flow-tool-links button {
+  width: max-content;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  padding: 3px 7px 3px 4px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border: 1px solid color-mix(in oklab, var(--flow-tool) 48%, var(--flow-line));
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--flow-tool) 10%, var(--flow-panel));
+  color: color-mix(in oklab, var(--flow-tool) 78%, var(--foreground));
+  font: 10px/1.3 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-tool-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 15px;
+  border-radius: 4px;
+  color: var(--flow-tool-key, var(--flow-tool));
+  background: color-mix(in oklab, var(--flow-tool-key, var(--flow-tool)) 22%, var(--flow-panel));
+}
+
+.flow-tool-mark[data-tool="write"] { --flow-tool-key: var(--flow-write); }
+.flow-tool-mark[data-tool="search"] { --flow-tool-key: var(--flow-search); }
+.flow-tool-mark[data-tool="run"] { --flow-tool-key: var(--flow-warn); }
+
+.flow-tool-links button b {
+  flex: none;
+  max-width: 134px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 620;
+}
+
+.flow-tool-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--flow-dim);
+}
+
+.flow-tool-links button:hover,
+.flow-tool-links button[data-current="true"] {
+  border-color: var(--flow-tool);
+}
+
+.flow-speech[data-new="true"],
+.flow-tool-links [data-new="true"] {
+  animation: flow-arrive 420ms cubic-bezier(0.19, 0.7, 0.35, 1) both;
+}
+
+@keyframes flow-arrive {
+  from { opacity: 0; transform: translateX(-7px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.flow-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 9px;
+  padding: 24px;
+  text-align: center;
+}
+
+.flow-map-dock {
+  position: absolute;
+  z-index: 1;
+}
+
+.flow-camera,
+.flow-minimap {
+  border: 1px solid var(--flow-line);
+  border-radius: 11px;
+  background: var(--flow-panel);
+  box-shadow: 0 6px 24px #0002;
+}
+
+.flow-map-dock {
+  z-index: 2;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.flow-camera {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  min-inline-size: 0;
+}
+
+.flow-camera .flow-minimap-toggle {
+  gap: 3px;
+  padding-inline: 5px;
+}
+
+.flow-minimap-toggle[aria-expanded="true"] {
+  color: var(--flow-accent);
+}
+
+.flow-camera span {
+  min-width: 39px;
+  color: var(--flow-dim);
+  text-align: center;
+  font: 10px/1 "JetBrains Mono", ui-monospace, monospace;
+}
+
+.flow-camera > svg {
+  margin: 0 3px;
+  color: var(--flow-dim);
+}
+
+.flow-minimap {
+  display: block;
+  padding: 5px;
+  width: 168px;
+  height: 107px;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.flow-minimap svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 5px;
+}
+
+.flow-minimap rect {
+  fill: color-mix(in oklab, var(--flow-accent) 25%, transparent);
+}
+
+.flow-minimap rect[data-active="true"] {
+  fill: color-mix(in oklab, var(--flow-accent) 56%, transparent);
+}
+
+.flow-minimap .flow-map-window {
+  fill: transparent;
+  stroke: var(--flow-dim);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+.flow-empty-symbol {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in oklab, var(--flow-accent) 38%, var(--flow-line));
+  border-radius: 12px;
+  background: linear-gradient(145deg, color-mix(in oklab, var(--flow-accent) 22%, var(--flow-panel)), var(--flow-panel));
+  color: color-mix(in oklab, var(--flow-accent) 78%, var(--foreground));
+}
+
+.flow-empty-symbol {
+  width: 66px;
+  color: var(--flow-accent);
+}
+
+.flow-empty h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: -0.025em;
+  font-weight: 675;
+}
+
+.flow-empty p {
+  margin: 2px 0 0;
+  color: var(--flow-dim);
+  font-size: 11px;
+}
+
+.flow-camera button {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 2px 8px;
+  color: var(--foreground);
+  background: var(--flow-panel);
+  border: 1px solid var(--flow-line);
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.flow-camera button:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--flow-accent) 76%, var(--flow-line));
+  background: color-mix(in oklab, var(--flow-accent) 11%, var(--flow-panel));
+}
+
+.flow-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@container (max-width: 650px) {
+  .flow-minimap {
+    width: 132px;
+    height: 86px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-flow *,
+  .agent-flow *::before,
+  .agent-flow *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

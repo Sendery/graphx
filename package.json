@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node graphx-build.mjs",
+    "dist": "node tools/build-dist.mjs && npm run build:agent-flow",
     "check": "node graphx-build.mjs --check",
     "verify:mermaid": "node tools/verify-mermaid.mjs",
     "verify:shapes": "node tools/verify-shapes.mjs",
@@ -17,12 +18,20 @@
     "mod": "node mod/build.mjs",
     "mod:test": "claude plugin validate mod/graphx-mod && claude plugin test mod/graphx-mod",
     "mod:preview": "node mod/tools/term-preview.mjs",
-    "mod:fixtures": "node mod/tools/gen-fixtures.mjs"
+    "mod:fixtures": "node mod/tools/gen-fixtures.mjs",
+    "build:agent-flow": "node tools/build-agent-flow.mjs",
+    "verify:agent-flow": "node --test tools/verify-agent-flow.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.0.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@hugeicons/core-free-icons": "4.2.2",
+    "@hugeicons/react": "1.1.9",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "esbuild": "0.25.12",
+    "typescript": "^5.9.3"
   },
   "exports": {
     "./engine": "./graphx.js",
@@ -35,7 +44,12 @@
     },
     "./layouts": "./graphx-layouts.js",
     "./tree": "./graphx-tree.js",
-    "./fx": "./graphx-fx.js"
+    "./fx": "./graphx-fx.js",
+    "./agent-flow": {
+      "types": "./dist/agent-flow/index.d.mts",
+      "import": "./dist/agent-flow/index.mjs"
+    },
+    "./agent-flow.css": "./dist/agent-flow/agent-flow.css"
   },
   "peerDependencies": {
     "react": ">=16.8"

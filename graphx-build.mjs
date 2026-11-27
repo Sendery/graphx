@@ -23,6 +23,7 @@ import vm from 'vm';
 import crypto from 'crypto';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { agentFlowHtml, validateAgentFlowDocument } from './tools/agent-flow-document.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -33,6 +34,25 @@ const VALUED = new Set(['--out', '--title', '--height', '--json-out', '--mode', 
 const src = args.find((a, i) => !a.startsWith('--') && !VALUED.has(args[i - 1]));
 const SRC_RE = /\.(json|mmd|mermaid|md|markdown)$/i;
 if (!src || !SRC_RE.test(src)) { console.error('uso: graphx-build.mjs <graph.json | diagrama.mmd | doc.md> [--out x.html] [--git <repo> --base <ref>] [--fragment]'); process.exit(2); }
+
+const input = /\.json$/i.test(src) ? JSON.parse(fs.readFileSync(src, 'utf8')) : null;
+if (input && Object.prototype.hasOwnProperty.call(input, 'agentFlow')) {
+  try {
+    validateAgentFlowDocument(input);
+    if (opt('--json-out')) fs.writeFileSync(opt('--json-out'), JSON.stringify(input, null, 2));
+    if (flag('--check')) console.log('✓ Agent Flow válido');
+    else {
+      const dest = opt('--out', src.replace(SRC_RE, flag('--fragment') ? '.fragment.html' : '.html'));
+      fs.writeFileSync(dest, agentFlowHtml(input, path.join(HERE, 'dist', 'agent-flow'),
+        { title: opt('--title'), height: opt('--height'), fragment: flag('--fragment') }));
+      console.log('✓ ' + dest + ' · Agent Flow');
+    }
+  } catch (error) {
+    console.error('✗ Agent Flow: ' + error.message);
+    process.exit(1);
+  }
+  process.exit(0);
+}
 
 const sandbox = { console: { warn() {}, error() {}, log() {} } };
 sandbox.globalThis = sandbox;
@@ -46,7 +66,7 @@ vm.runInContext(fs.readFileSync(path.join(HERE, 'graphx-fx.js'), 'utf8'), sandbo
 
 const errors = [], warns = [];
 let spec;
-if (/\.json$/i.test(src)) spec = JSON.parse(fs.readFileSync(src, 'utf8'));
+if (/\.json$/i.test(src)) spec = input;
 else {
   /* --- Mermaid → JSON de GraphX --- */
   let text = fs.readFileSync(src, 'utf8');

@@ -1,0 +1,13 @@
+{
+  "version": "1.9.0",
+  "files": {
+    "index.mjs": "c4a3ebb735e998eb5e2b69d2116c3f3cba1662ca90403e69b4577cdf0a515335",
+    "index.d.mts": "67d9f5a6576b3b13de5029d335243047a468cab3a1dad09e2f65b1396a6a013a",
+    "FlowCanvas.d.ts": "bfa8394651191e505055feeaf41f494e3e0b22a17ef879f1b0a0d95f34c7a741",
+    "types.d.ts": "3f2f8aa41c1563b5969c5cad04a3e72bedef47eba2775df9b248691383729ddf",
+    "layout.d.ts": "22edb3644cccb85fbd117625127b8b433de730c457f0fc5c331a2dde9d9a5df0",
+    "signals.d.ts": "8aa06381573487f77700eb647257a4a1390a2857d9a363d852faa6452fa523b7",
+    "agent-flow.css": "84d1505cff4732b5af680c8a7398ed594d56db3a7f8d937331017e01343348e6",
+    "browser.js": "a05a57160bb616e60133752ba07a7679583abf881e50f7e6b7273c651e77786a"
+  }
+}

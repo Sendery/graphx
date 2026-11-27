@@ -399,11 +399,18 @@ The full documentation is written in Spanish:
 
 </details>
 
+### Agent Flow
+
+Use the [Agent Flow renderer](docs/agent-flow.md) to display grouped sessions,
+delegations, shell processes, and their relations. GraphX builds standalone
+Agent Flow pages and provides a React entry point shared with Terax AI.
+
 <details>
 <summary><h3>🛠 Develop</h3></summary>
 
 ```bash
-node tools/build-dist.mjs                                   # rebuild dist/
+npm ci
+npm run dist                                               # rebuild both distributions
 node tools/verify.mjs && node tools/verify-mermaid.mjs      # tests without a browser (jsdom)
 node tools/verify-shapes.mjs && node tools/verify-tree.mjs && node tools/verify-fx.mjs
 node examples/fx/build.mjs docs/demo/index.html --standalone --lang en   # rebuild the live demo

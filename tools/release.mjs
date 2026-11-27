@@ -5,6 +5,7 @@
  *
  *   navegador · todo en uno   graphx-<v>.bundle.min.js      ELK + motor + formas + Mermaid + efectos + estilos
  *   navegador · ligero        graphx-<v>.lite.min.js        lo mismo sin ELK (lo carga de jsDelivr)
+ *   Agent Flow               graphx-<v>-agent-flow.zip     módulo React y visor offline
  *   por módulos               graphx-<v>-modules.zip        cada pieza minificada suelta, con sus estilos
  *   kit                       graphx-<v>-kit.zip            fuentes, dist/, react/, ELK y el ensamblador
  *   Claude Code               graphx-claude-<v del mod>.zip la skill graphx, el mod graphx-mod montado (con su bundle y
@@ -35,12 +36,20 @@ const SRC = ['graphx.js', 'graphx.css', 'graphx-mermaid.js', 'graphx-shapes.js',
 const hash = SRC.reduce((h, f) => h.update(fs.readFileSync(r(f))), crypto.createHash('sha256')).digest('hex');
 if (fs.readFileSync(r('dist', 'SOURCE_HASH'), 'utf8').trim() !== hash) { console.error('✗ dist/ no corresponde a las fuentes: ejecuta `node tools/build-dist.mjs`'); process.exit(1); }
 
+execFileSync(process.execPath, [r('tools', 'build-agent-flow.mjs')], { stdio: 'inherit' });
+
 const OUT = r('release', TAG);
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 const STAGE = fs.mkdtempSync(path.join(OUT, '.stage-'));
 const copy = (from, to) => { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.cpSync(from, to, { recursive: true }); };
 const zip = (name, dir) => execFileSync('zip', ['-qr', '-X', path.join(OUT, name), path.basename(dir)], { cwd: path.dirname(dir) });
+
+const agentFlowName = 'graphx-' + V + '-agent-flow';
+const agentFlow = path.join(STAGE, agentFlowName);
+copy(r('dist', 'agent-flow'), agentFlow);
+copy(r('docs', 'agent-flow.md'), path.join(agentFlow, 'README.md'));
+zip(agentFlowName + '.zip', agentFlow);
 
 /* navegador */
 fs.copyFileSync(r('dist', 'graphx.bundle.min.js'), path.join(OUT, `graphx-${V}.bundle.min.js`));
@@ -60,9 +69,15 @@ zip(`graphx-${V}-modules.zip`, mods);
 
 /* kit: fuentes, dist, react, ELK y el ensamblador */
 const kit = path.join(STAGE, `graphx-${V}-kit`);
-for (const f of [...SRC, 'graphx-build.mjs', 'package.json', 'README.md', 'README.es.md']) copy(r(f), path.join(kit, f));
+for (const f of [...SRC, 'graphx-build.mjs', 'package.json', 'package-lock.json', 'README.md', 'README.es.md']) copy(r(f), path.join(kit, f));
 copy(r('vendor', 'elk.bundled.js'), path.join(kit, 'vendor', 'elk.bundled.js'));
 copy(r('react'), path.join(kit, 'react'));
+copy(r('agent-flow'), path.join(kit, 'agent-flow'));
+copy(r('docs', 'agent-flow.md'), path.join(kit, 'docs', 'agent-flow.md'));
+copy(r('examples', 'agent-flow.json'), path.join(kit, 'examples', 'agent-flow.json'));
+for (const f of ['agent-flow-document.mjs', 'build-agent-flow.mjs', 'build-dist.mjs']) {
+  copy(r('tools', f), path.join(kit, 'tools', f));
+}
 for (const f of fs.readdirSync(r('dist'))) copy(r('dist', f), path.join(kit, 'dist', f));
 zip(`graphx-${V}-kit.zip`, kit);
 

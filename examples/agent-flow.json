@@ -1,0 +1,113 @@
+{
+  "title": "Agent Flow",
+  "theme": "dark",
+  "agentFlow": {
+    "direction": "down",
+    "arrangement": "fit",
+    "branches": [
+      {
+        "run": {
+          "key": "coordinator",
+          "tabTitle": "Coordinator",
+          "marker": "coordinator"
+        },
+        "start": 0,
+        "tasks": []
+      },
+      {
+        "run": {
+          "key": "application",
+          "tabTitle": "Application",
+          "color": "#50c990",
+          "active": true
+        },
+        "start": 10,
+        "actor": {
+          "name": "Lead agent",
+          "label": "Working",
+          "tone": "active",
+          "speech": {
+            "id": "lead-message",
+            "at": 20,
+            "label": "Agent reply",
+            "text": "Reviewing the change and coordinating the checks."
+          },
+          "signals": [
+            {
+              "id": "s1",
+              "tone": "message"
+            },
+            {
+              "id": "s2",
+              "tone": "branch"
+            }
+          ]
+        },
+        "tasks": [
+          {
+            "id": "review",
+            "at": 35,
+            "returnedAt": 85,
+            "actor": {
+              "name": "Reviewer",
+              "label": "Returned",
+              "tone": "complete",
+              "speech": {
+                "id": "r1",
+                "at": 80,
+                "label": "Agent reply",
+                "text": "The review is complete."
+              }
+            }
+          },
+          {
+            "id": "monitor",
+            "at": 50,
+            "process": {
+              "kind": "monitor",
+              "state": "listening"
+            },
+            "actor": {
+              "name": "Test monitor",
+              "label": "Listening",
+              "tone": "idle"
+            }
+          }
+        ]
+      },
+      {
+        "run": {
+          "key": "checks",
+          "tabTitle": "Checks",
+          "paneLabel": "Shell 1",
+          "color": "#86c4eb"
+        },
+        "start": 15,
+        "actor": {
+          "name": "Test agent",
+          "label": "Waiting",
+          "tone": "waiting"
+        },
+        "tasks": []
+      }
+    ],
+    "relations": [
+      {
+        "key": "dispatch",
+        "from": "coordinator",
+        "to": "application",
+        "kind": "relay",
+        "coordinator": true,
+        "label": "Started"
+      },
+      {
+        "key": "file",
+        "from": "application",
+        "to": "checks",
+        "kind": "file",
+        "label": "Shared file",
+        "description": "Both sessions touched the test report."
+      }
+    ]
+  }
+}
